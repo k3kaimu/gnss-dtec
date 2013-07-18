@@ -21,8 +21,8 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
     traceln("called");
 
     /* memory allocation */
-    byte[] data = new byte[sdr.nsamp * sdr.dtype];
-    byte[] datal = new byte[sdr.nsamp * sdr.dtype * sdr.acq.lenf];
+    scope byte[] data = new byte[sdr.nsamp * sdr.dtype];
+    scope byte[] datal = new byte[sdr.nsamp * sdr.dtype * sdr.acq.lenf];
 
     /* acquisition integration */
     foreach(i; 0 .. sdr.acq.intg){
@@ -46,7 +46,7 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
         rcvgetbuff(&sdrini,buffloc, sdr.nsamp * sdr.acq.lenf, sdr.ftype, sdr.dtype, datal);
 
         /* fine doppler search */
-        sdr.acq.acqfreqf = carrfsearch(datal, sdr.dtype, sdr.ti, sdr.crate, sdr.nsamp * sdr.acq.lenf, sdr.acq.nfftf, sdr.clen * sdr.acq.lenf, sdr.lcode);
+        sdr.acq.acqfreqf = carrfsearch(datal, sdr.dtype, sdr.ti, sdr.crate, sdr.nsamp * sdr.acq.lenf, sdr.acq.nfftf, sdr.lcode[0 .. sdr.clen * sdr.acq.lenf]);
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f, freqf=%.1f, diff=%.1f\n", sdr.satstr, sdr.acq.cn0, sdr.acq.peakr, cast(int)sdr.acq.acqcodei, sdr.acq.acqfreq - sdr.f_if, sdr.acq.acqfreqf - sdr.f_if, sdr.acq.acqfreq - sdr.acq.acqfreqf);
         
         sdr.trk.carrfreq = sdr.acq.acqfreqf;
@@ -60,8 +60,8 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
         //Sleep(ACQSLEEP);
     }
     //sdrfree(data); sdrfree(datal);
-    delete data;
-    delete datal;
+    //delete data;
+    //delete datal;
     return buffloc;
 }
 
@@ -119,6 +119,7 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] d
                         int nfreq, double crate, int m, cpx_t* codex, double *P)
 {
     traceln("called");
+    //tracefln("called: freps: %s", freq[0 .. nfreq]);
     //int i;
     cpx_t *datax;
     short* dataI, dataQ;
@@ -133,23 +134,23 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] d
     }
 */
     auto dataR = new byte[m*dtype];
-    dataI=cast(short*)sdrmalloc(short.sizeof*m);
-    dataQ=cast(short*)sdrmalloc(short.sizeof*m);
-    datax=cpxmalloc(m);
+    dataI = cast(short*)sdrmalloc(short.sizeof*m);
+    dataQ = cast(short*)sdrmalloc(short.sizeof*m);
+    datax = cpxmalloc(m);
 
-    if(dataR is null || dataI is null || dataQ is null || datax is null){
-        SDRPRINTF("error: pcorrelator memory allocation\n");
-            return;
-    }
+    enforce(dataI !is null && dataQ !is null && datax !is null, "error: pcorrelator memory allocation");
 
     /* zero padding */
-    //memset(dataR,0,m*dtype);
     dataR[0 .. m * dtype] = 0;
-    //memcpy(dataR,data,n*dtype);
     dataR[0 .. n * dtype] = data[0 .. n * dtype];
 
-    //for (i=0;i<nfreq;i++) {
     foreach(i; 0 .. nfreq){
+        // このtracingの2行をなくすと、最適化コンパイル(-O)時に正常に動作しなくなる。
+        // 外部のFFTWを使っているのが原因だと思われる。
+        // コンパイラの不具合なので、FFTWを使っている限りは自分では修正不可
+        tracing = false;
+        scope(exit) tracing = true;
+
         /* mix local carrier */
         mixcarr(dataR,dtype,ti,m,freq[i],0.0,dataI,dataQ);
     
@@ -179,6 +180,7 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] d
 *          short  *code     I   long code
 * return : double               doppler frequency (Hz)
 *------------------------------------------------------------------------------*/
+/+
 double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, double crate, int n, int m, int clen, short* code)
 {
     traceln("called");
@@ -202,13 +204,13 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
     }
 
     /* zero padding */
-    /+
+    /*
     for (i=0;i<m;i++) {
         rcodeI[i]=0;
         rcodeQ[i]=0;
         rdataI[i]=0;
         rdataQ[i]=0;
-    }+/
+    }*/
     rcodeI[0 .. m] = 0;
     rcodeQ[0 .. m] = 0;
     rdataI[0 .. m] = 0;
@@ -250,6 +252,86 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
     sdrfree(rcodeQ); free(fftxc); cpxfree(datax);
     delete rdataI;
     delete rdataQ;
+    
+    if (dtype==DType.I)
+        return cast(double)ind/(m*ti);
+    else
+        return (m/2.0-ind)/(m*ti);
+}
++/
+
+
+double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, double crate, int n, int m, short[] code)
+{
+    traceln("called");
+    //byte[] rdataI, rdataQ;
+    //short* rcode, rcodeI, rcodeQ;
+    //cpx_t* datax;
+    //double* fftxc;
+    int ind=0;
+    
+    //rcode = cast(short*)sdrmalloc(short.sizeof*m);
+    //rcodeI = cast(short*)sdrmalloc(short.sizeof*m);
+    //rcodeQ = cast(short*)sdrmalloc(short.sizeof*m);
+    //fftxc = cast(double*)malloc(double.sizeof*m);
+    //datax = cpxmalloc(m);
+
+    scope rdataI = new byte[m],
+          rdataQ = new byte[m],
+          rcode = new short[m],
+          rcodeI = new short[m],
+          rcodeQ = new short[m],
+          fftxc = new double[m],
+          datax = new cpx_t[m];
+
+    //if(rdataI is null || rdataQ is null || rcode is null || rcodeI is null || rcodeQ is null || fftxc is null || datax is null){
+    //    SDRPRINTF("error: carrfsearch memory allocation\n");
+    //        return 0;
+    //}
+
+    /* zero padding */
+
+    //rescode(code, clen, 0, 0, ti * crate, n, rcode);        
+    {
+        auto sink = rcode;
+        resamplingCode(code, 0, 0, ti * crate, n, sink);
+    }
+
+    if (dtype==DType.I) {  /* real */
+        //for (i=0;i<n;i++) rdataI[i]=data[i];
+        rdataI[0 .. n] = data[0 .. n];
+
+        mulvcs(rdataI, rcode, rcodeI);
+    
+        /* to frequency domain */
+        cpxcpx(rcodeI, null, 1.0, datax);
+
+    }
+    else if (dtype==DType.IQ) {  /* complex */
+        foreach(i; 0 .. n){
+            rdataI[i]=data[2*i];
+            rdataQ[i]=data[2*i+1];
+        }
+
+        mulvcs(rdataI, rcode, rcodeI);
+        mulvcs(rdataQ, rcode, rcodeQ);
+    
+        /* to frequency domain */
+        cpxcpx(rcodeI, rcodeQ, 1.0, datax);
+    }
+
+    /* compute power spectrum */
+    cpxpspec(datax, 0, fftxc);
+
+    if (dtype==DType.I)
+        maxvd(fftxc[0 .. m/2], -1, -1, ind);
+    if (dtype==DType.IQ)
+        maxvd(fftxc[m/2 .. $], -1,-1, ind);
+
+    ///*sdrfree(rdataI); sdrfree(rdataQ); */sdrfree(rcode); sdrfree(rcodeI);
+    //sdrfree(rcodeQ); free(fftxc); cpxfree(datax);
+    //delete rdataI;
+    //delete rdataQ;
     
     if (dtype==DType.I)
         return cast(double)ind/(m*ti);

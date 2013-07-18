@@ -18,14 +18,12 @@ import std.stdio;
 ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, ulong buffloc, ulong cnt)
 {
     traceln("called");
-
-    //sdr.flagtrk = OFF;
     
     /* memory allocation */
     immutable tmp = cast(size_t)((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf));
     sdr.currnsamp = cast(int)tmp;
 
-    byte[] data = new byte[sdr.nsamp * sdr.dtype];
+    scope byte[] data = new byte[sdr.nsamp * sdr.dtype];
     rcvgetbuff(&sdrini, buffloc, sdr.currnsamp, sdr.ftype, sdr.dtype, data);
 
     {
@@ -45,10 +43,6 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     sdrnavigation(sdr, buffloc, cnt);
     sdr.flagtrk = ON;
     
-    //sdrfree(data);
-    delete data;
-    
-    //return bufflocnow;
     return buffloc + sdr.currnsamp;
 }
 /* correlator -------------------------------------------------------------------

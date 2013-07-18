@@ -314,6 +314,12 @@ int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, si
         }
     }
 
+    debug(PrintBuffloc){
+        static size_t lastBuffloc = 0;
+        writefln("buffloc: %s, diff: %s", buffloc, cast(ptrdiff_t)buffloc - cast(ptrdiff_t)lastBuffloc);
+        lastBuffloc = buffloc;
+    }
+
     return 0;
 }
 /* push data to memory buffer ---------------------------------------------------

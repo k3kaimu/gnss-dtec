@@ -58,18 +58,18 @@ void specthread()
 
     //data=cast(char*)malloc(char.sizeof * spec.nsamp*spec.dtype*SPEC_LEN).enforce();
     //scope(failure) free(data);
-    byte[] data = new byte[spec.nsamp * spec.dtype * SPEC_LEN];
-    freq=cast(double*)malloc(double.sizeof * SPEC_NFFT*spec.dtype).enforce();
+    scope byte[] data = new byte[spec.nsamp * spec.dtype * SPEC_LEN];
+    freq = cast(double*)malloc(double.sizeof * SPEC_NFFT*spec.dtype).enforce();
     scope(failure) free(freq);
-    pspec=cast(double*)malloc(double.sizeof * SPEC_NFFT*spec.dtype).enforce();
+    pspec = cast(double*)malloc(double.sizeof * SPEC_NFFT*spec.dtype).enforce();
     scope(failure) free(pspec);
-    xI=cast(double*)malloc(double.sizeof * SPEC_BITN).enforce();
+    xI = cast(double*)malloc(double.sizeof * SPEC_BITN).enforce();
     scope(failure) free(xI);
-    yI=cast(double*)malloc(double.sizeof * SPEC_BITN).enforce();
+    yI = cast(double*)malloc(double.sizeof * SPEC_BITN).enforce();
     scope(failure) free(yI);
-    xQ=cast(double*)malloc(double.sizeof * SPEC_BITN).enforce();
+    xQ = cast(double*)malloc(double.sizeof * SPEC_BITN).enforce();
     scope(failure) free(xQ);
-    yQ=cast(double*)malloc(double.sizeof * SPEC_BITN).enforce();
+    yQ = cast(double*)malloc(double.sizeof * SPEC_BITN).enforce();
     scope(failure) free(yQ);
     
     /* initiarize plot structs */   
@@ -141,7 +141,7 @@ void specthread()
     /* free plot structs */
     quitspecpltstruct(spec);
     //free(data);
-    delete data;
+    //delete data;
     SDRPRINTF("spectrum thred is finished!\n");
 }
 /* initialize spectrum plot struct ----------------------------------------------

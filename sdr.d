@@ -1,5 +1,6 @@
-//##$ dmd -m64 -unittest -release -inline -debug=LPrint -version=MAIN_IS_SDRMAIN_MAIN sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
+//##$ dmd -m64 -unittest -debug=LPrint -version=MAIN_IS_SDRMAIN_MAIN sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
 
+// -debug=PrintBuffloc -version=TRACE -O -release -inline
 /*
 Change Log:
 2013/07/16 v2.0beta バッファ読み込みを、sdrスレッドが操るように修正

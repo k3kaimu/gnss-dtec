@@ -170,21 +170,33 @@ void cpxfree(cpx_t *cpx)
 /* complex FFT -----------------------------------------------------------------
 * cpx=fft(cpx)
 * args   : cpx_t  *cpx      I/O input/output complex data
-*          int    n         I   number of input/output data
+*          size_t    n         I   number of input/output data
 * return : none
 *------------------------------------------------------------------------------*/
 /**/
-void cpxfft(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpx, int n)
+void cpxfft(cpx_t *cpx, int n)
 {
     traceln("called");
     fftwf_plan p;
 
     synchronized(hfftmtx){
         fftwf_plan_with_nthreads(NFFTTHREAD);  //fft execute in multi threads 
-        p = fftwf_plan_dft_1d(n,cpx,cpx,FFTW_FORWARD,FFTW_ESTIMATE);
+        p = fftwf_plan_dft_1d(n, cpx, cpx, FFTW_FORWARD, FFTW_ESTIMATE);
         fftwf_execute(p); /* fft */
         fftwf_destroy_plan(p);
     }
+}
+
+
+void cpxfft(cpx_t *cpx, size_t n)
+{
+    cpxfft(cpx, n.to!int());
+}
+
+
+void cpxfft(cpx_t[] cpx)
+{
+    cpxfft(cpx.ptr, cpx.length.to!int());
 }
 
 
@@ -194,8 +206,7 @@ void cpxfft(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpx, int n)
 *          int    n         I   number of input/output data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxifft(string file = __FILE__, size_t line = __LINE__)
-    (cpx_t *cpx, int n)
+void cpxifft(cpx_t *cpx, int n)
 {
     traceln("called");
     fftwf_plan p;
@@ -209,6 +220,18 @@ void cpxifft(string file = __FILE__, size_t line = __LINE__)
 }
 
 
+void cpxifft(cpx_t *cpx, size_t n)
+{
+    cpxifft(cpx, n.to!int());
+}
+
+
+void cpxifft(cpx_t[] cpx)
+{
+    cpxifft(cpx.ptr, cpx.length.to!int());
+}
+
+
 /* convert short vector to complex vector ---------------------------------------
 * cpx=complex(I,Q)
 * args   : short  *I        I   input data array (real)
@@ -218,7 +241,7 @@ void cpxifft(string file = __FILE__, size_t line = __LINE__)
 *          cpx_t *cpx       O   output complex array
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxcpx(string file = __FILE__, size_t line = __LINE__)(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx)
+void cpxcpx(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx)
 {
     traceln("called");
     float *p=cast(float *)cpx;
@@ -231,6 +254,12 @@ void cpxcpx(string file = __FILE__, size_t line = __LINE__)(in short* I, in shor
 }
 
 
+void cpxcpx(in short[] I, in short[] Q, double scale, cpx_t[] cpx)
+{
+    cpxcpx(I.ptr, Q.ptr, scale, I.length, cpx.ptr);
+}
+
+
 /* convert float vector to complex vector ---------------------------------------
 * cpx=complex(I,Q)
 * args   : float  *I        I   input data array (real)
@@ -240,7 +269,7 @@ void cpxcpx(string file = __FILE__, size_t line = __LINE__)(in short* I, in shor
 *          cpx_t *cpx       O   output complex array
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxcpxf(string file = __FILE__, size_t line = __LINE__)(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx)
+void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx)
 {
     traceln("called");
     float *p=cast(float *)cpx;
@@ -250,6 +279,11 @@ void cpxcpxf(string file = __FILE__, size_t line = __LINE__)(in float* I, in flo
         p[0]=  I[i]*cast(float)scale;
         p[1]=Q?Q[i]*cast(float)scale:0.0f;
     }
+}
+
+void cpxcpxf(in float[] I, in float[] Q, double scale, cpx_t[] cpx)
+{
+    cpxcpxf(I.ptr, Q.ptr, scale, I.length, cpx.ptr);
 }
 
 
@@ -263,7 +297,7 @@ void cpxcpxf(string file = __FILE__, size_t line = __LINE__)(in float* I, in flo
 *          double *conv     O   output convolution data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxconv(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpxa, cpx_t *cpxb, int m, int n, int flagsum, double *conv)
+void cpxconv(cpx_t *cpxa, cpx_t *cpxb, size_t m, size_t n, bool flagsum, double *conv)
 {
     traceln("called");
     float* p, q;
@@ -295,7 +329,7 @@ void cpxconv(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpxa, cpx_t 
 *          double *pspec    O   output power spectrum data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxpspec(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpx, int n, int flagsum, double *pspec)
+void cpxpspec(cpx_t *cpx, size_t n, bool flagsum, double *pspec)
 {
     traceln("called");
     float* p;
@@ -313,17 +347,23 @@ void cpxpspec(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpx, int n,
 }
 
 
+void cpxpspec(cpx_t[] cpx, bool flagsum, double[] pspec)
+{
+    cpxpspec(cpx.ptr, cpx.length, flagsum, pspec.ptr);
+}
+
+
 
 /* dot products: d1=dot(a1,b),d2=dot(a2,b) --------------------------------------
 * args   : short  *a1       I   input short array
 *          short  *a2       I   input short array
 *          short  *b        I   input short array
-*          int    n         I   number of input data
+*          size_t    n         I   number of input data
 *          short  *d1       O   output short array
 *          short  *d2       O   output short array
 * return : none
 *------------------------------------------------------------------------------*/
-void dot_21(const short *a1, const short *a2, const short *b, int n,
+void dot_21(const short *a1, const short *a2, const short *b, size_t n,
                    double *d1, double *d2)
 {
     version(Dnative){
@@ -344,18 +384,23 @@ void dot_21(const short *a1, const short *a2, const short *b, int n,
 }
 
 
+void dot_21(in short[] a1, in short[] a2, in short[] b, double[] d1, double[] d2)
+{
+    dot_21(a1.ptr, a2.ptr, b.ptr, a1.length, d1.ptr, d2.ptr);
+}
+
 
 /* dot products: d1={dot(a1,b1),dot(a1,b2)},d2={dot(a2,b1),dot(a2,b2)} ----------
 * args   : short  *a1       I   input short array
 *          short  *a2       I   input short array
 *          short  *b1       I   input short array
 *          short  *b2       I   input short array
-*          int    n         I   number of input data
+*          size_t    n         I   number of input data
 *          short  *d1       O   output short array
 *          short  *d2       O   output short array
 * return : none
 *------------------------------------------------------------------------------*/
-void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, int n,
+void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, size_t n,
             double *d1, double *d2)
 {
     version(Dnative){
@@ -378,6 +423,11 @@ void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, int n,
     }
 }
 
+void dot_22(in short[] a1, in short[] a2, in short[] b1, in short[] b2, double[] d1, double[] d2)
+{
+    dot_22(a1.ptr, a2.ptr, b1.ptr, b2.ptr, a1.length, d1.ptr, d2.ptr);
+}
+
 
 /* dot products: d1={dot(a1,b1),dot(a1,b2),dot(a1,b3)},d2={...} -----------------
 * args   : short  *a1       I   input short array
@@ -385,13 +435,13 @@ void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, int n,
 *          short  *b1       I   input short array
 *          short  *b2       I   input short array
 *          short  *b3       I   input short array
-*          int    n         I   number of input data
+*          size_t    n         I   number of input data
 *          short  *d1       O   output short array
 *          short  *d2       O   output short array
 * return : none
 *------------------------------------------------------------------------------*/
 void dot_23(const short *a1, const short *a2, const short *b1,
-                   const short *b2, const short *b3, int n, double *d1,
+                   const short *b2, const short *b3, size_t n, double *d1,
                    double *d2)
 {
     version(Dnative){
@@ -417,6 +467,12 @@ void dot_23(const short *a1, const short *a2, const short *b1,
             d2[2]+=(*p2)*(*q3);
         }
     }
+}
+
+
+void dot_23(in short[] a1, in short[] a2, in short[] b1, in short[] b2, in short[] b3, double[] d1, double[] d2)
+{
+    dot_23(a1.ptr, a2.ptr, b1.ptr, b2.ptr, b3.ptr, a1.length, d1.ptr, d2.ptr);
 }
 
 
@@ -551,10 +607,16 @@ unittest{
 * return : none
 *------------------------------------------------------------------------------*/
 
-void mulvcs(const(byte)* data1, const short *data2, int n, short *out_)
+void mulvcs(const(byte)* data1, const short *data2, size_t n, short *out_)
 {   
     int i;
     for (i=0;i<n;i++) out_[i]=cast(short)(data1[i]*data2[i]);
+}
+
+
+void mulvcs(in byte[] data1, in short[] data2, short[] out_)
+{
+    mulvcs(data1.ptr, data2.ptr, data1.length, out_.ptr);
 }
 
 
@@ -574,6 +636,13 @@ void sumvf(const float *data1, const float *data2, int n, float *out_)
 }
 
 
+void sumvf(in float[] data1, in float[] data2, float[] out_)
+{
+    //sumvf(data1.ptr, data2.ptr, data1.length, out_.ptr);
+    out_[] = data1[] + data2[];
+}
+
+
 /* sum double vectors -----------------------------------------------------------
 * sum double vectors: out=data1.+data2
 * args   : double *data1    I   input double array
@@ -583,12 +652,18 @@ void sumvf(const float *data1, const float *data2, int n, float *out_)
 * return : none
 * note   : AVX command is used if "AVX" is defined
 *------------------------------------------------------------------------------*/
-void sumvd(const double *data1, const double *data2, int n, double *out_)
+void sumvd(const double *data1, const double *data2, size_t n, double *out_)
 {
     int i;
     for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
 }
 
+
+void sumvd(in double[] data1, in double[] data2, double[] out_)
+{
+    //sumvd(data1.ptr, data2.ptr, data1.length, out_.ptr);
+    out_[] = data1[] + data2[];
+}
 
 /* maximum value and index (int array) ------------------------------------------
 * calculate maximum value and index
@@ -601,7 +676,7 @@ void sumvd(const double *data1, const double *data2, int n, double *out_)
 * note   : maximum value and index are calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-int maxvi(const int *data, int n, int exinds, int exinde, int *ind)
+int maxvi(const int *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind)
 {
     int i;
     int max=data[0];
@@ -618,6 +693,12 @@ int maxvi(const int *data, int n, int exinds, int exinde, int *ind)
 }
 
 
+int maxvi(in int[] data, ptrdiff_t exinds, ptrdiff_t exinde, out int ind)
+{
+    return maxvi(data.ptr, data.length, exinds, exinde, &ind);
+}
+
+
 /* maximum value and index (float array) ----------------------------------------
 * calculate maximum value and index
 * args   : float  *data     I   input float array
@@ -629,7 +710,7 @@ int maxvi(const int *data, int n, int exinds, int exinde, int *ind)
 * note   : maximum value and index are calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-float maxvf(const float *data, int n, int exinds, int exinde, int *ind)
+float maxvf(const float *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind)
 {
     int i;
     float max=data[0];
@@ -646,6 +727,12 @@ float maxvf(const float *data, int n, int exinds, int exinde, int *ind)
 }
 
 
+float maxvf(in float[] data, int exinds, int exinde, out int ind)
+{
+    return maxvf(data.ptr, data.length, exinds, exinde, &ind);
+}
+
+
 /* maximum value and index (double array) ---------------------------------------
 * calculate maximum value and index
 * args   : double *data     I   input double array
@@ -657,7 +744,7 @@ float maxvf(const float *data, int n, int exinds, int exinde, int *ind)
 * note   : maximum value and index are calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-double maxvd(const double *data, int n, int exinds, int exinde, int *ind)
+double maxvd(const double *data, size_t n, int exinds, int exinde, int *ind)
 {
     int i;
     double max=data[0];
@@ -671,6 +758,12 @@ double maxvd(const double *data, int n, int exinds, int exinde, int *ind)
         }
     }
     return max;
+}
+
+
+double maxvd(in double[] data, int exinds, int exinde, out int ind)
+{
+    return maxvd(data.ptr, data.length, exinds, exinde, &ind);
 }
 
 
@@ -911,7 +1004,8 @@ void resdata(const char *data, int dtype, int n, int m, char *rdata)
 *          short  *rcode    O   resampling code
 * return : double               code remainder
 *------------------------------------------------------------------------------*/
-double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code, int len, double coff, int smax, double ci, int n, short *rcode)
+
+double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code, size_t len, double coff, size_t smax, double ci, size_t n, short *rcode)
 {
     traceln("called");
     traceln("len: ", len);
@@ -926,6 +1020,31 @@ double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code
         //while(coff>=len) coff-=len;
         coff %= len;
         *p = code[coff.to!int()];
+    }
+    traceln("return");
+    return coff-smax*ci;
+}
+
+
+
+double resamplingCode(R, W)(R src, double coff, size_t smax, double ci, size_t n, ref W sink)
+if(isInputRange!R && hasLength!R && isOutputRange!(W, ElementType!R))
+{
+    immutable len = src.length;
+
+    traceln("called");
+    traceln("len: ", len);
+    traceln("ci: ", ci);
+    auto cyc = src.cycle();
+    //short *p;
+    
+    coff-=smax*ci;
+    coff-=floor(coff/len)*len; /* 0<=coff<len */
+    traceln("coff: ", coff);
+    foreach(e; 0 .. n + 2 * smax)
+    {
+        sink.put(cyc[coff.to!size_t()]);
+        coff += ci;
     }
     traceln("return");
     return coff-smax*ci;

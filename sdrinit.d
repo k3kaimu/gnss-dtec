@@ -1,5 +1,3 @@
-//##$ rdmd -m64 -main sdr
-
 /*-------------------------------------------------------------------------------
 * sdrinit.c : SDR initialize/cleanup functions
 *
@@ -21,34 +19,39 @@ import std.range;
 import std.file;
 
 
-string readIniValue(T : string)(string file, string section, string key)
+string[] readLines(File file)
 {
-    // ファイルを行区切りでいれこむ
-    string[] lines = (){
-        string[] lns;
-        auto file = File(file);
+    string[] lns;
 
-        foreach(line; file.byLine)
-            lns ~= line.strip().dup;
+    foreach(line; file.byLine)
+        lns ~= line.strip().dup;
 
-        return lns;
-    }();
+    return lns;
+}
 
 
+string readIniValue(T : string)(string[] fileLines, string section, string key)
+{
     immutable secStr = "[" ~ section ~ "]";
 
-    lines = lines.find!(a => a.startsWith(secStr))(); // sectionを探す
-    lines = lines.find!(a => a.startsWith(key))();    // keyを探す
+    fileLines = fileLines.find!(a => a.startsWith(secStr))(); // sectionを探す
+    fileLines = fileLines.find!(a => a.startsWith(key))();    // keyを探す
 
-    auto str = lines.front.find!(a => a == '=')().drop(1);
+    auto str = fileLines.front.find!(a => a == '=')().drop(1);
     return str.until!(a => a == ';')().array().to!string().strip();
 }
 
 
-T readIniValue(T)(string file, string section, string key)
+string readIniValue(T : string)(string file, string section, string key)
+{
+    return readIniValue(file.readLines, section, key);
+}
+
+
+T readIniValue(T, Input)(Input fileOrLines, string section, string key)
 if(!is(T == string))
 {
-    string value = file.readIniValue!string(section, key);
+    string value = fileOrLines.readIniValue!string(section, key);
 
     static if(isArray!T)
     {
@@ -75,61 +78,42 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
 {
     traceln("called");
 
-    enforce(exists("gnss-sdrcli.ini"), "error: gnss-sdrcli.ini doesn't exist");
+    enforce(std.file.exists(iniFile), "error: gnss-sdrcli.ini doesn't exist");
+    auto iniLines = File(iniFile).readLines;
 
-    ini.fend = (){
-        immutable tmp = iniFile.readIniValue!string("RCV", "FEND");
+    {
+        ini.fend = iniLines.readIniValue!Fend("RCV", "FEND");
 
-        switch(tmp)
-        {
-          case "STEREO":
-            return Fend.STEREO;
-
-          case "FILESTEREO":
-            return Fend.FILESTEREO;
-
-          case "GN3Sv2":
-            return Fend.GN3SV2;
-
-          case "GN3Sv3":
-            return Fend.GN3SV3;
-
-          case "FILE":
-            return Fend.FILE;
-
-          default:
-            enforce(0, "error: wrong frontend type: %s".formattedString(tmp));
+        if (ini.fend == Fend.FILE || ini.fend == Fend.FILESTEREO){
+            ini.file1 = iniLines.readIniValue!string("RCV", "FILE1");
+            if(ini.file1.length)
+                ini.useif1 = ON;
         }
-        assert(0);
-    }();
 
-    if (ini.fend == Fend.FILE || ini.fend == Fend.FILESTEREO){
-        ini.file1 = iniFile.readIniValue!string("RCV", "FILE1");
-        if(ini.file1.length)
-            ini.useif1 = ON;
+        if (ini.fend == Fend.FILE) {
+            ini.file2 = iniLines.readIniValue!string("RCV", "FILE2");
+            if(ini.file2.length)
+                ini.useif2 = ON;
+        }
     }
 
-    if (ini.fend == Fend.FILE) {
-        ini.file2 = iniFile.readIniValue!string("RCV", "FILE2");
-        if(ini.file2.length)
-            ini.useif2 = ON;
+    {
+        ini.f_sf[0] = iniLines.readIniValue!double("RCV", "SF1");
+        ini.f_if[0] = iniLines.readIniValue!double("RCV", "IF1");
+        ini.dtype[0] = iniLines.readIniValue!DType("RCV", "DTYPE1");
+        ini.f_sf[1] = iniLines.readIniValue!double("RCV", "SF1");
+        ini.f_if[1] = iniLines.readIniValue!double("RCV", "IF1");
+        ini.dtype[1] = iniLines.readIniValue!DType("RCV", "DTYPE2");
+        ini.confini = iniLines.readIniValue!int("RCV", "CONFINI");
     }
 
-    ini.f_sf[0] = iniFile.readIniValue!double("RCV", "SF1");
-    ini.f_if[0] = iniFile.readIniValue!double("RCV", "IF1");
-    ini.dtype[0] = iniFile.readIniValue!DType("RCV", "DTYPE1");
-    ini.f_sf[1] = iniFile.readIniValue!double("RCV", "SF1");
-    ini.f_if[1] = iniFile.readIniValue!double("RCV", "IF1");
-    ini.dtype[1] = iniFile.readIniValue!DType("RCV", "DTYPE2");
-    ini.confini = iniFile.readIniValue!int("RCV", "CONFINI");
-
-    ini.nch = iniFile.readIniValue!int("CHANNEL", "NCH").enforce("error: wrong inifile value NCH=%d".formattedString(ini.nch));
+    ini.nch = iniLines.readIniValue!int("CHANNEL", "NCH").enforce("error: wrong inifile value NCH=%d".formattedString(ini.nch));
 
     {
         T[] getChannelSpec(T)(string key)
         {
             T[] tmp;
-            tmp = iniFile.readIniValue!(T[])("CHANNEL", key);
+            tmp = iniLines.readIniValue!(T[])("CHANNEL", key);
             enforce(tmp.length >= ini.nch);
             return tmp[0 .. ini.nch];
         }
@@ -141,18 +125,18 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
     }
 
     {
-        ini.pltacq = iniFile.readIniValue!bool("PLOT", "ACQ");
-        ini.plttrk = iniFile.readIniValue!bool("PLOT", "TRK");
+        ini.pltacq = iniLines.readIniValue!bool("PLOT", "ACQ");
+        ini.plttrk = iniLines.readIniValue!bool("PLOT", "TRK");
 
-        ini.outms = iniFile.readIniValue!int("OUTPUT", "OUTMS");
-        ini.rinex = iniFile.readIniValue!bool("OUTPUT", "RINEX");
-        ini.rtcm = iniFile.readIniValue!bool("OUTPUT", "RTCM");
-        ini.rinexpath = iniFile.readIniValue!string("OUTPUT", "RINEXPATH");
-        ini.rtcmport = iniFile.readIniValue!ushort("OUTPUT", "RTCMPORT");
-        ini.lexport = iniFile.readIniValue!ushort("OUTPUT", "LEXPORT");
+        ini.outms = iniLines.readIniValue!int("OUTPUT", "OUTMS");
+        ini.rinex = iniLines.readIniValue!bool("OUTPUT", "RINEX");
+        ini.rtcm = iniLines.readIniValue!bool("OUTPUT", "RTCM");
+        ini.rinexpath = iniLines.readIniValue!string("OUTPUT", "RINEXPATH");
+        ini.rtcmport = iniLines.readIniValue!ushort("OUTPUT", "RTCMPORT");
+        ini.lexport = iniLines.readIniValue!ushort("OUTPUT", "LEXPORT");
 
         /* spectrum setting */
-        ini.pltspec = iniFile.readIniValue!bool("SPECTRUM", "SPEC");
+        ini.pltspec = iniLines.readIniValue!bool("SPECTRUM", "SPEC");
     }
 
     foreach(i; 0 .. sdrini.nch){
@@ -248,6 +232,7 @@ int initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq,
         settitle(acq,sdr.satstr);
         setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
     }
+
     /* tracking */
     if (sdrini.plttrk) {
         setsdrplotprm(trk, PlotType.XY, 1 + 2 * sdr.trk.ncorrp, 0, 0, ON, 0.001, PLT_H, PLT_W, PLT_MH, PLT_MW, sdr.no);
@@ -256,10 +241,12 @@ int initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq,
         setlabel(trk, "Code Offset (sample)","Correlation Output");
         setyrange(trk, 0, 8 * sdr.trk.loopms);
     }
+
     if (sdrini.fend == Fend.FILE||sdrini.fend == Fend.FILESTEREO)
         trk.pltms = PLT_MS_FILE;
     else
         trk.pltms = PLT_MS;
+    
     return 0;
 }
 /* termination plot struct ------------------------------------------------------
@@ -568,6 +555,6 @@ void freesdrch(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr)
     free(sdr.trk.prm2.corrp);
     free(sdr.acq.freq);
 
-    if (sdr.nav.fec!=null)
+    if (sdr.nav.fec !is null)
         delete_viterbi27_port(sdr.nav.fec);
 }
