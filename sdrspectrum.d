@@ -38,7 +38,7 @@ void specthread()
 {
     sdrspec_t* spec = &sdrspec;
     int stop=0;
-    char *data;
+    //char *data;
     ulong buffloc;
     double* xI, yI, xQ, yQ, freq, pspec;
     
@@ -56,8 +56,9 @@ void specthread()
         }
     }
 
-    data=cast(char*)malloc(char.sizeof * spec.nsamp*spec.dtype*SPEC_LEN).enforce();
-    scope(failure) free(data);
+    //data=cast(char*)malloc(char.sizeof * spec.nsamp*spec.dtype*SPEC_LEN).enforce();
+    //scope(failure) free(data);
+    byte[] data = new byte[spec.nsamp * spec.dtype * SPEC_LEN];
     freq=cast(double*)malloc(double.sizeof * SPEC_NFFT*spec.dtype).enforce();
     scope(failure) free(freq);
     pspec=cast(double*)malloc(double.sizeof * SPEC_NFFT*spec.dtype).enforce();
@@ -139,7 +140,8 @@ void specthread()
     
     /* free plot structs */
     quitspecpltstruct(spec);
-    free(data);
+    //free(data);
+    delete data;
     SDRPRINTF("spectrum thred is finished!\n");
 }
 /* initialize spectrum plot struct ----------------------------------------------
@@ -199,7 +201,7 @@ void quitspecpltstruct(sdrspec_t *spec)
 *          double *yQ       O   histogram values (quadrature-phase samples)
 * return : none
 *------------------------------------------------------------------------------*/
-void calchistgram(char *data, int dtype, int n, double *xI, double *yI, double *xQ, double *yQ)
+void calchistgram(byte[] data, int dtype, int n, double *xI, double *yI, double *xQ, double *yQ)
 {
     int i;
     double[SPEC_BITN] xx = [-7,-5,-3,-1,+1,+3,+5,+7]; /* 3bit */
@@ -247,7 +249,7 @@ void hanning(int n, float *win)
 * return : int                  status 0:okay -1:failure
 * note : http://billauer.co.il/easyspec.html as a reference
 *------------------------------------------------------------------------------*/
-int spectrumanalyzer(const char *data, int dtype, int n, double f_sf, int nfft, double *freq, double *pspec)
+int spectrumanalyzer(const(byte)[] data, int dtype, int n, double f_sf, int nfft, double *freq, double *pspec)
 {
     int i,j,k,zuz,nwin=nfft/2,maxshift=n-nwin;
     float* x,xxI,xxQ,win;

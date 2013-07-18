@@ -34,45 +34,20 @@ __gshared sdrstat_t sdrstat;
 __gshared sdrch_t sdrch[MAXSAT];
 __gshared sdrspec_t sdrspec;
 
-/* initsdrgui -------------------------------------------------------------------
-* initialize sdr gui application  
-* args   : maindlg^ form       I   main dialog class
-*          sdrini_t* sdrinigui I   sdr init struct
-* return : none
-* note : This function is only used in GUI application 
-*------------------------------------------------------------------------------*/
-////#ifdef GUI
-//void initsdrgui(maindlg^ form, sdrini_t* sdrinigui)
-//{
-//    /* initialization global structs */
-//    memset(&sdrini,0,sizeof(sdrini));
-//    memset(&sdrstat,0,sizeof(sdrstat));
-//    memset(&sdrch,0,sizeof(sdrch));
 
-//    hform=GCHandle::Alloc(form);
-//    memcpy(&sdrini,sdrinigui,sizeof(sdrini_t)); /* copy setting from GUI */
-//}
-//#else
 /* main function ----------------------------------------------------------------
 * main entry point in CLI application  
 * args   : none
 * return : none
 * note : This function is only used in CLI application 
 *------------------------------------------------------------------------------*/
-int main()
+void main()
 {
-    /* read ini file */
-    if (readinifile(&sdrini)<0) {
-        return -1; 
-    }
+    enforce(readinifile(&sdrini) >= 0);
     startsdr();
-//#ifndef GUI
-//    SDRPRINTF("press 'q' to exit...\n");
-//    getchar();
-//#endif
-    return 0;
 }
-//#endif
+
+
 /* sdr start --------------------------------------------------------------------
 * start sdr function  
 * args   : void   *arg      I   not used
@@ -80,107 +55,62 @@ int main()
 * note : This function is called as thread in GUI application and is called as
 *        function in CLI application
 *------------------------------------------------------------------------------*/
-//#ifdef GUI
-//void startsdr(void *arg) /* call as thread */
-//#else
-void startsdr() /* call as function */
-//#endif
+void startsdr()
 {
     int stop;
 
     /* mutexes and events */
     openhandles();
+    scope(exit) closehandles();
 
     SDRPRINTF("GNSS-SDRLIB start!\n");
     
-    /* check initial value */
-    if (chk_initvalue(&sdrini)<0) {
-        quitsdr(&sdrini,1);
-        return;
-    }
+    enforce(chk_initvalue(&sdrini) >= 0);
 
     /* receiver initialization */
-    if (rcvinit(&sdrini)<0) {
-        quitsdr(&sdrini,1);
-        return;
-    }
+    enforce(rcvinit(&sdrini) >= 0);
+    scope(exit) rcvquit(&sdrini);
+
     /* initialize sdr channel struct */
-    //for (i=0;i<sdrini.nch;i++) {
-    foreach(i; 0 .. sdrini.nch){
-        if (initsdrch(i+1,sdrini.sys[i],sdrini.sat[i],sdrini.ctype[i],sdrini.dtype[sdrini.ftype[i]-1],sdrini.ftype[i],sdrini.f_sf[sdrini.ftype[i]-1],sdrini.f_if[sdrini.ftype[i]-1],&sdrch[i])<0) {
-            quitsdr(&sdrini,2);
-            return;
-        }
+    size_t sdrch_IniEndIdx;
+    scope(exit) {
+        foreach(i; 0 .. sdrch_IniEndIdx)
+            freesdrch(&sdrch[i]);
     }
-    
-    /* create threads */
-    //hsyncthread = new Thread(() => syncthread(null)); /* synchronization thread */
+
+    foreach(i; 0 .. sdrini.nch){
+        enforce(initsdrch(i+1, sdrini.sys[i], sdrini.sat[i], sdrini.ctype[i], sdrini.dtype[sdrini.ftype[i]-1], sdrini.ftype[i], sdrini.f_sf[sdrini.ftype[i]-1], sdrini.f_if[sdrini.ftype[i]-1],&sdrch[i]) >= 0);
+        sdrch_IniEndIdx = i + 1;
+    }
+
     hsyncthread = spawn(&syncthread);
-    //hsyncthread.start();
-//#ifndef GUI 
-    //hkeythread = new Thread(() => keythread(null)); /* keyboard listener thread */
     hkeythread = spawn(&keythread);
-    //hkeythread.start();
-//#endif
-    /* sdr channel thread */
-    //for (i=0;i<sdrini.nch;i++) {
     foreach(i; 0 .. sdrini.nch){
-        /* GPS L1CA */
-        if (sdrch[i].sys==SYS_GPS&&sdrch[i].ctype==CTYPE_L1CA){
-            //sdrch[i].hsdr = new Thread(() => sdrthread(sdrch[i]));
-            //sdrch[i].hsdr.start();
+        if (sdrch[i].sys == SYS_GPS && sdrch[i].ctype == CTYPE_L1CA)
             sdrch[i].hsdr = spawn(&sdrthread, i);
-        }
+        else
+            assert(0);
     }
-/+
-//#ifndef GUI 
-    /* sdr spectrum analyzer */
-    if (sdrini.pltspec) {
-        sdrspec.dtype=sdrch[0].dtype;
-        sdrspec.ftype=sdrch[0].ftype;
-        sdrspec.nsamp=sdrch[0].nsamp;
-        sdrspec.f_sf=sdrch[0].f_sf;
-        //hspecthread = new Thread(() => specthread(&sdrspec));
-        hspecthread = spawn(&specthread);
-        //hspecthread.start();
-    }
-//#endif
-+/
 
     /* start grabber */
-    if (rcvgrabstart(&sdrini)<0) {
-        quitsdr(&sdrini,4);
-        return;
-    }
+    enforce(rcvgrabstart(&sdrini) >= 0);
 
     tracing = false;
+    
     /* data grabber loop */
     while (1) {
-        //WaitForSingleObject(hstopmtx,INFINITE);
         synchronized(hstopmtx)
             stop = sdrstat.stopflag;
-        //ReleaseMutex(hstopmtx);
         if (stop) break;
 
         /* grab data */
-        if (rcvgrabdata(&sdrini)<0) break;
+        enforce(rcvgrabdata(&sdrini) >= 0);
     }
     tracing = true;
-    /* wait thereds */
-    /*for (i=0;i<sdrini.nch;i++)
-        sdrch[i].hsdr.join();
-    */
+
     foreach(e; Thread.getAll)
         if(e.name.startsWith("sdrchannel"))
             e.join();
-    
-    /* sdr termination */
-    quitsdr(&sdrini,0);
-
-//#ifdef GUI
-//    maindlg^form=static_cast<maindlg^>(hform.Target);
-//    form.guistop();
-//#endif
 
     SDRPRINTF("GNSS-SDRLIB is finished!\n");
 }
@@ -235,10 +165,8 @@ void sdrthread(size_t index)
     Sleep(100);
     
     /* check the exit flag */
-    //WaitForSingleObject(hstopmtx,INFINITE);
     synchronized(hstopmtx)
         stop = sdrstat.stopflag;
-    //ReleaseMutex(hstopmtx);
     
     while (!stop) {
         /* acquisition */
@@ -279,7 +207,6 @@ void sdrthread(size_t index)
                     pll(sdr,&sdr.trk.prm2); /* PLL */
                     dll(sdr,&sdr.trk.prm2); /* DLL */
 
-                    //WaitForSingleObject(hobsmtx,INFINITE);
                     /* calculate observation data */
                     synchronized(hobsmtx){
                         if (loopcnt%(SNSMOOTHMS/sdr.trk.loopms)==0)
@@ -287,7 +214,6 @@ void sdrthread(size_t index)
                         else
                             setobsdata(sdr, buffloc, cnt, &sdr.trk, 0);
                     }
-                    //ReleaseMutex(hobsmtx);
 
                     /* plot correator output */
 /+
@@ -317,11 +243,8 @@ void sdrthread(size_t index)
         sdr.trk.buffloc = buffloc;
 
         /* check the exit flag */
-        //WaitForSingleObject(hstopmtx,INFINITE);
         synchronized(hstopmtx)
             stop = sdrstat.stopflag;
-
-        //ReleaseMutex(hstopmtx);
     }
     /* plot termination */
     quitpltstruct(&pltacq,&plttrk);
@@ -371,12 +294,9 @@ void syncthread()
     out_.obsd=cast(obsd_t *)calloc(MAXSAT,obsd_t.sizeof);
     
     while (!stop) {
-        //WaitForSingleObject(hstopmtx,INFINITE);
         synchronized(hstopmtx)
             stop=sdrstat.stopflag;
-        //ReleaseMutex(hstopmtx);
 
-        //WaitForSingleObject(hobsmtx,INFINITE);
         /* copy all tracking data */
         synchronized(hobsmtx){
             //for (i=nsat=0;i<sdrini.nch;i++) {
@@ -389,12 +309,11 @@ void syncthread()
                 }
             }
         }
-        //ReleaseMutex(hobsmtx);  
         
         /* find minimum tow channel (nearest satellite) */
         oldreftow=reftow;
         reftow=3600*24*7;
-        //for (i=0;i<nsat;i++) {
+
         foreach(i; 0 .. nsat){
             if (trk[i].tow[isat[0]]<reftow)
                 reftow=trk[i].tow[isat[0]];
@@ -403,8 +322,8 @@ void syncthread()
         if (nsat==0||oldreftow==reftow||(cast(int)(reftow*100)%(sdrini.outms/10))!=0) {
             continue;
         }
+
         /* select same timing index  */
-        //for (i=0;i<nsat;i++) {
         foreach(i; 0 .. nsat){
             //for (j=0;j<MAXOBS;j++) {
             foreach(j; 0 .. MAXOBS){
@@ -412,10 +331,10 @@ void syncthread()
                     ind[i]=j;
             }       
         }
+
         /* decide reference satellite (most distant satellite) */
         maxcodei=0;
         refi=0;
-        //for (i=0;i<nsat;i++) {
         foreach(i; 0 .. nsat){
             codei[i]=trk[i].codei[ind[i]];
             remcode[i]=trk[i].remcodeout[ind[i]];
@@ -424,6 +343,7 @@ void syncthread()
                 maxcodei=trk[i].codei[ind[i]];
             }
         }
+
         /* reference satellite */
         diffsamp=trk[refi].cntout[ind[refi]]-sdrch[isat[refi]].nav.firstsfcnt;
         sampref=sdrch[isat[refi]].nav.firstsf+cast(ulong)(sdrch[isat[refi]].nsamp*(-cast(int)(PTIMING)+diffsamp)); /* reference sample */
@@ -431,7 +351,6 @@ void syncthread()
         samprefd=cast(double)(sampref-sampbase);            
         
         /* computation observation data */
-        //for (i=0;i<nsat;i++) {
         foreach(i; 0 .. nsat){
             obs[i].sat=sdrch[isat[i]].sat;
             obs[i].week=sdrch[isat[i]].nav.eph.week;
@@ -453,12 +372,12 @@ void syncthread()
                 sdrstat.stopflag=ON; stop=ON;
             }
         }
+
         /* rtcm obs output */
         if (sdrini.rtcm&&out_.soc.flag) 
             sendrtcmobs(out_.obsd,&out_.soc,out_.nsat);
                 
         /* navigation data output */
-        //for (i=0;i<sdrini.nch;i++) {
         foreach(i;0 .. sdrini.nch){
             if ((sdrch[i].nav.eph.update)&&(sdrch[i].nav.eph.cnt==3)) {
                 sdrch[i].nav.eph.cnt=0;
@@ -490,25 +409,23 @@ void syncthread()
 *------------------------------------------------------------------------------*/
 void keythread() 
 {
-    int stop=0,c;
+    int stop = 0,c;
 
     do {
-        c=getchar();
+        c = getchar();
         switch(c) {
             case 'q':
             case 'Q':
-                //WaitForSingleObject(hstopmtx,INFINITE);
                 synchronized(hstopmtx)
                     sdrstat.stopflag = 1;
-                //ReleaseMutex(hstopmtx);
                 break;
+
             default:
                 SDRPRINTF("press 'q' to exit...\n");
                 break;
         }
-        //WaitForSingleObject(hstopmtx,INFINITE);
         synchronized(hstopmtx)
             stop = sdrstat.stopflag;
-        //ReleaseMutex(hstopmtx);
+
     } while (!stop);
 }

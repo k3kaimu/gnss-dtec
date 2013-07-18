@@ -55,7 +55,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         ini.buffsize=STEREO_DATABUFF_SIZE*MEMBUFLEN;
                 
         /* memory allocation */
-        sdrstat.buff = cast(ubyte*)malloc(ini.buffsize).enforce();
+        sdrstat.buff = cast(byte*)malloc(ini.buffsize).enforce();
         scope(failure) free(sdrstat.buff);
         break;
 /+    /* SiGe GN3S v2/v3 */
@@ -99,7 +99,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
         /* memory allocation */
         if (ini.fp1.isOpen)
-            sdrstat.buff1 = cast(ubyte*)malloc(ini.dtype[0]*ini.buffsize).enforce();
+            sdrstat.buff1 = cast(byte*)malloc(ini.dtype[0]*ini.buffsize).enforce();
         
         scope(failure) 
             if(sdrstat.buff1 !is null)
@@ -107,7 +107,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
 
         if (ini.fp2.isOpen)
-            sdrstat.buff2 = cast(ubyte*)malloc(ini.dtype[1]*ini.buffsize);
+            sdrstat.buff2 = cast(byte*)malloc(ini.dtype[1]*ini.buffsize);
 
         scope(failure)
             if(sdrstat.buff2 !is null)
@@ -269,7 +269,7 @@ int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *i
 *          char   *expbuff  O   extracted data buffer
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, ulong buffloc, size_t n, int ftype, int dtype, char *expbuf)
+int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, ulong buffloc, size_t n, int ftype, int dtype, byte[] expbuf)
 {
     traceln("called");
     switch (ini.fend) {
@@ -279,7 +279,7 @@ int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, ul
         break;+/
     /* STEREO Binary File */
     case FEND_FILESTEREO: 
-        stereo_getbuff(buffloc,n.to!int,dtype,expbuf);
+        stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
         break;
     /* SiGe GN3S v2 */
 /+    case FEND_GN3SV2:
@@ -291,7 +291,7 @@ int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, ul
         break;+/
     /* File */
     case FEND_FILE:
-        file_getbuff(buffloc,n,ftype,dtype,expbuf);
+        file_getbuff(buffloc, n, ftype, dtype, expbuf);
         break;
     default:
         enforce(0);
@@ -334,7 +334,7 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void file_getbuff(string file = __FILE__, size_t line = __LINE__)(ulong buffloc, size_t n, int ftype, int dtype, char *expbuf)
+void file_getbuff(string file = __FILE__, size_t line = __LINE__)(ulong buffloc, size_t n, int ftype, int dtype, byte[] expbuf)
 {
     traceln("called");
     ulong membuffloc=buffloc%(MEMBUFLEN*dtype*FILE_BUFFSIZE);
@@ -345,25 +345,29 @@ void file_getbuff(string file = __FILE__, size_t line = __LINE__)(ulong buffloc,
     
     //WaitForSingleObject(hbuffmtx,INFINITE);
     synchronized(hbuffmtx){
-        
         if (ftype==FTYPE1) {
             if (nout>0) {
-                memcpy(expbuf,&sdrstat.buff1[membuffloc],n-nout);
+                //memcpy(expbuf,&sdrstat.buff1[membuffloc],n-nout);
+                expbuf[0 .. n-nout] = sdrstat.buff1[membuffloc .. membuffloc + n-nout];
                 
-                memcpy(&expbuf[(n-nout)],&sdrstat.buff1[0],nout);
+                //memcpy(&expbuf[(n-nout)],&sdrstat.buff1[0],nout);
+                expbuf[n-nout .. n] = sdrstat.buff1[0 .. nout];
                 
             } else {
-                memcpy(expbuf,&sdrstat.buff1[membuffloc],n);
-                
+                //memcpy(expbuf,&sdrstat.buff1[membuffloc],n);
+                expbuf[0 .. n] = sdrstat.buff1[membuffloc  .. membuffloc + n];
             }
         }
         
         if (ftype==FTYPE2) {
             if (nout>0) {
-                memcpy(expbuf,&sdrstat.buff2[membuffloc],n-nout);
-                memcpy(&expbuf[(n-nout)],&sdrstat.buff2[0],nout);
+                //memcpy(expbuf,&sdrstat.buff2[membuffloc],n-nout);
+                expbuf[0 .. n-nout] = sdrstat.buff2[membuffloc .. membuffloc + n-nout];
+                //memcpy(&expbuf[(n-nout)],&sdrstat.buff2[0],nout);
+                expbuf[n-nout .. n] = sdrstat.buff2[0 .. nout];
             } else {
-                memcpy(expbuf,&sdrstat.buff2[membuffloc],n);
+                //memcpy(expbuf,&sdrstat.buff2[membuffloc],n);
+                expbuf[0 .. n] = sdrstat.buff2[membuffloc  .. membuffloc + n];
             }
         }
         

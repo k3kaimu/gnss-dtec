@@ -19,12 +19,14 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
     import std.stdio;
     traceln("called");
     //int i;
-    char* data, datal;
+    //char* data, datal;
     ulong buffloc,bufflocnow;
 
     /* memory allocation */
-    data = cast(char*)sdrmalloc(char.sizeof * sdr.nsamp*sdr.dtype);
-    datal = cast(char*)sdrmalloc(char.sizeof * sdr.nsamp*sdr.acq.lenf*sdr.dtype);
+    //data = cast(char*)sdrmalloc(char.sizeof * sdr.nsamp * sdr.dtype);
+    //datal = cast(char*)sdrmalloc(char.sizeof * sdr.nsamp * sdr.acq.lenf * sdr.dtype);
+    byte[] data = new byte[sdr.nsamp * sdr.dtype];
+    byte[] datal = new byte[sdr.nsamp * sdr.dtype * sdr.acq.lenf];
 
     /* current buffer location */
     //WaitForSingleObject(hreadmtx,INFINITE);
@@ -43,7 +45,7 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
         writefln("###### acq buffloc %s", buffloc);
     }else{
         synchronized(hreadmtx)
-            buffloc = (sdrini.fendbuffsize*sdrstat.buffloccnt)-sdr.acq.intg*sdr.nsamp;
+            buffloc = sdrini.fendbuffsize * sdrstat.buffloccnt - sdr.acq.intg * sdr.nsamp;
     }
     //ReleaseMutex(hreadmtx);
 
@@ -55,20 +57,20 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
         do {
             //WaitForSingleObject(hreadmtx,INFINITE);
             synchronized(hreadmtx)
-                bufflocnow = sdrini.fendbuffsize*sdrstat.buffloccnt-sdr.nsamp;
+                bufflocnow = sdrini.fendbuffsize * sdrstat.buffloccnt - sdr.nsamp;
             //ReleaseMutex(hreadmtx);
         } while (bufflocnow < buffloc);
 
         /* get current 1ms data */
-        rcvgetbuff(&sdrini,buffloc,sdr.nsamp,sdr.ftype,sdr.dtype,data);
-        buffloc+=sdr.nsamp;
+        rcvgetbuff(&sdrini, buffloc, sdr.nsamp, sdr.ftype, sdr.dtype, data);
+        buffloc += sdr.nsamp;
 
         /* fft correlation */
-        pcorrelator(data,sdr.dtype,sdr.ti,sdr.nsamp,sdr.acq.freq,sdr.acq.nfreq,sdr.crate,sdr.acq.nfft,sdr.xcode,power);
+        pcorrelator(data, sdr.dtype, sdr.ti, sdr.nsamp, sdr.acq.freq, sdr.acq.nfreq, sdr.crate, sdr.acq.nfft, sdr.xcode, power);
 
         /* check acquisition result */
-        if (checkacquisition(power,sdr)) {
-            sdr.flagacq=ON;
+        if (checkacquisition(power, sdr)) {
+            sdr.flagacq = ON;
             break;
         }
     }
@@ -91,7 +93,9 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
         Sleep(ACQSLEEP);
     }
-    sdrfree(data); sdrfree(datal);
+    //sdrfree(data); sdrfree(datal);
+    delete data;
+    delete datal;
     return buffloc;
 }
 /* check acquisition result -----------------------------------------------------
@@ -141,14 +145,14 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double *P,
 * return : none
 * notes  : P=abs(ifft(conj(fft(code)).*fft(data.*e^(2*pi*freq*t*i)))).^2
 *------------------------------------------------------------------------------*/
-void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const char *data, int dtype, double ti, int n, double *freq,
+void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, int dtype, double ti, int n, double *freq,
                         int nfreq, double crate, int m, cpx_t* codex, double *P)
 {
     traceln("called");
     //int i;
     cpx_t *datax;
     short* dataI, dataQ;
-    char *dataR;
+    //byte *dataR;
 /*    
     if (!(dataR=cast(char*)sdrmalloc(char.sizeof*m*dtype))||
         !(dataI=cast(short*)sdrmalloc(short.sizeof*m))||
@@ -158,7 +162,7 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const char *dat
             return;
     }
 */
-    dataR=cast(char*)sdrmalloc(char.sizeof*m*dtype);
+    auto dataR = new byte[m*dtype];
     dataI=cast(short*)sdrmalloc(short.sizeof*m);
     dataQ=cast(short*)sdrmalloc(short.sizeof*m);
     datax=cpxmalloc(m);
@@ -185,7 +189,8 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const char *dat
         /* convolution */
         cpxconv(datax,codex,m,n,1,&P[i*n]);
     }
-    sdrfree(dataR); 
+    //sdrfree(dataR); 
+    delete dataR;
     sdrfree(dataI); 
     sdrfree(dataQ); 
     cpxfree(datax);
@@ -202,17 +207,17 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const char *dat
 *          short  *code     I   long code
 * return : double               doppler frequency (Hz)
 *------------------------------------------------------------------------------*/
-double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const char *data, int dtype, double ti, double crate, int n, int m, int clen, short* code)
+double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, int dtype, double ti, double crate, int n, int m, int clen, short* code)
 {
     traceln("called");
-    char* rdataI, rdataQ;
+    byte[] rdataI, rdataQ;
     short* rcode, rcodeI, rcodeQ;
     cpx_t* datax;
     double* fftxc;
     int i,ind=0;
     
-    rdataI=cast(char*)sdrmalloc(char.sizeof*m);
-    rdataQ=cast(char*)sdrmalloc(char.sizeof*m);
+    rdataI = new byte[m];
+    rdataQ = new byte[m];
     rcode=cast(short*)sdrmalloc(short.sizeof*m);
     rcodeI=cast(short*)sdrmalloc(short.sizeof*m);
     rcodeQ=cast(short*)sdrmalloc(short.sizeof*m);
@@ -242,7 +247,7 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const char *d
         //for (i=0;i<n;i++) rdataI[i]=data[i];
         rdataI[0 .. n] = data[0 .. n];
 
-        mulvcs(rdataI,rcode,m,rcodeI);
+        mulvcs(rdataI.ptr,rcode,m,rcodeI);
     
         /* to frequency domain */
         cpxcpx(rcodeI,null,1.0,m,datax);
@@ -254,8 +259,8 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const char *d
             rdataQ[i]=data[2*i+1];
         }
 
-        mulvcs(rdataI,rcode,n,rcodeI);
-        mulvcs(rdataQ,rcode,n,rcodeQ);
+        mulvcs(rdataI.ptr,rcode,n,rcodeI);
+        mulvcs(rdataQ.ptr,rcode,n,rcodeQ);
     
         /* to frequency domain */
         cpxcpx(rcodeI,rcodeQ,1.0,m,datax);
@@ -269,8 +274,10 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const char *d
     if (dtype==DTYPEIQ)
         maxvd(&fftxc[m/2],m/2,-1,-1,&ind);
 
-    sdrfree(rdataI); sdrfree(rdataQ); sdrfree(rcode); sdrfree(rcodeI);
+    /*sdrfree(rdataI); sdrfree(rdataQ); */sdrfree(rcode); sdrfree(rcodeI);
     sdrfree(rcodeQ); free(fftxc); cpxfree(datax);
+    delete rdataI;
+    delete rdataQ;
     
     if (dtype==DTYPEI)
         return cast(double)ind/(m*ti);

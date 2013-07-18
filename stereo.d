@@ -255,7 +255,7 @@ void stereo_exp_init()
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void stereo_exp(const(ubyte)* buf, int n, int dtype, char *expbuf)
+void stereo_exp(const(byte)* buf, size_t n, int dtype, byte[] expbuf)
 {
     int i;
     if (!lut1[0]||!lut2[0][0]) stereo_exp_init();
@@ -288,7 +288,7 @@ void stereo_exp(const(ubyte)* buf, int n, int dtype, char *expbuf)
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void stereo_getbuff(ulong buffloc, int n, int dtype, char *expbuf)
+void stereo_getbuff(ulong buffloc, size_t n, int dtype, byte[] expbuf)
 {
     ulong membuffloc=buffloc%(MEMBUFLEN*STEREO_DATABUFF_SIZE);
     int nout = cast(int)((membuffloc+n)-(MEMBUFLEN*STEREO_DATABUFF_SIZE));
@@ -297,7 +297,7 @@ void stereo_getbuff(ulong buffloc, int n, int dtype, char *expbuf)
     synchronized(hbuffmtx){
         if (nout>0) {
             stereo_exp(&sdrstat.buff[membuffloc],n-nout,dtype,expbuf);
-            stereo_exp(&sdrstat.buff[0],nout,dtype,&expbuf[dtype*(n-nout)]);
+            stereo_exp(&sdrstat.buff[0],nout,dtype,expbuf[dtype*(n-nout) .. $]);
         } else {
             stereo_exp(&sdrstat.buff[membuffloc],n,dtype,expbuf);
         }

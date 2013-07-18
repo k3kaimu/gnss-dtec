@@ -19,13 +19,14 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
 {
     traceln("called");
     
-    char *data=null;
+    //char *data=null;
     ulong bufflocnow;
 
     sdr.flagtrk=OFF;
     
     /* memory allocation */
-    data=cast(char*)sdrmalloc(char.sizeof*sdr.nsamp*sdr.dtype);
+    //data=cast(char*)sdrmalloc(char.sizeof*sdr.nsamp*sdr.dtype);
+    byte[] data = new byte[sdr.nsamp * sdr.dtype];
     
     /* current buffer location */
     //WaitForSingleObject(hreadmtx,INFINITE);
@@ -55,7 +56,8 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
         sdr.flagtrk=ON;
     }
     
-    sdrfree(data);
+    //sdrfree(data);
+    delete data;
     
     return bufflocnow;
 }
@@ -76,7 +78,7 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
 * return : none
 * notes  : see above for data
 *------------------------------------------------------------------------------*/
-void correlator(string file = __FILE__, size_t line = __LINE__)(const char *data, int dtype, double ti, int n, double freq, double phi0, 
+void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, int dtype, double ti, int n, double freq, double phi0, 
                        double crate, double coff, int* s, int ns, double *I, double *Q,
                        double *remc, double *remp, short* codein, int coden)
 {

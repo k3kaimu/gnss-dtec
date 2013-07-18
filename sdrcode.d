@@ -60,7 +60,7 @@ immutable CRATE_LEXL =     2.5575E6    ;/* QZSS LEX long */
 static char legendre[10223]= 0;
 
 /* flip array direction -------------------------------------------------------*/
-void fliparrays(short *in_, int n, short *out_)
+deprecated void fliparrays(short *in_, int n, short *out_)
 {
     int i;
     short *tmp;
@@ -72,7 +72,7 @@ void fliparrays(short *in_, int n, short *out_)
     }
 }
 /* flip array direction -------------------------------------------------------*/
-void fliparrayc(char *in_, int n, char *out_)
+deprecated void fliparrayc(char *in_, int n, char *out_)
 {
     int i;
     char *tmp;
@@ -84,25 +84,23 @@ void fliparrayc(char *in_, int n, char *out_)
     }
 }
 
-void fliparray(T)(T* in_, size_t n, T* out_)
-{
-    auto tmp = in_[0 .. n].dup;
+void fliparray(T)(T[] in_, T[] out_)
+in{
+    assert(in_.length == out_.length);
+}
+body{
+    auto tmp = in_.dup;
     tmp.reverse;
-    out_[0 .. n] = tmp[];
-    //T* tmp = cast(T*)malloc(n * T.sizeof);
-    //if (tmp!=null) {
-    //    memcpy(tmp,in_,n);
-    //    for(i=0;i<n;i++) out_[n-i-1]=tmp[i];
-    //    free(tmp);
-    //}
+    out_[] = tmp[];
 }
 
 /* octal to binary ------------------------------------------------------------*/
-void oct2bin(const char *oct, int n, int nbit, byte* bin, int skiplast, int flip)
+void oct2bin(string oct, int nbit, byte* bin, int skiplast, int flip)
 {
-    int i,j,k,skip;
+    immutable n = oct.length;
+    int i,j,k;
     static const byte[3][8] octlist=cast(byte[3][8])[[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]]; /* 0=>1, 1=>-1 */
-    skip=3*n-nbit;
+    size_t skip = 3 * n - nbit;
     for (i=j=0;i<n;i++) {
         for (k=0;k<3;k++) {
             if (!skiplast&&i==0&&k<skip) continue;
@@ -111,8 +109,100 @@ void oct2bin(const char *oct, int n, int nbit, byte* bin, int skiplast, int flip
             j++;
         }
     }
-    if (flip) fliparray(bin,nbit,bin);
+
+    bin[0 .. nbit].reverse;
 }
+
+
+auto octalToBinary(R, bool fromLSB = true)(R rng)
+if(isInputRange!R && isIntegral!(ElementType!R))
+{
+    static struct Result(){
+        bool front() @property pure nothrow @safe const
+        {
+            return _front & _mask;
+        }
+
+
+        bool empty() @property pure nothrow @safe const
+        {
+            return _mask == 0;
+        }
+
+
+        void popFront()
+        {
+          static if(fromLSB)
+          {
+            _mask = ((_mask & 0x3) << 1) | (_mask >> 2);
+
+            if(_mask == 1){
+                _range.popFront();
+                if(!_range.empty)
+                    _front = _range.front;
+                else
+                    _mask = 0;
+            }
+          }
+          else
+          {
+            _mask = ((_mask & 0x6) >> 1) | ((_mask << 2) & 0x7);
+
+            if(_mask == 0x4){
+                _range.popFront();
+                if(!_range.empty)
+                    _front = _range.front;
+                else
+                    _mask = 0;
+            }
+          }
+        }
+
+
+      static if(isForwardRange!R)
+        typeof(this) save() @property
+        {
+            typeof(this) dst = this;
+            dst._range = dst._range.save;
+            return dst;
+        }
+
+
+      static if(hasLength!R)
+        size_t length() @property
+        {
+          static if(fromLSB)
+          {
+            return _range.length * 3 - bsr(_mask);
+          }
+          else
+          {
+            return _range.length * 3 - (2 - bsr(_mask));
+          }
+        }
+
+
+      private:
+        R _range;
+        ElementType!R _front;
+        ubyte _mask;
+    }
+
+    
+    if(!rng.empty){
+      static if(fromLSB)
+        return Result!()(rng, rng.front, 1);
+      else
+        return Result!()(rng, rng.front, 4);
+    }else{
+        Result!() dst;
+        dst._mask = 0;
+        
+        return dst;
+    }
+}
+
+
 /* hexadecimal to decimal ------------------------------------------------------*/
 int hexc2dec(char hex)
 {
@@ -122,12 +212,13 @@ int hexc2dec(char hex)
     return 0;
 }
 /* hexadecimal to binary -------------------------------------------------------*/
-void hex2bin(const char* hex, int n, int nbit, short* bin, int skiplast, int flip)
+void hex2bin(string hex, int nbit, short* bin, int skiplast, int flip)
 {
-    int i,j,k,skip;
+    immutable n = hex.length;
+    int i,j,k;
     static const char[4][16] hexlist = cast(char[4][16])[[1,1,1,1],[1,1,1,-1],[1,1,-1,1],[1,1,-1,-1],[1,-1,1,1],[1,-1,1,-1],[1,-1,-1,1],[1,-1,-1,-1], /* 0=>1, 1=>-1 */
                                       [-1,1,1,1],[-1,1,1,-1],[-1,1,-1,1],[-1,1,-1,-1],[-1,-1,1,1],[-1,-1,1,-1],[-1,-1,-1,1],[-1,-1,-1,-1]];
-    skip=4*n-nbit;
+    immutable skip = 4 * n - nbit;
     for (i=j=0;i<n;i++) {
         for (k=0;k<4;k++) {
             if (!skiplast&&i==0&&k<skip) continue;
@@ -136,7 +227,8 @@ void hex2bin(const char* hex, int n, int nbit, short* bin, int skiplast, int fli
             j++;
         }
     }
-    if (flip) fliparrays(bin,nbit,bin);
+    //if (flip) fliparrays(bin,nbit,bin);
+    bin[0 .. nbit].reverse;
 }
 /* C/A code (IS-GPS-200) ------------------------------------------------------*/
 static short *gencode_L1CA(int prn, int *len, double *crate)
@@ -454,10 +546,10 @@ static short *gencode_L1CO(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    oct2bin(s1init[prn-1].ptr,4,11,R1.ptr,0,1); /* S1 Initial Condition */
-    oct2bin(s2init[prn-1].ptr,4,11,R2.ptr,0,1); /* S2 Initial Condition (prn>=64) */
-    oct2bin(s1poly[prn-1].ptr,4,11,T1.ptr,1,1); /* S1 Polynomial Coefficient */
-    oct2bin("5001".ptr,4,11,T2.ptr,1,1);        /* S2 Polynomial Coefficient (Constant) */
+    oct2bin(s1init[prn-1], 11, R1.ptr, 0, 1); /* S1 Initial Condition */
+    oct2bin(s2init[prn-1], 11, R2.ptr, 0, 1); /* S2 Initial Condition (prn>=64) */
+    oct2bin(s1poly[prn-1], 11, T1.ptr, 1, 1); /* S1 Polynomial Coefficient */
+    oct2bin("5001", 11, T2.ptr, 1, 1);        /* S2 Polynomial Coefficient (Constant) */
     T1[10]=T2[10]=-1; /* last tap is always 1 */
     
     for (i=0;i<LEN_L1CO;i++) {
@@ -521,8 +613,8 @@ static short *gencode_L2CM(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    oct2bin(reg[prn-1].ptr,9,27,R.ptr,0,0);  /* Initial Regster */
-    oct2bin("112225170".ptr,9,27,T.ptr,0,0); /* Polynomial Coefficient:{3,6,8,11,14,16,18,21,22,23,24} */
+    oct2bin(reg[prn-1], 27, R.ptr, 0, 0);  /* Initial Regster */
+    oct2bin("112225170", 27, T.ptr, 0, 0); /* Polynomial Coefficient:{3,6,8,11,14,16,18,21,22,23,24} */
     
     for (i=0;i<LEN_L2CM;i++) {
         C=R[26];
@@ -576,8 +668,8 @@ static short *gencode_L2CL(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    oct2bin(reg[prn-1].ptr,9,27,R.ptr,0,0);  /* Initial Register */
-    oct2bin("112225170".ptr,9,27,T.ptr,0,0); /* Polynomial Coefficient:{3,6,8,11,14,16,18,21,22,23,24} */
+    oct2bin(reg[prn-1], 27, R.ptr, 0, 0);  /* Initial Register */
+    oct2bin("112225170", 27, T.ptr, 0, 0); /* Polynomial Coefficient:{3,6,8,11,14,16,18,21,22,23,24} */
     
     for (i=0;i<LEN_L2CL;i++) {
         C=R[26];
@@ -784,7 +876,7 @@ static short *gencode_E1B(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    hex2bin(hex[prn-1].ptr,1023,LEN_E1B,code,0,0);
+    hex2bin(hex[prn-1], LEN_E1B, code, 0, 0);
     for (i=0;i<LEN_E1B;i++) code[i]=-code[i];
     *len=LEN_E1B;
     *crate=CRATE_E1B;
@@ -855,7 +947,7 @@ static short *gencode_E1C(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    hex2bin(hex[prn-1].ptr,1023,LEN_E1C,code,0,0);
+    hex2bin(hex[prn-1], LEN_E1C, code, 0, 0);
     for (i=0;i<LEN_E1C;i++) code[i]=-code[i];
     *len=LEN_E1C;
     *crate=CRATE_E1C;
@@ -884,10 +976,10 @@ static short *gencode_E5AI(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    oct2bin("40503".ptr,5,14,T1.ptr,1,1); /* Polynomial Cofficient */
-    oct2bin("50661".ptr,5,14,T2.ptr,1,1); /* Polynomial Cofficient */
-    oct2bin("77777".ptr,5,14,R1.ptr,0,0); /* Initial Regster */
-    oct2bin(reg[prn-1].ptr,5,14,R2.ptr,0,1); /* Initial Regster */
+    oct2bin("40503", 14, T1.ptr, 1, 1); /* Polynomial Cofficient */
+    oct2bin("50661", 14, T2.ptr, 1, 1); /* Polynomial Cofficient */
+    oct2bin("77777", 14, R1.ptr, 0, 0); /* Initial Regster */
+    oct2bin(reg[prn-1], 14, R2.ptr, 0, 1); /* Initial Regster */
     
     for (i=0;i<LEN_E5AI;i++) {
         G1=R1[13];
@@ -931,10 +1023,10 @@ static short *gencode_E5AQ(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    oct2bin("40503".ptr,5,14,T1.ptr,1,1); /* Polynomial Cofficient */
-    oct2bin("50661".ptr,5,14,T2.ptr,1,1); /* Polynomial Cofficient */
-    oct2bin("77777".ptr,5,14,R1.ptr,0,0); /* Initial Register */
-    oct2bin(reg[prn-1].ptr,5,14,R2.ptr,0,1); /* Initial Register */
+    oct2bin("40503", 14, T1.ptr, 1, 1); /* Polynomial Cofficient */
+    oct2bin("50661", 14, T2.ptr, 1, 1); /* Polynomial Cofficient */
+    oct2bin("77777", 14, R1.ptr, 0, 0); /* Initial Register */
+    oct2bin(reg[prn-1], 14, R2.ptr, 0, 1); /* Initial Register */
     
     for (i=0;i<LEN_E5AQ;i++) {
         G1=R1[13];
@@ -978,10 +1070,10 @@ static short *gencode_E5BI(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    oct2bin("64021".ptr,5,14,T1.ptr,1,1); /* Polynomial Cofficient */
-    oct2bin("51445".ptr,5,14,T2.ptr,1,1); /* Polynomial Cofficient */
-    oct2bin("77777".ptr,5,14,R1.ptr,0,0); /* Initial Register */
-    oct2bin(reg[prn-1].ptr,5,14,R2.ptr,0,1); /* Initial Register */
+    oct2bin("64021", 14, T1.ptr, 1, 1); /* Polynomial Cofficient */
+    oct2bin("51445", 14, T2.ptr, 1, 1); /* Polynomial Cofficient */
+    oct2bin("77777", 14, R1.ptr, 0, 0); /* Initial Register */
+    oct2bin(reg[prn-1], 14, R2.ptr, 0, 1); /* Initial Register */
     
     for (i=0;i<LEN_E5BI;i++) {
         G1=R1[13];
@@ -1025,10 +1117,10 @@ static short *gencode_E5BQ(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    oct2bin("64021".ptr,5,14,T1.ptr,1,1); /* Polynomial Cofficient */
-    oct2bin("43143".ptr,5,14,T2.ptr,1,1); /* Polynomial Cofficient */
-    oct2bin("77777".ptr,5,14,R1.ptr,0,0); /* Initial Register */
-    oct2bin(reg[prn-1].ptr,5,14,R2.ptr,0,1); /* Initial Register */
+    oct2bin("64021", 14, T1.ptr, 1, 1); /* Polynomial Cofficient */
+    oct2bin("43143", 14, T2.ptr, 1, 1); /* Polynomial Cofficient */
+    oct2bin("77777", 14, R1.ptr, 0, 0); /* Initial Register */
+    oct2bin(reg[prn-1], 14, R2.ptr, 0, 1); /* Initial Register */
     
     for (i=0;i<LEN_E5BQ;i++) {
         G1=R1[13];
@@ -1061,7 +1153,7 @@ static short *gencode_E1CO(int *len, double *crate)
         return null;
     
 
-    hex2bin(hex[0].ptr,7,LEN_E1CO,code,1,0);
+    hex2bin(hex[0], LEN_E1CO, code, 1, 0);
     *len=LEN_E1CO;
     *crate=CRATE_E1CO;
 
@@ -1077,7 +1169,7 @@ static short *gencode_E5AIO(int *len, double *crate)
     if (!code)
         return null;
     
-    hex2bin(hex[0].ptr,5,LEN_E5AIO,code,1,0);
+    hex2bin(hex[0], LEN_E5AIO, code, 1, 0);
     *len=LEN_E5AIO;
     *crate=CRATE_E5AIO;
 
@@ -1107,7 +1199,7 @@ static short *gencode_E5AQO(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    hex2bin(hex[prn-1].ptr,25,LEN_E5AQO,code,1,0);
+    hex2bin(hex[prn-1], LEN_E5AQO, code, 1, 0);
     *len=LEN_E5AQO;
     *crate=CRATE_E5AQO;
 
@@ -1123,7 +1215,7 @@ static short *gencode_E5BIO(int *len, double *crate)
     if (!code)
         return null;
     
-    hex2bin(hex[0].ptr,1,LEN_E5BIO,code,1,0);
+    hex2bin(hex[0], LEN_E5BIO, code, 1, 0);
     *len=LEN_E5BIO;
     *crate=CRATE_E5BIO;
 
@@ -1152,7 +1244,7 @@ static short *gencode_E5BQO(int prn, int *len, double *crate)
     if(!code)
         return null;
 
-    hex2bin(hex[prn-1].ptr,25,LEN_E5BQO,code,1,0);
+    hex2bin(hex[prn-1], LEN_E5BQO, code, 1, 0);
     *len=LEN_E5BQO;
     *crate=CRATE_E5BQO;
 
@@ -1240,7 +1332,7 @@ static short *gencode_LEXS(int prn, int *len, double *crate)
         return null;
 
     for (i=0;i<10;i++) R1[i]=-1; /* Initial Register */
-    oct2bin(init_state[prn-193].ptr,7,20,R2.ptr,0,1); /* Initial Register */
+    oct2bin(init_state[prn-193], 20, R2.ptr, 0, 1); /* Initial Register */
     for (i=0;i<LEN_LEXS;i++) { 
         code[2*i]=cast(byte)(-R1[9]*R2[19]);
         C1=cast(byte)(R1[2]*R1[3]*R1[4]*R1[5]*R1[8]*R1[9]);
@@ -1273,7 +1365,7 @@ static short *gencode_LEXL(int prn, int *len, double *crate)
         return null;
 
     for (i=0;i<10;i++) R1[i]=-1; /* Initial Register */
-    oct2bin(init_state[prn-193].ptr,7,20,R2.ptr,0,1); /* Initial Register */
+    oct2bin(init_state[prn-193], 20, R2.ptr, 0, 1); /* Initial Register */
     for (i=0;i<LEN_LEXL;i++) {
         code[2*i+1]=-R1[9]*R2[19];
         C1=cast(byte)(R1[2]*R1[3]*R1[4]*R1[5]*R1[8]*R1[9]);

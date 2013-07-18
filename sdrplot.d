@@ -31,18 +31,12 @@ int updatepltini(string file = __FILE__, size_t line = __LINE__)(int nx, int ny,
     
     SHGetFolderPath(null, CSIDL_APPDATA, null, 0,apppath1.ptr);
 
-    //strcat(apppath1.ptr,"\\gnuplot.ini".ptr);
     immutable gpini1Path = apppath1.to!string() ~ `\gnuplot.ini`;
     writeln(gpini1Path);
     File file1 = File(gpini1Path, "w");
     enforce(file1.isOpen);
-    //fp1 = fopen(apppath1.ptr,"w".ptr).enforce();
-    //scope(failure) fclose(fp1);
     
     file1.writeln("set terminal windows");
-    //fprintf(fp1,"set terminal windows\n".ptr);
-    //fflush(fp1);
-    //fclose(fp1);
 
     SHGetFolderPath(null, CSIDL_APPDATA, null, 0, apppath2.ptr);
     immutable gpini2Path = apppath1.to!string() ~ `\wgnuplot.ini`;
@@ -56,28 +50,12 @@ int updatepltini(string file = __FILE__, size_t line = __LINE__)(int nx, int ny,
     file2.writefln("TextWrap=1");
     file2.writefln("TextLines=400");
     file2.writefln("SysColors=0");
-    file2.writefln("GraphOrigin=%d %d",posx,posy);
-    file2.writefln("GraphSize=%d %d",nx,ny);
-    //static assert(0);
-
-    //strcat(apppath2.ptr,"\\wgnuplot.ini".ptr);
-    //fp2=fopen(apppath2.ptr,"w".ptr).enforce();
-    //scope(failure) fclose(fp2);
-
-    //fprintf(fp2,"[WGNUPLOT]\n".ptr);
-    //fprintf(fp2,"TextOrigin=263 200\n".ptr);
-    //fprintf(fp2,"TextSize=1393 790\n".ptr);
-    //fprintf(fp2,"TextMinimized=0\n".ptr);
-    //fprintf(fp2,"TextFont=Arial,14\n".ptr);
-    //fprintf(fp2,"TextWrap=1\n".ptr);
-    //fprintf(fp2,"TextLines=400\n".ptr);
-    //fprintf(fp2,"SysColors=0\n".ptr);
-    //fprintf(fp2,"GraphOrigin=%d %d\n".ptr,posx,posy);
-    //fprintf(fp2,"GraphSize=%d %d\n".ptr,nx,ny);
-    //fflush(fp2);
-    //fclose(fp2);
+    file2.writefln("GraphOrigin=%d %d", posx, posy);
+    file2.writefln("GraphSize=%d %d", nx, ny);
     return 0;
 }
+
+
 /* set plot parameter -----------------------------------------------------------
 * set plot parameter to plot struct
 * args   : sdrplt_t *plt    I   sdr plot struct
@@ -109,6 +87,8 @@ void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt
     plt.pltmw=mw;  
     plt.pltno=no;
 }
+
+
 /* initialization of plot struct ------------------------------------------------
 * allocate memory and open pipe
 * args   : sdrplt_t *plt    I   sdr plot struct
@@ -172,6 +152,8 @@ int initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 //#endif
     return 0;
 }
+
+
 /* quit plot function -----------------------------------------------------------
 * close pipe handle and free memory
 * args   : sdrplt_t *plt    I   sdr plot struct
@@ -194,6 +176,8 @@ void quitsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
     if (plt.y!=null) free(plt.y); plt.y=null;
     if (plt.z!=null) free(plt.z); plt.z=null;
 }
+
+
 /* gnuplot set x axis range -----------------------------------------------------
 * set x axis range
 * args   : sdrplt_t *plt    I   sdr plot struct
@@ -206,9 +190,9 @@ void setxrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, do
     traceln("called");
     plt.fp.writefln("set xr[%.1f:%.1f]",xmin,xmax);
     plt.fp.flush();
-    //fprintf(plt.fp,"set xr[%.1f:%.1f]\n",xmin,xmax);
-    //fflush(plt.fp);
 }
+
+
 /* gnuplot set y axis range -----------------------------------------------------
 * set y axis range
 * args   : sdrplt_t *plt    I   sdr plot struct
@@ -221,9 +205,9 @@ void setyrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, do
     traceln("called");
     plt.fp.writefln("set yr[%.1f:%.1f]",ymin,ymax);
     plt.fp.flush();
-    //fprintf(plt.fp,"set yr[%.1f:%.1f]\n",ymin,ymax);
-    //fflush(plt.fp);
 }
+
+
 /* gnuplot set labels -----------------------------------------------------------
 * set labels in x and y axes
 * args   : sdrplt_t *plt    I   sdr plot struct
@@ -239,10 +223,9 @@ void setlabel(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, str
         fp.writefln("set yl '%s'", ylabel);
         fp.flush();
     }
-    //fprintf(plt.fp,"set xl '%s'\n",xlabel);
-    //fprintf(plt.fp,"set yl '%s'\n",ylabel);
-    //fflush(plt.fp);
 }
+
+
 /* gnuplot set title ------------------------------------------------------------
 * set title in figure
 * args   : sdrplt_t *plt    I   sdr plot struct
@@ -252,10 +235,11 @@ void setlabel(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, str
 void settitle(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string title)
 {
     traceln("called");
-    //fprintf(plt.fp,"set title '%s'\n",title);
-    //fflush(plt.fp);
     plt.fp.writefln("set title '%s'", title);
+    plt.fp.flush();
 }
+
+
 /* plot 1D function -------------------------------------------------------------
 * gnuplot plot 1D data function
 * args   : FILE   *fp       I   gnuplot pipe handle
@@ -272,17 +256,15 @@ void ploty(string file = __FILE__, size_t line = __LINE__)(File fp, double *y, i
     fp.writeln("set grid");
     fp.writeln("unset key");
     fp.writeln("plot '-' with lp lw 1 pt 6 ps 2");
-    //fprintf(fp, "set grid\n");
-    //fprintf(fp, "unset key\n");
-    //fprintf(fp, "plot '-' with lp lw 1 pt 6 ps 2\n");
+
     for(i=0;i<n;i+=(skip+1))
         fp.writefln("%.3f", y[i] * scale);
-        //fprintf(fp,"%.3f\n",y[i]*scale);
+
     fp.writeln("e");
     fp.flush();
-    //fprintf(fp,"e\n");
-    //fflush(fp);
 }
+
+
 /* plot 2D function -------------------------------------------------------------
 * gnuplot plot 2D data function
 * args   : FILE   *fp       I   gnuplot pipe handle
@@ -300,17 +282,15 @@ void plotxy(string file = __FILE__, size_t line = __LINE__)(File fp, double *x, 
     fp.writeln("set grid");
     fp.writeln("unset key");
     fp.writeln("plot '-' with p pt 6 ps 2");
-    //fprintf(fp, "set grid\n");
-    //fprintf(fp, "unset key\n");
-    //fprintf(fp, "plot '-' with p pt 6 ps 2\n");
+
     for(i=0;i<n;i+=(skip+1))
         fp.writefln("%.3f\t%.3f", x[i], y[i] * scale);
-        //fprintf(fp,"%.3f\t%.3f\n",x[i],y[i]*scale);
+
     fp.writeln("e");
     fp.flush();
-    //fprintf(fp,"e\n"); 
-    //fflush(fp);
 }
+
+
 /* plot surface function --------------------------------------------------------
 * gnuplot plot 3D surface data function
 * args   : FILE   *fp       I   gnuplot pipe handle
@@ -327,20 +307,17 @@ void plotsurfz(string file = __FILE__, size_t line = __LINE__)(File fp, double*z
     int i,j;
     fp.writeln("unset key");
     fp.writeln("splot '-' with pm3d");
-    //fprintf(fp, "unset key\n");
-    //fprintf(fp, "splot '-' with pm3d\n");
+
     for(i=0;i<ny;i+=(skip+1)) {
         for(j=0;j<nx;j+=(skip+1))
             fp.writefln("%.3f", z[j*ny+i]);
-            //fprintf(fp,"%.3f\n",z[j*ny+i]);
-        //fprintf(fp,"\n");
         fp.writeln();
     }
     fp.writeln("e");
     fp.flush();
-    //fprintf(fp,"e\n");
-    //fflush(fp);
 }
+
+
 /* plot boxes function ----------------------------------------------------------
 * gnuplot plot boxes function
 * args   : FILE   *fp       I   gnuplot pipe handle
@@ -360,19 +337,15 @@ void plotbox(string file = __FILE__, size_t line = __LINE__)(File fp, double *x,
     fp.writeln("set boxwidth 0.95");
     fp.writeln(`set style fill solid border lc rgb "black"`);
     fp.writeln("plot '-' with boxes");
-    //fprintf(fp, "set grid\n");
-    //fprintf(fp, "unset key\n");
-    //fprintf(fp, "set boxwidth 0.95\n");
-    //fprintf(fp, "set style fill solid border lc rgb \"black\"\n");
-    //fprintf(fp, "plot '-' with boxes\n");
+
     for(i=0;i<n;i+=(skip+1))
         fp.writefln("%.3f\t%.3f", x[i], y[i] * scale);
-        //fprintf(fp,"%.3f\t%.3f\n",x[i],y[i]*scale);
+
     fp.writeln("e");
     fp.flush();
-    //fprintf(fp,"e\n"); 
-    //fflush(fp);
 }
+
+
 /* plot function/thread ---------------------------------------------------------
 * gnuplot plot function/thread called from plot/plotthread
 * args   : void   *arg      I   sdr plot struct
@@ -407,6 +380,8 @@ void plotgnuplot(void *arg)
             break;
     }
 }
+
+
 /* plot (thread version) --------------------------------------------------------
 * gnuplot plot function (thread version)
 * args   : sdrplt_t *plt    I   sdr plot struct
@@ -416,13 +391,13 @@ void plotgnuplot(void *arg)
 void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 {
     traceln("called");
-    //WaitForSingleObject(hpltmtx,INFINITE);
     synchronized(hpltmtx){
         hpltthread = new Thread(() => plotgnuplot(plt));
         hpltthread.start();
     }
-    //ReleaseMutex(hpltmtx);
 }
+
+
 /* plot (function version) ------------------------------------------------------
 * gnuplot plot function (function version)
 * args   : sdrplt_t *plt    I   sdr plot struct
@@ -432,7 +407,5 @@ void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 void plot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 {
     traceln("called");
-    //WaitForSingleObject(hpltmtx,INFINITE);  
     plotgnuplot(plt);
-    //ReleaseMutex(hpltmtx);
 }
