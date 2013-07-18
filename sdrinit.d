@@ -141,18 +141,18 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
     }
 
     {
-        ini.pltacq = iniFile.readIniValue!int("PLOT", "ACQ");
-        ini.plttrk = iniFile.readIniValue!int("PLOT", "TRK");
+        ini.pltacq = iniFile.readIniValue!bool("PLOT", "ACQ");
+        ini.plttrk = iniFile.readIniValue!bool("PLOT", "TRK");
 
         ini.outms = iniFile.readIniValue!int("OUTPUT", "OUTMS");
-        ini.rinex = iniFile.readIniValue!int("OUTPUT", "RINEX");
-        ini.rtcm = iniFile.readIniValue!int("OUTPUT", "RTCM");
+        ini.rinex = iniFile.readIniValue!bool("OUTPUT", "RINEX");
+        ini.rtcm = iniFile.readIniValue!bool("OUTPUT", "RTCM");
         ini.rinexpath = iniFile.readIniValue!string("OUTPUT", "RINEXPATH");
         ini.rtcmport = iniFile.readIniValue!ushort("OUTPUT", "RTCMPORT");
         ini.lexport = iniFile.readIniValue!ushort("OUTPUT", "LEXPORT");
 
         /* spectrum setting */
-        ini.pltspec = iniFile.readIniValue!int("SPECTRUM", "SPEC");
+        ini.pltspec = iniFile.readIniValue!bool("SPECTRUM", "SPEC");
     }
 
     foreach(i; 0 .. sdrini.nch){
@@ -466,7 +466,7 @@ int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
 *          sdrch_t *sdr     I/0 sdr channel struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int initsdrch(string file = __FILE__, size_t line = __LINE__)(int chno, int sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if, sdrch_t *sdr)
+int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if, sdrch_t *sdr)
 {
     traceln("called");
     int i;

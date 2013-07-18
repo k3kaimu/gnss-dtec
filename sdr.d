@@ -1,4 +1,4 @@
-//##$ dmd -m64 -release -inline -unittest sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace
+//##$ dmd -m64 -release -inline -unittest -O sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace
 
 module sdr;
 /*------------------------------------------------------------------------------
@@ -71,18 +71,7 @@ enum Fend{
     FILE
 }
 
-//const FEND_STEREO = 0;
-//const FEND_GN3SV2 = -1;
-//const FEND_GN3SV3 = 1;
-//const FEND_FILESTEREO = 2;
-//const FEND_FILE = 3;
 
-/+
-const FTYPE1 = 1;
-const FTYPE2 = 2;
-const DTYPEI = 1;
-const DTYPEIQ = 2;
-+/
 immutable MEMBUFLEN = 5000;
 
 enum FType{
@@ -159,32 +148,7 @@ immutable SNSMOOTHMS = 100;
 immutable MAXGPSSATNO = 210;
 immutable MAXGALSATNO = 50;
 immutable MAXCMPSATNO = 37;
-//const CTYPE_L1CA = 1;
-//const CTYPE_L1CP = 2;
-//const CTYPE_L1CD = 3;
-//const CTYPE_L1CO = 4;
-//const CTYPE_L2CM = 5;
-//const CTYPE_L2CL = 6;
-//const CTYPE_L5I = 7;
-//const CTYPE_L5Q = 8;
-//const CTYPE_E1B = 9;
-//const CTYPE_E1C = 10;
-//const CTYPE_E5AI = 11;
-//const CTYPE_E5AQ = 12;
-//const CTYPE_E5BI = 13;
-//const CTYPE_E5BQ = 14;
-//const CTYPE_E1CO = 15;
-//const CTYPE_E5AIO = 16;
-//const CTYPE_E5AQO = 17;
-//const CTYPE_E5BIO = 18;
-//const CTYPE_E5BQO = 19;
-//const CTYPE_G1 = 20;
-//const CTYPE_G2 = 21;
-//const CTYPE_B1 = 22;
-//const CTYPE_LEXS = 23;
-//const CTYPE_LEXL = 24;
-//const CTYPE_L1SAIF = 25;
-//const CTYPE_L1SBAS = 26;
+
 
 enum CType
 {
@@ -218,13 +182,9 @@ enum CType
 
 
 /* gnuplot plotting setting */
-//const PLT_Y = 1;
-//const PLT_XY = 2;
-//const PLT_SURFZ = 3;
-//const PLT_BOX = 4;
 enum PlotType
 {
-    Y,
+    Y = 1,
     XY,
     SurfZ,
     Box,
@@ -281,24 +241,24 @@ struct sdrini_t
     bool useif1;
     bool useif2;
     int confini;
-    int nch;
-    int nchL1;
-    int nchL2;
-    int nchL5;
-    int nchL6;
+    uint nch;
+    uint nchL1;
+    uint nchL2;
+    uint nchL5;
+    uint nchL6;
     int[] sat;
     int[] sys;
     CType[] ctype;
     FType[] ftype;
-    int pltacq;
-    int plttrk;
+    bool pltacq;
+    bool plttrk;
     int outms;
-    int rinex;
-    int rtcm;
+    bool rinex;
+    bool rtcm;
     string rinexpath;
     ushort rtcmport;
     ushort lexport;
-    int pltspec;
+    bool pltspec;
     int buffsize;
     int fendbuffsize;
 }
@@ -525,27 +485,6 @@ struct sdrspec_t
     sdrplt_t pspec;
 }
 
-
-//extern(C):
-
-//extern(Windows) HANDLE CreateEventW(
-//  LPSECURITY_ATTRIBUTES lpEventAttributes, // セキュリティ記述子
-//  BOOL bManualReset,                       // リセットのタイプ
-//  BOOL bInitialState,                      // 初期状態
-//  LPCTSTR lpName                           // イベントオブジェクトの名前
-//);
-
-//alias CreateEvent = CreateEventW;
-
-//BOOL CloseHandle(
-//  HANDLE hObject   // オブジェクトのハンドル
-//);
-
-//extern(C) BOOL SetEvent(
-//  HANDLE hEvent   // イベントオブジェクトのハンドル
-//);
-
-extern(D):
 
 void SDRPRINTF(T...)(T args)
 {
