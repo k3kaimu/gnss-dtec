@@ -137,23 +137,29 @@ void sdrthread(size_t index)
     Thread.getThis.name = "sdrchannel_" ~ index.to!string();
     sdrplt_t pltacq,plttrk;
     ulong buffloc = 0, /*bufflocnow = 0,*/ cnt = 0,loopcnt = 0;
-    int stop = 0,cntsw = 0, swsync, swreset;
+    int /*stop = 0,*/cntsw = 0, swsync, swreset;
     double *acqpower = null;
     //double[] acqpower;
 
     /* plot setting */
     if (initpltstruct(&pltacq,&plttrk,sdr)<0) {
         sdrstat.stopflag=ON;
-        stop=ON;
+        //stop=ON;
     }
     SDRPRINTF("**** %s sdr thread start! ****\n",sdr.satstr);
     //Sleep(100);
     
     /* check the exit flag */
-    synchronized(hstopmtx)
-        stop = sdrstat.stopflag;
+    //synchronized(hstopmtx)
+    //    stop = sdrstat.stopflag;
+    bool isStopped()
+    {
+        synchronized(hstopmtx)
+            return sdrstat.stopflag != 0;
+    }
+
     
-    while (!stop) {
+    while (!isStopped()) {
         /* acquisition */
         if (!sdr.flagacq) {
             /* memory allocation */
@@ -161,7 +167,7 @@ void sdrthread(size_t index)
             acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft*sdr.acq.nfreq);
             
             /* fft correlation */
-            buffloc=sdracquisition(sdr, acqpower, cnt, buffloc);
+            buffloc = sdracquisition(sdr, acqpower, cnt, buffloc);
             
             /* plot aquisition result */
             if (sdr.flagacq && sdrini.pltacq) {
@@ -225,9 +231,9 @@ void sdrthread(size_t index)
         }
         sdr.trk.buffloc = buffloc;
 
-        /* check the exit flag */
-        synchronized(hstopmtx)
-            stop = sdrstat.stopflag;
+        ///* check the exit flag */
+        //synchronized(hstopmtx)
+        //    stop = sdrstat.stopflag;
     }
     /* plot termination */
     quitpltstruct(&pltacq,&plttrk);

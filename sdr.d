@@ -272,8 +272,8 @@ struct sdrini_t
 
 struct sdrstat_t
 {
-    int stopflag;
-    int specflag;
+    bool stopflag;
+    bool specflag;
     byte *buff;
     byte *buff1;
     byte *buff2;
@@ -439,7 +439,6 @@ struct sdrplt_t
     Pid processId;
     Pipe pipe;
     File fp;
-    //HWND hw;
     int nx;
     int ny;
     double *x;
