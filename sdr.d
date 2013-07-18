@@ -1,4 +1,4 @@
-//##$ dmd -m64 -release -inline sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw
+//##$ dmd -m64 -release -inline -unittest sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw
 
 /* Converted to D from sdr.h by htod */
 module sdr;
@@ -99,17 +99,6 @@ pragma(lib, "libnslstereo.a");
 pragma(lib, "libusb.lib");
 //C     #include "lib/usb/lusb0_usb.h"
 //import lusb0_usb;
-
-/* original printf function */
-//C     #if defined(GUI)
-//C     #define SDRPRINTF(...) do { 	char str[1024]; 	sprintf(str,__VA_ARGS__);  	maindlg^form=static_cast<maindlg^>(hform.Target); 	String^ strstr = gcnew String(str); 	form->mprintf(strstr); } while (0)
-//C     #else
-//C     #define SDRPRINTF(...) printf(__VA_ARGS__)
-//C     #endif
-
-//C     #ifdef __cplusplus
-//C     extern "C" {
-//C     #endif
 
 /* constants -----------------------------------------------------------------*/
 //C     #define ROUND(x)  ((int)floor((x)+0.5))     /* round function */
@@ -375,48 +364,12 @@ const LENLEXRSP = LENLEXRS - LENLEXRSK;
 const LENLEXERR = LENLEXRSP / 2;
 const LENLEXRCV = 8 + LENLEXMSG - LENLEXRSP;
 
-/* type definition -----------------------------------------------------------*/
-//C     typedef fftwf_complex cpx_t; /* complex type for fft */
-//alias fftwf_complex cpx_t;
 alias Complex!float cpx_t;
 alias size_t SOCKET;
 
 const SOMAXCONN = 5;
 
-/* sdr initialization struct */
-//C     typedef struct {
-//C     	int fend;            /* front end type */
-//C     	double f_sf[2];      /* sampling frequency (Hz) */
-//C     	double f_if[2];      /* intermediate frequency (Hz) */
-//C     	int dtype[2];        /* data type (DTYPEI/DTYPEIQ) */
-//C     	FILE *fp1;           /* IF1 file pointer */
-//C     	FILE *fp2;           /* IF2 file pointer */
-//C     	char file1[1024];    /* IF1 file path */
-//C     	char file2[1024];    /* IF2 file path */
-//C     	int useif1;          /* IF1 flag */
-//C     	int useif2;          /* IF2 flag */
-//C     	int confini;         /* front end configuration flag */
-//C     	int nch;             /* number of sdr channels */
-//C     	int nchL1;           /* number of L1 channels */
-//C     	int nchL2;           /* number of L2 channels */
-//C     	int nchL5;           /* number of L5 channels */
-//C     	int nchL6;           /* number of L6 channels */
-//C     	int sat[MAXSAT];     /* PRN of channels */
-//C     	int sys[MAXSAT];     /* satellite system type of channels (SYS_*) */
-//C     	int ctype[MAXSAT];   /* code type of channels (CTYPE_* )*/
-//C     	int ftype[MAXSAT];   /* front end type of channels (FTYPE1/FTYPE2) */
-//C     	int pltacq;          /* plot acquisition flag */
-//C     	int plttrk;          /* plot tracking flag */
-//C     	int outms;           /* output interval (ms) */
-//C     	int rinex;           /* rinex output flag */
-//C     	int rtcm;            /* rtcm output flag */
-//C     	char rinexpath[1024];/* rinex output path */
-//C     	int rtcmport;        /* rtcm TCP/IP port */
-//C     	int lexport;         /* LEX TCP/IP port */
-//C     	int pltspec;         /* plot spectrum flag */
-//C     	int buffsize;        /* data buffer size */
-//C     	int fendbuffsize;    /* front end data buffer size */
-//C     } sdrini_t;
+
 struct _N183
 {
     int fend;
@@ -453,36 +406,19 @@ struct _N183
 }
 alias _N183 sdrini_t;
 
-/* sdr current state struct */
-//C     typedef struct {
-//C     	int stopflag;        /* stop flag */
-//C     	int specflag;        /* spectrum flag */
-//C     	unsigned char *buff; /* IF data buffer */	
-//C     	unsigned char *buff1;/* IF data buffer (for file input) */	
-//C     	unsigned char *buff2;/* IF data buffer (for file input) */
-//C     	ulong buffloccnt; /* current buffer location */
-//C     } sdrstat_t;
+
 struct _N184
 {
     int stopflag;
     int specflag;
-    ubyte *buff;
-    ubyte *buff1;
-    ubyte *buff2;
+    byte *buff;
+    byte *buff1;
+    byte *buff2;
     ulong buffloccnt;
 }
 alias _N184 sdrstat_t;
 
-/* sdr observation struct */
-//C     typedef struct {
-//C     	int sat;             /* PRN */
-//C     	double tow;          /* time of week (s) */
-//C     	int week;            /* week number */
-//C     	double P;            /* pseudo range (m) */
-//C     	double L;            /* carrier phase (cycle) */
-//C     	double D;            /* doppler frequency (Hz) */
-//C     	double S;            /* SNR (dB-Hz) */
-//C     } sdrobs_t;
+
 struct _N185
 {
     int sat;
@@ -495,22 +431,7 @@ struct _N185
 }
 alias _N185 sdrobs_t;
 
-/* sdr acquisition struct */
-//C     typedef struct {
-//C     	int intg;            /* number of integration */
-//C     	double hband;        /* half band of search frequency (Hz) */
-//C     	double step;         /* frequency search step (Hz) */
-//C     	int nfreq;           /* number of search frequency */
-//C     	double *freq;        /* search frequency (Hz) */
-//C     	int acqcodei;        /* acquired code phase */
-//C     	double acqfreq;      /* acquired frequency (Hz) */
-//C     	double acqfreqf;     /* acquired frequency (fine search) (Hz) */
-//C     	int lenf;            /* number of integration (fine search) */
-//C     	int nfft;            /* number of FFT points */
-//C     	int nfftf;           /* number of FFT points (fine search) */
-//C     	double cn0;          /* signal C/N0 */ 
-//C     	double peakr;        /* first/second peak ratio */
-//C     } sdracq_t;
+
 struct _N186
 {
     int intg;
@@ -529,24 +450,7 @@ struct _N186
 }
 alias _N186 sdracq_t;
 
-/* sdr tracking parameter struct */
-//C     typedef struct {
-//C     	double cspace;       /* correlation space (chip) */
-//C     	int cspaces;         /* correlation space (sample) */
-//C     	int *corrp;          /* correlation points (sample) */
-//C     	double *corrx;       /* correlation points (for plotting) */
-//C     	int ne;              /* early correlation point */
-//C     	int nl;              /* late correlation point */
-//C     	double pllb;         /* noise bandwidth of PLL (Hz) */
-//C     	double dllb;         /* noise bandwidth of DLL (Hz) */
-//C     	double fllb;         /* noise bandwidth of FLL (Hz) */
-//C     	double dt;           /* loop interval (s) */
-//C     	double dllw2;        /* DLL coefficient */
-//C     	double dllaw;        /* DLL coefficient */
-//C     	double pllw2;        /* PLL coefficient */
-//C     	double pllaw;        /* PLL coefficient */
-//C     	double fllw;         /* FLL coefficient */
-//C     } sdrtrkprm_t;
+
 struct _N187
 {
     double cspace = 0;
@@ -567,43 +471,7 @@ struct _N187
 }
 alias _N187 sdrtrkprm_t;
 
-/* sdr tracking struct */
-//C     typedef struct {
-//C     	double codefreq;     /* code frequency (Hz) */
-//C     	double carrfreq;     /* carrier frequency (Hz) */
-//C     	double remcode;      /* remained code phase (chip) */
-//C     	double remcarr;      /* remained carrier phase (rad) */
-//C     	double oldremcode;   /* previous remained code phase (chip) */
-//C     	double oldremcarr;   /* previous remained carrier phase (chip) */
-//C     	double codeNco;      /* code NCO */
-//C     	double codeErr;      /* code tracking error */
-//C     	double carrNco;      /* carrier NCO */
-//C     	double carrErr;      /* carrier tracking error */
-//C     	ulong buffloc;    /* current buffer location */
-//C     	double tow[OBSINTERPN]; /* time of week (s) */
-//C     	ulong codei[OBSINTERPN]; /* code phase (sample) */
-//C     	ulong codeisum[OBSINTERPN]; /* code phase (SNR smoothing interval) (sample) */
-//C     	ulong cntout[OBSINTERPN]; /* loop counter */
-//C     	double remcodeout[OBSINTERPN]; /* remained code phase (chip)*/
-//C     	double L[OBSINTERPN];/* carrier phase (cycle) */
-//C     	double D[OBSINTERPN];/* doppler frequency (Hz) */
-//C     	double S[OBSINTERPN];/* signal to noise ratio (dB-Hz) */
-//C     	double *I;           /* correlation (in-phase) */
-//C     	double *Q;           /* correlation (quadrature-phase) */
-//C     	double *oldI;        /* previous correlation (in-phase) */
-//C     	double *oldQ;        /* previous correlation (quadrature-phase) */
-//C     	double *sumI;        /* integrated correlation (in-phase) */
-//C     	double *sumQ;        /* integrated correlation (quadrature-phase) */
-//C     	double *oldsumI;     /* previous integrated correlation (in-phase) */
-//C     	double *oldsumQ;     /* previous integrated correlation (quadrature-phase) */
-//C     	double Isum;         /* integrated correlation for SNR computation (in-phase) */
-//C     	int ncorrp;          /* number of correlation points */
-//C     	int loopms;          /* loop filter interval (ms) */
-//C     	int flagpolarityadd; /* polarity (half cycle ambiguity) add flag */
-//C     	int flagremcarradd;  /* remained carrier phase add flag */
-//C     	sdrtrkprm_t prm1;    /* tracking parameter struct */
-//C     	sdrtrkprm_t prm2;    /* tracking parameter struct */
-//C     } sdrtrk_t;
+
 struct _N188
 {
     double codefreq = 0;
@@ -643,32 +511,7 @@ struct _N188
 }
 alias _N188 sdrtrk_t;
 
-/* sdr navigation struct */
-//C     typedef struct {
-//C     	FILE *fpnav;         /* for navigation bit logging */
-//C     	int ctype;           /* code type */
-//C     	int rate;            /* navigation data rate (ms) */
-//C     	int flen;            /* frame length (bits) */
-//C     	int addflen;         /* additional frame bits (bits) */
-//C     	int addplen;         /* additional bits for parity check (bits) */
-//C     	int *prebits;        /* preamble bits */
-//C     	int prelen;          /* preamble bits length (bits) */
-//C     	int bit;             /* current navigation bit */
-//C     	double bitIP;        /* current navigation bit (IP data) */
-//C     	int *fbits;          /* frame bits */
-//C     	int *fbitsdec;       /* decoded frame bits */
-//C     	int *bitsync;        /* frame bits synchronization count */
-//C     	int bitind;          /* frame bits synchronization index */
-//C     	int bitth;           /* frame bits synchronization threshold */
-//C     	ulong firstsf;    /* first subframe location (sample) */
-//C     	ulong firstsfcnt; /* first subframe count */
-//C     	double firstsftow;   /* tow of first subframe */
-//C     	int polarity;        /* bit polarity */
-//C     	void *fec;           /* FEC (fec.h)  */
-//C     	int swnavsync;       /* switch of frame synchronization (last bit) */
-//C     	int swnavreset;      /* switch of frame synchronization (first bit) */
-//C     	eph_t eph;           /* ephemeris struct (defined in rtklib.h) */
-//C     } sdrnav_t;
+
 struct _N189
 {
     File fpnav;
@@ -697,40 +540,7 @@ struct _N189
 }
 alias _N189 sdrnav_t;
 
-/* sdr channel struct */
-//C     typedef struct {
-//C     	HANDLE hsdr;         /* thread handle */
-//C     	int no;              /* channel number */
-//C     	int sat;             /* satellite number */
-//C     	int sys;             /* satellite system */
-//C     	int prn;             /* PRN */
-//C     	char satstr[5];      /* PRN string */
-//C     	int ctype;           /* code type */
-//C     	int dtype;           /* data type */
-//C     	int ftype;           /* front end type */
-//C     	double f_sf;         /* sampling rate (Hz) */
-//C     	double f_if;         /* intermediate frequency (Hz) */
-//C     	short *code;         /* original code */
-//C     	short *lcode;        /* resampled code */
-//C     	cpx_t *xcode;        /* resampled code in frequency domain */
-//C     	int clen;            /* code length */
-//C     	double crate;        /* code chip rate (Hz) */
-//C     	double ctime;        /* code period (s) */
-//C     	double ti;           /* sampling interval (s) */
-//C     	double ci;           /* chip interval (s) */
-//C     	int nsamp;           /* number of samples in one code (doppler=0Hz) */
-//C     	int nsampchip;       /* number of samples in one code chip (doppler=0Hz) */
-//C     	int currnsamp;       /* current number of sampling per one code */
-//C     	sdracq_t acq;        /* acquisition struct */
-//C     	sdrtrk_t trk;        /* tracking struct */
-//C     	sdrnav_t nav;        /* navigation struct */
-//C     	int flagacq;         /* acquisition flag */
-//C     	int flagtrk;         /* tracking flag */
-//C     	int flagnavsync;     /* navigation frame synchronization flag */
-//C     	int flagnavpre;      /* preamble found flag */
-//C     	int flagfirstsf;     /* first subframe found flag */
-//C     	int flagnavdec;      /* navigation data decoded flag */
-//C     } sdrch_t;
+
 struct _N190
 {
     Tid hsdr;
@@ -767,26 +577,7 @@ struct _N190
 }
 alias _N190 sdrch_t;
 
-/* sdr plotting struct */
-//C     typedef struct {
-//C     	FILE *fp;            /* file pointer (gnuplot pipe) */
-//C     	HWND hw;             /* window handle */
-//C     	int nx;              /* length of x data */
-//C     	int ny;              /* length of y data */
-//C     	double *x;           /* x data */
-//C     	double *y;           /* y data */
-//C     	double *z;           /* z data */
-//C     	int type;            /* plotting type (PLT_X/PLT_XY/PLT_SURFZ) */
-//C     	int skip;            /* skip data (0: plotting all data) */
-//C     	int flagabs;         /* y axis data absolute flag (y=abs(y)) */
-//C     	double scale;        /* y axis data scale (y=scale*y) */
-//C     	int plth;            /* plot window height */
-//C     	int pltw;            /* plot window width */
-//C     	int pltmh;           /* plot window margin height */
-//C     	int pltmw;           /* plot window margin width */
-//C     	int pltno;           /* number of figure */
-//C     	double pltms;        /* plot interval (ms) */
-//C     } sdrplt_t;
+
 struct _N191
 {
     Pid processId;
@@ -811,13 +602,7 @@ struct _N191
 }
 alias _N191 sdrplt_t;
 
-/* sdr socket struct */
-//C     typedef struct {
-//C     	HANDLE hsoc;         /* socket handle */
-//C     	int port;            /* port number */
-//C     	SOCKET s_soc,c_soc;  /* server/client socket */
-//C     	int flag;            /* connection flag */
-//C     } sdrsoc_t;
+
 struct _N192
 {
     Tid hsoc;
@@ -828,16 +613,7 @@ struct _N192
 }
 alias _N192 sdrsoc_t;
 
-/* sdr output struct */
-//C     typedef struct {
-//C     	int nsat;            /* number of satellite */
-//C     	obsd_t *obsd;        /* observation struct (defined in rtklib.h) */
-//C     	eph_t *eph;          /* ephemeris struct (defined in rtklib.h) */
-//C     	rnxopt_t opt;        /* rinex option struct (defined in rtklib.h) */
-//C     	sdrsoc_t soc;        /* sdr socket struct */
-//C     	char rinexobs[1024]; /* rinex observation file name */
-//C     	char rinexnav[1024]; /* rinex navigation file name */
-//C     } sdrout_t;
+
 struct _N193
 {
     int nsat;
@@ -850,16 +626,7 @@ struct _N193
 }
 alias _N193 sdrout_t;
 
-/* sdr spectrum struct */
-//C     typedef struct {
-//C     	int dtype;           /* data type (DTYPEI/DTYPEIQ) */
-//C     	int ftype;           /* front end type */
-//C     	int nsamp;           /* number of samples in one code */
-//C     	double f_sf;         /* sampling frequency (Hz) */
-//C     	sdrplt_t histI;      /* plot struct for histogram */
-//C     	sdrplt_t histQ;      /* plot struct for histogram */
-//C     	sdrplt_t pspec;      /* plot struct for spectrum analysis */            
-//C     } sdrspec_t;
+
 struct _N194
 {
     int dtype;
@@ -872,283 +639,6 @@ struct _N194
 }
 alias _N194 sdrspec_t;
 
-/+
-/* sdrmain.c -----------------------------------------------------------------*/
-//C     #ifdef GUI
-//C     extern GCHandle hform;
-//C     extern void initsdrgui(maindlg^ form, sdrini_t* sdrinigui);
-//C     extern void startsdr(void *arg);
-//C     #else
-//C     extern void startsdr(void);
-void  startsdr();
-//C     #endif
-//C     extern void quitsdr(sdrini_t *ini, int stop);
-void  quitsdr(sdrini_t *ini, int stop);
-//C     extern void sdrthread(void *arg);
-void  sdrthread(void *arg);
-//C     extern void syncthread(void * arg);
-void  syncthread(void *arg);
-//C     extern void keythread(void *arg);
-void  keythread(void *arg);
-+/
-/+
-/* sdracq.c ------------------------------------------------------------------*/
-//C     extern ulong sdraccuisition(sdrch_t *sdr, double *power);
-ulong  sdraccuisition(sdrch_t *sdr, double *power);
-//C     extern int checkacquisition(double *P, sdrch_t *sdr);
-int  checkacquisition(double *P, sdrch_t *sdr);
-//C     extern void pcorrelator(const char *data, int dtype, double ti, int n, double *freq, int nfreq, double crate, int m, cpx_t* codex, double *P);
-void  pcorrelator(char *data, int dtype, double ti, int n, double *freq, int nfreq, double crate, int m, cpx_t *codex, double *P);
-//C     extern double carrfsearch(const char *data, int dtype, double ti, double crate, int n, int m, int clen, short* code);
-double  carrfsearch(char *data, int dtype, double ti, double crate, int n, int m, int clen, short *code);
-+/
-/+
-/* sdrtrk.c ------------------------------------------------------------------*/
-//C     extern ulong sdrtracking(sdrch_t *sdr, ulong buffloc, ulong cnt);
-ulong  sdrtracking(sdrch_t *sdr, ulong buffloc, ulong cnt);
-//C     extern void correlator(const char *data, int dtype, double ti, int n, double freq, double phi0, double crate, double coff, int* s, int ns, double *I, double *Q, double *remc, double *remp, short* codein, int coden);
-void  correlator(char *data, int dtype, double ti, int n, double freq, double phi0, double crate, double coff, int *s, int ns, double *I, double *Q, double *remc, double *remp, short *codein, int coden);
-//C     extern void cumsumcorr(double *I, double *Q, sdrtrk_t *trk, int flag1, int flag2);
-void  cumsumcorr(double *I, double *Q, sdrtrk_t *trk, int flag1, int flag2);
-//C     extern void pll(sdrch_t *sdr, sdrtrkprm_t *prm);
-void  pll(sdrch_t *sdr, sdrtrkprm_t *prm);
-//C     extern void dll(sdrch_t *sdr, sdrtrkprm_t *prm);
-void  dll(sdrch_t *sdr, sdrtrkprm_t *prm);
-//C     extern void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int flag);
-void  setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int flag);
-+/
-/+
-/* sdrinit.c -----------------------------------------------------------------*/
-//C     extern int readinifile(sdrini_t *ini);
-int  readinifile(sdrini_t *ini);
-//C     extern int chk_initvalue(sdrini_t *ini);
-int  chk_initvalue(sdrini_t *ini);
-//C     extern void openhandles(void);
-void  openhandles();
-//C     extern void closehandles(void);
-void  closehandles();
-//C     extern int initpltstruct(sdrplt_t *acq, sdrplt_t *trk,sdrch_t *sdr);
-int  initpltstruct(sdrplt_t *acq, sdrplt_t *trk, sdrch_t *sdr);
-//C     extern void quitpltstruct(sdrplt_t *acq, sdrplt_t *trk);
-void  quitpltstruct(sdrplt_t *acq, sdrplt_t *trk);
-//C     extern int initacqstruct(int sys, int ctype, sdracq_t *acq);
-int  initacqstruct(int sys, int ctype, sdracq_t *acq);
-//C     extern int inittrkprmstruct(sdrtrkprm_t *prm, int sw);
-int  inittrkprmstruct(sdrtrkprm_t *prm, int sw);
-//C     extern int inittrkstruct(int sys, int ctype, sdrtrk_t *trk);
-int  inittrkstruct(int sys, int ctype, sdrtrk_t *trk);
-//C     extern int initnavstruct(int sys, int ctype, sdrnav_t *nav);
-int  initnavstruct(int sys, int ctype, sdrnav_t *nav);
-//C     extern int initsdrch(int chno, int sys, int prn, int ctype, int dtype, int ftype, double f_sf, double f_if, sdrch_t *sdr);
-int  initsdrch(int chno, int sys, int prn, int ctype, int dtype, int ftype, double f_sf, double f_if, sdrch_t *sdr);
-//C     extern void freesdrch(sdrch_t *sdr);
-void  freesdrch(sdrch_t *sdr);
-+/
-/+
-/* sdrcmn.c ------------------------------------------------------------------*/
-//C     extern void gettimeofday_init();
-//void  gettimeofday_init(...);
-//C     extern int gettimeofday(struct timeval *tv, void *tz_unused);
-//int  gettimeofday(timeval *tv, void *tz_unused);
-//C     extern void tic(void);
-void  tic();
-//C     extern void toc(void);
-void  toc();
-//C     extern void settimeout(struct timespec *timeout, int waitms);
-//void  settimeout(timespec *timeout, int waitms);
-//C     extern double log2(double n);
-double  log2(double n);
-//C     extern int calcfftnum(double x, int next);
-int  calcfftnum(double x, int next);
-//C     extern int calcfftnumreso(double reso, double ti);
-int  calcfftnumreso(double reso, double ti);
-//C     extern void *sdrmalloc(size_t size);
-void * sdrmalloc(size_t size);
-//C     extern void sdrfree(void *p);
-void  sdrfree(void *p);
-//C     extern cpx_t *cpxmalloc(int n);
-cpx_t * cpxmalloc(int n);
-//C     extern void cpxfree(cpx_t *cpx);
-void  cpxfree(cpx_t *cpx);
-//C     extern void cpxfft(cpx_t *cpx, int n);
-void  cpxfft(cpx_t *cpx, int n);
-//C     extern void cpxifft(cpx_t *cpx, int n);
-void  cpxifft(cpx_t *cpx, int n);
-//C     extern void cpxcpx(const short *I, const short *Q, double scale, int n, cpx_t *cpx);
-void  cpxcpx(short *I, short *Q, double scale, int n, cpx_t *cpx);
-//C     extern void cpxcpxf(const float *I, const float *Q, double scale, int n, cpx_t *cpx);
-void  cpxcpxf(float *I, float *Q, double scale, int n, cpx_t *cpx);
-//C     extern void cpxconv(cpx_t *cpxa, cpx_t *cpxb, int m, int n, int flagsum, double *conv);
-void  cpxconv(cpx_t *cpxa, cpx_t *cpxb, int m, int n, int flagsum, double *conv);
-//C     extern void cpxpspec(cpx_t *cpx, int n, int flagsum, double *pspec);
-void  cpxpspec(cpx_t *cpx, int n, int flagsum, double *pspec);
-//C     extern void dot_21(const short *a1, const short *a2, const short *b, int n, double *d1, double *d2);
-void  dot_21(short *a1, short *a2, short *b, int n, double *d1, double *d2);
-//C     extern void dot_22(const short *a1, const short *a2, const short *b1, const short *b2, int n, double *d1, double *d2);
-void  dot_22(short *a1, short *a2, short *b1, short *b2, int n, double *d1, double *d2);
-//C     extern void dot_23(const short *a1, const short *a2, const short *b1, const short *b2, const short *b3, int n, double *d1, double *d2);
-void  dot_23(short *a1, short *a2, short *b1, short *b2, short *b3, int n, double *d1, double *d2);
-//C     extern double mixcarr(const char *data, int dtype, double ti, int n, double freq, double phi0, short *I, short *Q);
-double  mixcarr(char *data, int dtype, double ti, int n, double freq, double phi0, short *I, short *Q);
-//C     extern void mulvcs(const char *data1, const short *data2, int n, short *out_);
-void  mulvcs(char *data1, short *data2, int n, short *out_);
-//C     extern void sumvf(const float *data1, const float *data2, int n, float *out_);
-void  sumvf(float *data1, float *data2, int n, float *out_);
-//C     extern void sumvd(const double *data1, const double *data2, int n, double *out_);
-void  sumvd(double *data1, double *data2, int n, double *out_);
-//C     extern int maxvi(const int *data, int n, int exinds, int exinde, int *ind);
-int  maxvi(int *data, int n, int exinds, int exinde, int *ind);
-//C     extern float maxvf(const float *data, int n, int exinds, int exinde, int *ind);
-float  maxvf(float *data, int n, int exinds, int exinde, int *ind);
-//C     extern double maxvd(const double *data, int n, int exinds, int exinde, int *ind);
-double  maxvd(double *data, int n, int exinds, int exinde, int *ind);
-//C     extern double meanvd(const double *data, int n, int exinds, int exinde);
-double  meanvd(double *data, int n, int exinds, int exinde);
-//C     extern double interp1(double *x, double *y, int n, double t);
-double  interp1(double *x, double *y, int n, double t);
-//C     extern void uint64todouble(ulong *data, ulong base, int n, double *out_);
-void  uint64todouble(ulong *data, ulong base, int n, double *out_);
-//C     extern void ind2sub(int ind, int nx, int ny, int *subx, int *suby);
-void  ind2sub(int ind, int nx, int ny, int *subx, int *suby);
-//C     extern void shiftright(void *dst, void *src, size_t size, int n);
-void  shiftright(void *dst, void *src, size_t size, int n);
-//C     extern void resdata(const char *data, int dtype, int n, int m, char *rdata);
-void  resdata(char *data, int dtype, int n, int m, char *rdata);
-//C     extern double rescode(const short *code, int len, double coff, int smax, double ci, int n, short *rcode);
-double  rescode(short *code, int len, double coff, int smax, double ci, int n, short *rcode);
-+/
-/+
-/* sdrcode.c -----------------------------------------------------------------*/
-//C     extern short *gencode(int prn, int ctype, int *len, double *crate);
-short * gencode(int prn, int ctype, int *len, double *crate);
-+/
-/+
-/* sdrplot.c -----------------------------------------------------------------*/
-//C     extern int updatepltini(int nx, int ny, int posx, int posy);
-int  updatepltini(int nx, int ny, int posx, int posy);
-//C     extern void setsdrplotprm(sdrplt_t *plt, int type, int nx, int ny, int skip, int abs, double s, int h, int w, int mh, int mw, int no);
-void  setsdrplotprm(sdrplt_t *plt, int type, int nx, int ny, int skip, int abs, double s, int h, int w, int mh, int mw, int no);
-//C     extern int initsdrplot(sdrplt_t *plt);
-int  initsdrplot(sdrplt_t *plt);
-//C     extern void quitsdrplot(sdrplt_t *plt);
-void  quitsdrplot(sdrplt_t *plt);
-//C     extern void setxrange(sdrplt_t *plt, double xmin, double xmax);
-void  setxrange(sdrplt_t *plt, double xmin, double xmax);
-//C     extern void setyrange(sdrplt_t *plt, double ymin, double ymax);
-void  setyrange(sdrplt_t *plt, double ymin, double ymax);
-//C     extern void setlabel(sdrplt_t *plt, char *xlabel, char *ylabel);
-void  setlabel(sdrplt_t *plt, char *xlabel, char *ylabel);
-//C     extern void settitle(sdrplt_t *plt, char *title);
-void  settitle(sdrplt_t *plt, char *title);
-//C     extern void ploty(FILE *fp, double *x, int n, int skip, double scale);
-void  ploty(FILE *fp, double *x, int n, int skip, double scale);
-//C     extern void plotxy(FILE *fp, double *x, double *y, int n, int skip, double scale);
-void  plotxy(FILE *fp, double *x, double *y, int n, int skip, double scale);
-//C     extern void plotsurfz(FILE *fp, double*z, int nx, int ny, int skip, double scale);
-void  plotsurfz(FILE *fp, double *z, int nx, int ny, int skip, double scale);
-//C     extern void plotbox(FILE *fp, double *x, double *y, int n, int skip, double scale);
-void  plotbox(FILE *fp, double *x, double *y, int n, int skip, double scale);
-//C     extern void plotthread(sdrplt_t *plt);
-void  plotthread(sdrplt_t *plt);
-//C     extern void plot(sdrplt_t *plt);
-void  plot(sdrplt_t *plt);
-+/
-/+
-/* sdrnav.c ------------------------------------------------------------------*/
-//C     extern void sdrnavigation(sdrch_t *sdr, ulong buffloc, ulong cnt);
-void  sdrnavigation(sdrch_t *sdr, ulong buffloc, ulong cnt);
-//C     extern void bits2bin(int *bits, int nbits, int nbin, unsigned char *bin);
-void  bits2bin(int *bits, int nbits, int nbin, ubyte *bin);
-//C     extern int nav_decode_frame(const unsigned char *buff, eph_t *eph);
-int  nav_decode_frame(ubyte *buff, eph_t *eph);
-//C     extern int nav_checksync(int biti, double IP, double IPold, sdrnav_t *nav);
-int  nav_checksync(int biti, double IP, double IPold, sdrnav_t *nav);
-//C     extern int nav_checkbit(int biti, double IP, sdrnav_t *nav);
-int  nav_checkbit(int biti, double IP, sdrnav_t *nav);
-//C     extern void nav_decodefec(sdrnav_t *nav);
-void  nav_decodefec(sdrnav_t *nav);
-//C     extern int paritycheck(int *bits);
-int  paritycheck(int *bits);
-//C     extern int nav_paritycheck(sdrnav_t *nav);
-int  nav_paritycheck(sdrnav_t *nav);
-//C     extern int nav_findpreamble(sdrnav_t *nav);
-int  nav_findpreamble(sdrnav_t *nav);
-//C     extern int nav_decodenav(sdrnav_t *nav);
-int  nav_decodenav(sdrnav_t *nav);
-+/
-/+
-/* sdrout.c ------------------------------------------------------------------*/
-//C     extern void createrinexopt(rnxopt_t *opt);
-void  createrinexopt(rnxopt_t *opt);
-//C     extern void sdrobs2obsd(sdrobs_t *sdrobs, int ns, obsd_t *out_);
-void  sdrobs2obsd(sdrobs_t *sdrobs, int ns, obsd_t *out_);
-//C     extern int createrinexobs(char *file, rnxopt_t *opt);
-int  createrinexobs(char *file, rnxopt_t *opt);
-//C     extern int writerinexobs(char *file, rnxopt_t *opt, obsd_t *obsd, int ns);
-int  writerinexobs(char *file, rnxopt_t *opt, obsd_t *obsd, int ns);
-//C     extern int createrinexnav(char *file, rnxopt_t *opt);
-int  createrinexnav(char *file, rnxopt_t *opt);
-//C     extern int writerinexnav(char *file, rnxopt_t *opt, eph_t *eph);
-int  writerinexnav(char *file, rnxopt_t *opt, eph_t *eph);
-//C     extern void tcpsvrstart(sdrsoc_t *soc);
-void  tcpsvrstart(sdrsoc_t *soc);
-//C     extern void tcpsvrclose(sdrsoc_t *soc);
-void  tcpsvrclose(sdrsoc_t *soc);
-//C     extern void sendrtcmnav(eph_t *eph, sdrsoc_t *soc);
-void  sendrtcmnav(eph_t *eph, sdrsoc_t *soc);
-//C     extern void sendrtcmobs(obsd_t *obsd, sdrsoc_t *soc, int nsat);
-void  sendrtcmobs(obsd_t *obsd, sdrsoc_t *soc, int nsat);
-+/
-/+
-/* sdrrcv.c ------------------------------------------------------------------*/
-//C     extern int rcvinit(sdrini_t *ini);
-int  rcvinit(sdrini_t *ini);
-//C     extern int rcvquit(sdrini_t *ini);
-int  rcvquit(sdrini_t *ini);
-//C     extern int rcvgrabstart(sdrini_t *ini);
-int  rcvgrabstart(sdrini_t *ini);
-//C     extern int rcvgrabdata(sdrini_t *ini);
-int  rcvgrabdata(sdrini_t *ini);
-//C     extern int rcvgrabdata_file(sdrini_t *ini);
-int  rcvgrabdata_file(sdrini_t *ini);
-//C     extern int rcvgetbuff(sdrini_t *ini, ulong buffloc, int n, int ftype, int dtype, char *expbuf);
-int  rcvgetbuff(sdrini_t *ini, ulong buffloc, int n, int ftype, int dtype, char *expbuf);
-//C     extern void file_pushtomembuf(void);
-void  file_pushtomembuf();
-//C     extern void file_getbuff(ulong buffloc, int n, int ftype, int dtype, char *expbuf);
-void  file_getbuff(ulong buffloc, int n, int ftype, int dtype, char *expbuf);
-+/
-/+
-/* sdrspec.c -----------------------------------------------------------------*/
-//C     extern void initsdrspecgui(sdrspec_t* sdrspecgui);
-void  initsdrspecgui(sdrspec_t *sdrspecgui);
-//C     extern void specthread(void * arg);
-void  specthread(void *arg);
-//C     extern int initspecpltstruct(sdrspec_t *spec);
-int  initspecpltstruct(sdrspec_t *spec);
-//C     extern void quitspecpltstruct(sdrspec_t *spec);
-void  quitspecpltstruct(sdrspec_t *spec);
-//C     extern void calchistgram(char *data, int dtype, int n, double *xI, double *yI, double *xQ, double *yQ);
-void  calchistgram(char *data, int dtype, int n, double *xI, double *yI, double *xQ, double *yQ);
-//C     extern void hanning(int n, float *win);
-void  hanning(int n, float *win);
-//C     extern int spectrumanalyzer(const char *data, int dtype, int n, double f_sf, int nfft, double *freq, double *pspec);
-int  spectrumanalyzer(char *data, int dtype, int n, double f_sf, int nfft, double *freq, double *pspec);
-+/
-/* sdrlex.c ------------------------------------------------------------------*/
-//C     #ifdef QZSLEX
-//C     extern void lexthread(void *arg);*/
-//C     #endif
-
-/* sdrsaif.c */
-//C     #ifdef QZSSAIF
-//C     extern void sdrthread_qzssaif(void *arg);*/
-//C     #endif
-
-//C     #ifdef __cplusplus
-//C     }
-//C     #endif
-//C     #endif /* SDR_H */
 
 extern(C):
 
@@ -1164,50 +654,7 @@ alias CreateEvent = CreateEventW;
 BOOL CloseHandle(
   HANDLE hObject   // オブジェクトのハンドル
 );
-/+
-BOOL QueryPerformanceCounter(
-  LARGE_INTEGER *lpPerformanceCount   // カウンタの値
-);
 
-BOOL QueryPerformanceFrequency(
-  LARGE_INTEGER *lpFrequency   // 現在の周波数
-);
-+/
-/+
-extern(Windows) DWORD GetPrivateProfileStringW(
-  const(char)* lpAppName,        // セクション名
-  const(char)* lpKeyName,        // キー名
-  const(char)* lpDefault,        // 既定の文字列
-  char* lpReturnedString,  // 情報が格納されるバッファ
-  DWORD nSize,              // 情報バッファのサイズ
-  const(char)* lpFileName        // .ini ファイルの名前
-);
-
-alias GetPrivateProfileString = GetPrivateProfileStringW;
-+/
-/+
-DWORD GetFileAttributesW(
-  LPCTSTR lpFileName   // ファイルまたはディレクトリの名前
-);
-
-alias GetFileAttributes = GetFileAttributesW;
-+/
-/+
-size_t _beginthread( 
-   void function(void*) start_address,
-   uint stack_size,
-   void *arglist 
-);
-
-size_t _beginthreadex( 
-   void *security,
-   uint stack_size,
-   void function(void*) start_address,
-   void *arglist,
-   uint initflag,
-   uint *thrdaddr 
-);
-+/
 extern(C) BOOL SetEvent(
   HANDLE hEvent   // イベントオブジェクトのハンドル
 );
@@ -1250,9 +697,6 @@ immutable CSIDL_COMMON_STARTUP          =  0x0018;        // All Users\Startup
 immutable CSIDL_COMMON_DESKTOPDIRECTORY =  0x0019;        // All Users\Desktop
 immutable CSIDL_APPDATA                 =  0x001a;        // <user name>\Application Data
 immutable CSIDL_PRINTHOOD               =  0x001b;        // <user name>\PrintHood
-
-//int _pclose(FILE * _File);
-//FILE* _popen(const(char)* _Command, const(char)* _Mode);
 
 extern(D):
 
