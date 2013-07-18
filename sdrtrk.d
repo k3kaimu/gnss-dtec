@@ -78,7 +78,7 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
 * return : none
 * notes  : see above for data
 *------------------------------------------------------------------------------*/
-void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, int dtype, double ti, int n, double freq, double phi0, 
+void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, 
                        double crate, double coff, int* s, int ns, double *I, double *Q,
                        double *remc, double *remp, short* codein, int coden)
 {

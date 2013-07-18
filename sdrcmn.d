@@ -580,14 +580,14 @@ void resdata(const char *data, int dtype, int n, int m, char *rdata)
     double index=0.0;
     int ind;
     
-    if (dtype==DTYPEIQ) { /* complex */
+    if (dtype == DType.IQ) { /* complex */
         for (p=rdata;p<rdata+m;p+=2,index+=n*2) {
             ind=cast(int)(index/m)*2;
             p[0]=data[ind  ];
             p[1]=data[ind+1];
         }
     }
-    if (dtype==DTYPEI) { /* real */
+    if (dtype == DType.I) { /* real */
         for (p=rdata;p<rdata+m;p++,index+=n) {
             ind=cast(int)(index/m);
             p[0]=data[ind];
@@ -639,7 +639,7 @@ double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code
 *          short  *I,*Q     O   carrier mixed data I, Q component
 * return : double               phase remainder
 *------------------------------------------------------------------------------*/
-double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, int dtype, double ti, int n, double freq, double phi0, short *I, short *Q)
+double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, short *I, short *Q)
 {
     traceln("called");
 
@@ -660,14 +660,14 @@ double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] dat
     phi=phi0*CDIV/DPI;
     ps=freq*CDIV*ti; /* phase step */
 
-    if (dtype==DTYPEIQ) { /* complex */
+    if (dtype==DType.IQ) { /* complex */
         for (p=data.ptr;p<data.ptr+n*2;p+=2,I++,Q++,phi+=ps) {
             index=(cast(int)phi)&CMASK;
             *I=cast(short)(cost[index]*p[0]);
             *Q=cast(short)(cost[index]*p[1]);
         }
     }
-    if (dtype==DTYPEI) { /* real */
+    if (dtype==DType.I) { /* real */
         for (p=data.ptr;p<data.ptr+n;p++,I++,Q++,phi+=ps) {
             index=(cast(int)phi)&CMASK;
             *I=cast(short)(cost[index]*p[0]);

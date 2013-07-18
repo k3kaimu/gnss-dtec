@@ -332,13 +332,13 @@ void nav_decodefec(string file = __FILE__, size_t line = __LINE__)(sdrnav_t *nav
     int dec2[NAVFLEN_L1SAIF/2];
 
     /* L1CA */
-    if (nav.ctype==CTYPE_L1CA) {
+    if (nav.ctype==CType.L1CA) {
         /* FEC is not used */
         memcpy(nav.fbitsdec,nav.fbits,int.sizeof*(nav.flen+nav.addflen));
     }
     /* L1SAIF */
     /* !!!! this doesn't work well :-( */
-    if (nav.ctype==CTYPE_L1SAIF) {
+    if (nav.ctype==CType.L1SAIF) {
         /* 1/2 convolutional code */
         init_viterbi27_port(nav.fec,0);
         for (i=0;i<NAVFLEN_L1SAIF+NAVADDFLEN_L1SAIF;i++) enc[i]=(nav.fbits[i]==1)? 0:255;
@@ -399,7 +399,7 @@ int nav_paritycheck(string file = __FILE__, size_t line = __LINE__)(sdrnav_t *na
     memcpy(bits,nav.fbitsdec,int.sizeof*(nav.flen+nav.addplen));
 
     /* L1CA parity check */
-    if (nav.ctype==CTYPE_L1CA) {
+    if (nav.ctype==CType.L1CA) {
         /* chacking all words */
         for (i=0;i<10;i++) {
             /* bit inversion */
@@ -418,7 +418,7 @@ int nav_paritycheck(string file = __FILE__, size_t line = __LINE__)(sdrnav_t *na
     
     /* L1-SBAS/SAIF parity check */
     /* !!!! this doesn't work well :-( */
-    if (nav.ctype==CTYPE_L1SAIF||CTYPE_L1SBAS) {
+    if (nav.ctype==CType.L1SAIF||CType.L1SBAS) {
         bits2bin(&bits[0],226,29,bin.ptr);
         bits2bin(&bits[226],24,3,pbin.ptr);
     
@@ -469,7 +469,7 @@ int nav_decodenav(string file = __FILE__, size_t line = __LINE__)(sdrnav_t *nav)
     ubyte *bin;
     
     /* decoding L1CA navigation data */
-    if (nav.ctype==CTYPE_L1CA) {
+    if (nav.ctype==CType.L1CA) {
         /* bit inversion */
         for (i=0;i<10;i++) {
             if (nav.fbitsdec[i*30+1]==-1) {
@@ -491,7 +491,7 @@ int nav_decodenav(string file = __FILE__, size_t line = __LINE__)(sdrnav_t *nav)
     }
     
     /* decoding L1-SBAS/SAIF navigation data */
-    if (nav.ctype==CTYPE_L1SAIF||CTYPE_L1SBAS) {
+    if (nav.ctype==CType.L1SAIF||CType.L1SBAS) {
 
     }   
     return sfn;

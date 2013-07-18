@@ -83,19 +83,19 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
         switch(tmp)
         {
           case "STEREO":
-            return FEND_STEREO;
+            return Fend.STEREO;
 
           case "FILESTEREO":
-            return FEND_FILESTEREO;
+            return Fend.FILESTEREO;
 
           case "GN3Sv2":
-            return FEND_GN3SV2;
+            return Fend.GN3SV2;
 
           case "GN3Sv3":
-            return FEND_GN3SV3;
+            return Fend.GN3SV3;
 
           case "FILE":
-            return FEND_FILE;
+            return Fend.FILE;
 
           default:
             enforce(0, "error: wrong frontend type: %s".formattedString(tmp));
@@ -103,13 +103,13 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
         assert(0);
     }();
 
-    if (ini.fend == FEND_FILE || ini.fend == FEND_FILESTEREO){
+    if (ini.fend == Fend.FILE || ini.fend == Fend.FILESTEREO){
         ini.file1 = iniFile.readIniValue!string("RCV", "FILE1");
         if(ini.file1.length)
             ini.useif1 = ON;
     }
 
-    if (ini.fend == FEND_FILE) {
+    if (ini.fend == Fend.FILE) {
         ini.file2 = iniFile.readIniValue!string("RCV", "FILE2");
         if(ini.file2.length)
             ini.useif2 = ON;
@@ -117,27 +117,27 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
 
     ini.f_sf[0] = iniFile.readIniValue!double("RCV", "SF1");
     ini.f_if[0] = iniFile.readIniValue!double("RCV", "IF1");
-    ini.dtype[0] = iniFile.readIniValue!int("RCV", "DTYPE1");
+    ini.dtype[0] = iniFile.readIniValue!DType("RCV", "DTYPE1");
     ini.f_sf[1] = iniFile.readIniValue!double("RCV", "SF1");
     ini.f_if[1] = iniFile.readIniValue!double("RCV", "IF1");
-    ini.dtype[1] = iniFile.readIniValue!int("RCV", "DTYPE2");
+    ini.dtype[1] = iniFile.readIniValue!DType("RCV", "DTYPE2");
     ini.confini = iniFile.readIniValue!int("RCV", "CONFINI");
 
     ini.nch = iniFile.readIniValue!int("CHANNEL", "NCH").enforce("error: wrong inifile value NCH=%d".formattedString(ini.nch));
 
     {
-        int[] getChannelSpec(string key)
+        T[] getChannelSpec(T)(string key)
         {
-            int[] tmp;
-            tmp = iniFile.readIniValue!(int[])("CHANNEL", key);
+            T[] tmp;
+            tmp = iniFile.readIniValue!(T[])("CHANNEL", key);
             enforce(tmp.length >= ini.nch);
             return tmp[0 .. ini.nch];
         }
 
-        ini.sat[0 .. ini.nch]   = getChannelSpec("SAT");
-        ini.sys[0 .. ini.nch]   = getChannelSpec("SYS");
-        ini.ctype[0 .. ini.nch] = getChannelSpec("CTYPE");
-        ini.ftype[0 .. ini.nch] = getChannelSpec("FTYPE");
+        ini.sat   = getChannelSpec!int("SAT");
+        ini.sys   = getChannelSpec!int("SYS");
+        ini.ctype = getChannelSpec!CType("CTYPE");
+        ini.ftype = getChannelSpec!FType("FTYPE");
     }
 
     {
@@ -156,9 +156,9 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
     }
 
     foreach(i; 0 .. sdrini.nch){
-        if (sdrini.ctype[i]==CTYPE_L1CA) {
+        if (sdrini.ctype[i] == CType.L1CA) {
             sdrini.nchL1++;
-        }else if (sdrini.ctype[i]==CTYPE_LEXS) {
+        }else if (sdrini.ctype[i] == CType.LEXS) {
             sdrini.nchL6++;
         }else
             enforce(0, "ctype: %n is not supported.".formattedString(sdrini.ctype[i]));
@@ -183,7 +183,7 @@ void checkInitValue(string file = __FILE__, size_t line = __LINE__)(in ref sdrin
     enforce(ini.lexport >= 0 && ini.lexport <= short.max, "error: wrong rtcm port lex:%d".formattedString(ini.lexport));
 
     /* checking filepath */
-    if(ini.fend == FEND_FILE || ini.fend == FEND_FILESTEREO){
+    if(ini.fend == Fend.FILE || ini.fend == Fend.FILESTEREO){
         enforce(!ini.useif1 || exists(ini.file1), "error: file1 doesn't exist: %s".formattedString(ini.file1));
         enforce(!ini.useif2 || exists(ini.file2), "error: file1 or file2 are not selected".formattedString(ini.file2));
         enforce(ini.useif1 || ini.useif2, "error: file1 or file2 are not selected");
@@ -210,8 +210,8 @@ void openhandles()
     hpltmtx = new Mutex();
     hobsmtx = new Mutex();
 
-    /* events */
-    hlexeve=CreateEvent(null,true,false,null);
+    ///* events */
+    //hlexeve=CreateEvent(null,true,false,null);
 }
 /* close mutex and event --------------------------------------------------------
 * close mutex and event handles
@@ -229,7 +229,7 @@ void closehandles()
     //CloseHandle(hobsmtx);  hobsmtx=null;
 
     /* events */
-    CloseHandle(hlexeve);  hlexeve=null;
+    //CloseHandle(hlexeve);  hlexeve=null;
 }
 /* initialization plot struct ---------------------------------------------------
 * set value to plot struct
@@ -243,23 +243,23 @@ int initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq,
     traceln("called");
     /* acquisition */
     if (sdrini.pltacq) {
-        setsdrplotprm(acq,PLT_SURFZ,sdr.acq.nfreq,sdr.acq.nfft,3,OFF,1,PLT_H,PLT_W,PLT_MH,PLT_MW,sdr.no);
+        setsdrplotprm(acq, PlotType.SurfZ, sdr.acq.nfreq, sdr.acq.nfft, 3, OFF, 1, PLT_H, PLT_W, PLT_MH, PLT_MW, sdr.no);
         if (initsdrplot(acq)<0) return -1;
         settitle(acq,sdr.satstr);
         setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
     }
     /* tracking */
     if (sdrini.plttrk) {
-        setsdrplotprm(trk,PLT_XY,1+2*sdr.trk.ncorrp,0,0,ON,0.001,PLT_H,PLT_W,PLT_MH,PLT_MW,sdr.no);
+        setsdrplotprm(trk, PlotType.XY, 1 + 2 * sdr.trk.ncorrp, 0, 0, ON, 0.001, PLT_H, PLT_W, PLT_MH, PLT_MW, sdr.no);
         if(initsdrplot(trk)<0) return -1;
-        settitle(trk,sdr.satstr);
-        setlabel(trk,"Code Offset (sample)","Correlation Output");
-        setyrange(trk,0,8*sdr.trk.loopms);
+        settitle(trk, sdr.satstr);
+        setlabel(trk, "Code Offset (sample)","Correlation Output");
+        setyrange(trk, 0, 8 * sdr.trk.loopms);
     }
-    if (sdrini.fend==FEND_FILE||sdrini.fend==FEND_FILESTEREO)
-        trk.pltms=PLT_MS_FILE;
+    if (sdrini.fend == Fend.FILE||sdrini.fend == Fend.FILESTEREO)
+        trk.pltms = PLT_MS_FILE;
     else
-        trk.pltms=PLT_MS;
+        trk.pltms = PLT_MS;
     return 0;
 }
 /* termination plot struct ------------------------------------------------------
@@ -280,18 +280,18 @@ void quitpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
 /* initialize acquisition struct ------------------------------------------------
 * set value to acquisition struct
 * args   : int sys          I   system type (SYS_GPS...)
-*          int ctype        I   code type (CTYPE_L1CA...)
+*          int ctype        I   code type (CType.L1CA...)
 *          sdracq_t *acq    I/0 acquisition struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, int ctype, sdracq_t *acq)
+int initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdracq_t *acq)
 {
     traceln("called");
-    acq.intg=ACQINTG;
-    acq.hband=ACQHBAND;
-    acq.step=ACQSTEP;
-    acq.nfreq=2*(ACQHBAND/ACQSTEP)+1;
-    acq.lenf=ACQLENF;
+    acq.intg = ACQINTG;
+    acq.hband = ACQHBAND;
+    acq.step = ACQSTEP;
+    acq.nfreq = 2 * (ACQHBAND / ACQSTEP) + 1;
+    acq.lenf = ACQLENF;
 
     return 0;
 }
@@ -356,11 +356,11 @@ int inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(sdrtrkprm_t
 /* initialize tracking struct --------------------------------------------------
 * set value to tracking struct
 * args   : int sys          I   system type (SYS_GPS...)
-*          int ctype        I   code type (CTYPE_L1CA...)
+*          int ctype        I   code type (CType.L1CA...)
 *          sdrtrk_t *trk    I/0 tracking struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, int ctype, sdrtrk_t *trk)
+int inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdrtrk_t *trk)
 {
     traceln("called");
     int ret;
@@ -387,11 +387,11 @@ int inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, int c
     trk.oldsumQ=cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
     scope(failure) free(trk.oldsumQ);
 
-    if (sys==SYS_GPS&&ctype==CTYPE_L1CA)   trk.loopms=LOOP_MS_L1CA;
-    if (sys==SYS_SBS&&ctype==CTYPE_L1SBAS) trk.loopms=LOOP_MS_SBAS;
-    if (sys==SYS_QZS&&ctype==CTYPE_L1CA)   trk.loopms=LOOP_MS_L1CA;
-    if (sys==SYS_QZS&&ctype==CTYPE_LEXS)   trk.loopms=LOOP_MS_LEX;
-    if (sys==SYS_QZS&&ctype==CTYPE_L1SAIF) trk.loopms=LOOP_MS_SBAS;
+    if (sys==SYS_GPS&&ctype==CType.L1CA)   trk.loopms=LOOP_MS_L1CA;
+    if (sys==SYS_SBS&&ctype==CType.L1SBAS) trk.loopms=LOOP_MS_SBAS;
+    if (sys==SYS_QZS&&ctype==CType.L1CA)   trk.loopms=LOOP_MS_L1CA;
+    if (sys==SYS_QZS&&ctype==CType.LEXS)   trk.loopms=LOOP_MS_LEX;
+    if (sys==SYS_QZS&&ctype==CType.L1SAIF) trk.loopms=LOOP_MS_SBAS;
 
     //if (!trk.I||!trk.Q||!trk.oldI||!trk.oldQ||!trk.sumI||!trk.sumQ||!trk.oldsumI||!trk.oldsumQ) {
     //    SDRPRINTF("error: inittrkstruct memory allocation\n");
@@ -402,11 +402,11 @@ int inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, int c
 /* initialize navigation struct -------------------------------------------------
 * set value to navigation struct
 * args   : int sys          I   system type (SYS_GPS...)
-*          int ctype        I   code type (CTYPE_L1CA...)
+*          int ctype        I   code type (CType.L1CA...)
 *          sdrnav_t *nav    I/0 navigation struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, int ctype, sdrnav_t *nav)
+int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdrnav_t *nav)
 {
     traceln("called");
     int[32] preamble = 0;
@@ -416,7 +416,7 @@ int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, int c
 
     nav.ctype=ctype;
     nav.bitth=NAVBITTH;        
-    if (ctype==CTYPE_L1CA) {
+    if (ctype==CType.L1CA) {
         nav.rate=NAVRATE_L1CA;
         nav.flen=NAVFLEN_L1CA;
         nav.addflen=NAVADDFLEN_L1CA;
@@ -424,7 +424,7 @@ int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, int c
         nav.prelen=NAVPRELEN_L1CA;
         memcpy(preamble.ptr,pre_l1ca.ptr,int.sizeof*nav.prelen);
     }
-    if (ctype==CTYPE_L1SAIF) {
+    if (ctype==CType.L1SAIF) {
         nav.rate=NAVRATE_L1SAIF;
         nav.flen=NAVFLEN_L1SAIF;
         nav.addflen=NAVADDFLEN_L1SAIF;
@@ -458,7 +458,7 @@ int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, int c
 * args   : int    chno      I   channel number (1,2,...)
 *          int    sys       I   system type (SYS_***)
 *          int    prn       I   PRN number
-*          int    ctype     I   code type (CTYPE_***)
+*          int    ctype     I   code type (CType.***)
 *          int    dtype     I   data type (DTYPEI or DTYPEIQ)
 *          int    ftype     I   front end type (FTYPE1 or FTYPE2)
 *          double f_sf      I   sampling frequency (Hz)
@@ -466,7 +466,7 @@ int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, int c
 *          sdrch_t *sdr     I/0 sdr channel struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int initsdrch(string file = __FILE__, size_t line = __LINE__)(int chno, int sys, int prn, int ctype, int dtype, int ftype, double f_sf, double f_if, sdrch_t *sdr)
+int initsdrch(string file = __FILE__, size_t line = __LINE__)(int chno, int sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if, sdrch_t *sdr)
 {
     traceln("called");
     int i;

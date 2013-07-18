@@ -1366,35 +1366,35 @@ body{
 *          double *crate    O   code chip rate (chip/s)
 * return : short*               pointer of generated code
 *------------------------------------------------------------------------------*/
-short *gencode(int prn, int ctype, int *len, double *crate)
+short *gencode(int prn, CType ctype, int *len, double *crate)
 {
     switch (ctype) {
-        case CTYPE_L1CA  : return gencode_L1CA(prn,len,crate);
-        case CTYPE_L1CP  : return gencode_L1CP(prn,len,crate);
-        case CTYPE_L1CD  : return gencode_L1CD(prn,len,crate);
-        case CTYPE_L1CO  : return gencode_L1CO(prn,len,crate);
-        case CTYPE_L2CM  : return gencode_L2CM(prn,len,crate);
-        case CTYPE_L2CL  : return gencode_L2CL(prn,len,crate);
-        case CTYPE_L5I   : return gencode_L5I(prn,len,crate);
-        case CTYPE_L5Q   : return gencode_L5Q(prn,len,crate);
-        case CTYPE_E1B   : return gencode_E1B(prn,len,crate);
-        case CTYPE_E1C   : return gencode_E1C(prn,len,crate);
-        case CTYPE_E5AI  : return gencode_E5AI(prn,len,crate);
-        case CTYPE_E5AQ  : return gencode_E5AQ(prn,len,crate);
-        case CTYPE_E5BI  : return gencode_E5BI(prn,len,crate);
-        case CTYPE_E5BQ  : return gencode_E5BQ(prn,len,crate);
-        case CTYPE_E1CO  : return gencode_E1CO(len,crate);
-        case CTYPE_E5AIO : return gencode_E5AIO(len,crate);
-        case CTYPE_E5AQO : return gencode_E5AQO(prn,len,crate);
-        case CTYPE_E5BIO : return gencode_E5BIO(len,crate);
-        case CTYPE_E5BQO : return gencode_E5BQO(prn,len,crate);
-        case CTYPE_G1    : return gencode_G1G2(len,crate);
-        case CTYPE_G2    : return gencode_G1G2(len,crate);
-        case CTYPE_B1    : return gencode_B1(prn,len,crate);
-        case CTYPE_LEXS  : return gencode_LEXS(prn,len,crate);
-        case CTYPE_LEXL  : return gencode_LEXL(prn,len,crate);
-        case CTYPE_L1SAIF: return gencode_L1CA(prn,len,crate);
-        case CTYPE_L1SBAS: return gencode_L1CA(prn,len,crate);
+        case CType.L1CA  : return gencode_L1CA(prn,len,crate);
+        case CType.L1CP  : return gencode_L1CP(prn,len,crate);
+        case CType.L1CD  : return gencode_L1CD(prn,len,crate);
+        case CType.L1CO  : return gencode_L1CO(prn,len,crate);
+        case CType.L2CM  : return gencode_L2CM(prn,len,crate);
+        case CType.L2CL  : return gencode_L2CL(prn,len,crate);
+        case CType.L5I   : return gencode_L5I(prn,len,crate);
+        case CType.L5Q   : return gencode_L5Q(prn,len,crate);
+        case CType.E1B   : return gencode_E1B(prn,len,crate);
+        case CType.E1C   : return gencode_E1C(prn,len,crate);
+        case CType.E5AI  : return gencode_E5AI(prn,len,crate);
+        case CType.E5AQ  : return gencode_E5AQ(prn,len,crate);
+        case CType.E5BI  : return gencode_E5BI(prn,len,crate);
+        case CType.E5BQ  : return gencode_E5BQ(prn,len,crate);
+        case CType.E1CO  : return gencode_E1CO(len,crate);
+        case CType.E5AIO : return gencode_E5AIO(len,crate);
+        case CType.E5AQO : return gencode_E5AQO(prn,len,crate);
+        case CType.E5BIO : return gencode_E5BIO(len,crate);
+        case CType.E5BQO : return gencode_E5BQO(prn,len,crate);
+        case CType.G1    : return gencode_G1G2(len,crate);
+        case CType.G2    : return gencode_G1G2(len,crate);
+        case CType.B1    : return gencode_B1(prn,len,crate);
+        case CType.LEXS  : return gencode_LEXS(prn,len,crate);
+        case CType.LEXL  : return gencode_LEXL(prn,len,crate);
+        case CType.L1SAIF: return gencode_L1CA(prn,len,crate);
+        case CType.L1SBAS: return gencode_L1CA(prn,len,crate);
         default         : 
             SDRPRINTF("error: gencode prn:%d ctype:%d",prn,ctype);
             return null;

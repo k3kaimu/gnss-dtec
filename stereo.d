@@ -255,29 +255,25 @@ void stereo_exp_init()
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void stereo_exp(const(byte)* buf, size_t n, int dtype, byte[] expbuf)
+void stereo_exp(const(byte)* buf, size_t n, DType dtype, byte[] expbuf)
 {
     int i;
     if (!lut1[0]||!lut2[0][0]) stereo_exp_init();
 
-    switch (dtype) {
+    final switch (dtype) {
         /* front end 1 (max2769) */
-        case DTYPEI:
+        case DType.I:
             for (i=0;i<n;i++) {
                 expbuf[i]=lut1[buf[i]];
             }
             break;
         /* front end 2 (max2112) */
-        case DTYPEIQ:
+        case DType.IQ:
             for (i=0;i<n;i++) {
                 expbuf[2*i  ]=lut2[buf[i]][0];
                 expbuf[2*i+1]=lut2[buf[i]][1];
             }
             break;
-
-        default:
-            enforce(0);
-            assert(0);
     }
 }
 /* get current data buffer (stereo) ---------------------------------------------
@@ -288,7 +284,7 @@ void stereo_exp(const(byte)* buf, size_t n, int dtype, byte[] expbuf)
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void stereo_getbuff(ulong buffloc, size_t n, int dtype, byte[] expbuf)
+void stereo_getbuff(ulong buffloc, size_t n, DType dtype, byte[] expbuf)
 {
     ulong membuffloc=buffloc%(MEMBUFLEN*STEREO_DATABUFF_SIZE);
     int nout = cast(int)((membuffloc+n)-(MEMBUFLEN*STEREO_DATABUFF_SIZE));

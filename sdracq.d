@@ -132,7 +132,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double *P,
 /* parallel correlator ----------------------------------------------------------
 * fft based parallel correlator
 * args   : char   *data     I   sampling data vector (n x 1 or 2n x 1)
-*          int    dtype     I   sampling data type (1:real,2:complex)
+*          DType  dtype     I   sampling data type (1:real,2:complex)
 *          double ti        I   sampling interval (s)
 *          int    n         I   number of samples
 *          double *freq     I   doppler search frequencies (Hz)
@@ -144,7 +144,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double *P,
 * return : none
 * notes  : P=abs(ifft(conj(fft(code)).*fft(data.*e^(2*pi*freq*t*i)))).^2
 *------------------------------------------------------------------------------*/
-void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, int dtype, double ti, int n, double *freq,
+void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double *freq,
                         int nfreq, double crate, int m, cpx_t* codex, double *P)
 {
     traceln("called");
@@ -206,7 +206,7 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] d
 *          short  *code     I   long code
 * return : double               doppler frequency (Hz)
 *------------------------------------------------------------------------------*/
-double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, int dtype, double ti, double crate, int n, int m, int clen, short* code)
+double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, double crate, int n, int m, int clen, short* code)
 {
     traceln("called");
     byte[] rdataI, rdataQ;
@@ -242,7 +242,7 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
     rdataQ[0 .. m] = 0;
 
     rescode(code,clen,0,0,ti*crate,n,rcode);        
-    if (dtype==DTYPEI) {  /* real */
+    if (dtype==DType.I) {  /* real */
         //for (i=0;i<n;i++) rdataI[i]=data[i];
         rdataI[0 .. n] = data[0 .. n];
 
@@ -252,7 +252,7 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
         cpxcpx(rcodeI,null,1.0,m,datax);
 
     }
-    if (dtype==DTYPEIQ) {  /* complex */
+    if (dtype==DType.IQ) {  /* complex */
         for (i=0;i<n;i++) {
             rdataI[i]=data[2*i];
             rdataQ[i]=data[2*i+1];
@@ -268,9 +268,9 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
     /* compute power spectrum */
     cpxpspec(datax,m,0,fftxc);
 
-    if (dtype==DTYPEI)
+    if (dtype==DType.I)
         maxvd(fftxc,m/2,-1,-1,&ind);
-    if (dtype==DTYPEIQ)
+    if (dtype==DType.IQ)
         maxvd(&fftxc[m/2],m/2,-1,-1,&ind);
 
     /*sdrfree(rdataI); sdrfree(rdataQ); */sdrfree(rcode); sdrfree(rcodeI);
@@ -278,7 +278,7 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
     delete rdataI;
     delete rdataQ;
     
-    if (dtype==DTYPEI)
+    if (dtype==DType.I)
         return cast(double)ind/(m*ti);
     else
         return (m/2.0-ind)/(m*ti);

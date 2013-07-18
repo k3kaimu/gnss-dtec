@@ -27,7 +27,7 @@ __gshared Mutex hreadmtx;
 __gshared Mutex hfftmtx;
 __gshared Mutex hpltmtx;
 __gshared Mutex hobsmtx;
-__gshared HANDLE hlexeve;
+//__gshared HANDLE hlexeve;
 /* sdr structs */
 __gshared sdrini_t sdrini;
 __gshared sdrstat_t sdrstat;
@@ -87,7 +87,7 @@ void startsdr()
     hsyncthread = spawn(&syncthread);
     hkeythread = spawn(&keythread);
     foreach(i; 0 .. sdrini.nch){
-        if (sdrch[i].sys == SYS_GPS && sdrch[i].ctype == CTYPE_L1CA)
+        if (sdrch[i].sys == SYS_GPS && sdrch[i].ctype == CType.L1CA)
             sdrch[i].hsdr = spawn(&sdrthread, i);
         else
             assert(0);
@@ -230,10 +230,10 @@ void sdrthread(size_t index)
                 writefln("carrier phase:%s, bufflocnow:%s, buffloc:%s", sdr.trk.L[0], bufflocnow, buffloc);
 
                 /* LEX thread */
-                if ((cntsw%LEXMS)==0) {
-                    if (sdrini.nchL6 != 0 && sdr.sys == SYS_QZS && loopcnt > 2)
-                        SetEvent(hlexeve);
-                }
+                //if ((cntsw%LEXMS)==0) {
+                //    if (sdrini.nchL6 != 0 && sdr.sys == SYS_QZS && loopcnt > 2)
+                //        SetEvent(hlexeve);
+                //}
 
                 if (sdr.no==1&&cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
                 cnt++;

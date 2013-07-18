@@ -43,14 +43,14 @@ void specthread()
     double* xI, yI, xQ, yQ, freq, pspec;
     
     /* check front end */
-    if (sdrini.fend==FEND_FILE) {
-        if (spec.ftype==FTYPE2&&(!sdrini.useif2)) {
+    if (sdrini.fend==Fend.FILE) {
+        if (spec.ftype==FType.Type2&&(!sdrini.useif2)) {
             SDRPRINTF("error: spectrum analysis FE2 doesn't exist\n");
             return;
         }
     }
-    if (sdrini.fend==FEND_GN3SV2||sdrini.fend==FEND_GN3SV3) {
-        if (spec.ftype==FTYPE2) {
+    if (sdrini.fend==Fend.GN3SV2||sdrini.fend==Fend.GN3SV3) {
+        if (spec.ftype==FType.Type2) {
             SDRPRINTF("error: spectrum analysis FE2 doesn't exist\n");
             return;
         }
@@ -108,12 +108,12 @@ void specthread()
         calchistgram(data,spec.dtype,SPEC_LEN*spec.nsamp,xI,yI,xQ,yQ);
 
         /* histogram plot */
-        if (spec.dtype==DTYPEI||spec.dtype==DTYPEIQ) {
+        if (spec.dtype==DType.I||spec.dtype==DType.IQ) {
             spec.histI.x=xI;
             spec.histI.y=yI;
             plot(&spec.histI);
         }
-        if (spec.dtype==DTYPEIQ) {
+        if (spec.dtype==DType.IQ) {
             spec.histQ.x=xQ;
             spec.histQ.y=yQ;
             plot(&spec.histQ);
@@ -154,24 +154,24 @@ int initspecpltstruct(sdrspec_t *spec)
     int n;
 
     /* histogram (real sample) */
-    setsdrplotprm(&spec.histI,PLT_BOX,SPEC_BITN,0,0,OFF,1,SPEC_PLT_H,SPEC_PLT_W,SPEC_PLT_MH,SPEC_PLT_MW,1);
+    setsdrplotprm(&spec.histI,PlotType.Box,SPEC_BITN,0,0,OFF,1,SPEC_PLT_H,SPEC_PLT_W,SPEC_PLT_MH,SPEC_PLT_MW,1);
     if (initsdrplot(&spec.histI)<0) return -1;
     settitle(&spec.histI, "Real Sample Histogram");
     setlabel(&spec.histI, "Sample Value", "Number of Samples");
     setyrange(&spec.histI,0,70000);
 
     /* histogram (imaginary sample) */
-    setsdrplotprm(&spec.histQ,PLT_BOX,SPEC_BITN,0,0,OFF,1,SPEC_PLT_H,SPEC_PLT_W,SPEC_PLT_MH,SPEC_PLT_MW,2);
+    setsdrplotprm(&spec.histQ,PlotType.Box,SPEC_BITN,0,0,OFF,1,SPEC_PLT_H,SPEC_PLT_W,SPEC_PLT_MH,SPEC_PLT_MW,2);
     if (initsdrplot(&spec.histQ)<0) return -1;
     settitle(&spec.histQ,"Imaginary Sample Histogram");
     setlabel(&spec.histQ,"Sample Value","Number of Samples");
     setyrange(&spec.histQ,0,70000);
 
-    if (spec.dtype==DTYPEIQ) n=3;
+    if (spec.dtype==DType.IQ) n=3;
     else n=2;
 
     /* power spectrum analysis */
-    setsdrplotprm(&spec.pspec,PLT_XY,SPEC_NFFT*spec.dtype,0,20,OFF,1,SPEC_PLT_H,SPEC_PLT_W,SPEC_PLT_MH,SPEC_PLT_MW,n);
+    setsdrplotprm(&spec.pspec,PlotType.XY,SPEC_NFFT*spec.dtype,0,20,OFF,1,SPEC_PLT_H,SPEC_PLT_W,SPEC_PLT_MH,SPEC_PLT_MW,n);
     if (initsdrplot(&spec.pspec)<0) return -1;
     settitle(&spec.pspec,"Power Spectrum Analysis");
     setlabel(&spec.pspec,"Frequency (MHz)","Power Spectrum (dB)");
@@ -212,11 +212,11 @@ void calchistgram(byte[] data, int dtype, int n, double *xI, double *yI, double 
     memset(yQ,0,double.sizeof * SPEC_BITN);
 
     /* count samples */
-    if (dtype==DTYPEI) {
+    if (dtype==DType.I) {
         for (i=0;i<n;i++) {
             yI[(data[i]+7)/2]++;
         }
-    }else if(dtype==DTYPEIQ) {
+    }else if(dtype==DType.IQ) {
         for (i=0;i<n;i++) {
             yI[(data[2*i  ]+7)/2]++;
         }
@@ -284,18 +284,18 @@ int spectrumanalyzer(const(byte)[] data, int dtype, int n, double f_sf, int nfft
         memset(xxQ,0,float.sizeof*nfft*2);
         
         for (j=zuz,k=0;j<nwin+zuz;j++,k++) {
-            if (dtype==DTYPEI) {
+            if (dtype==DType.I) {
                 xxI[k]=win[k]*x[j];
             }
-            if (dtype==DTYPEIQ) {
+            if (dtype==DType.IQ) {
                 xxI[k]=win[k]*x[2*j];
                 xxQ[k]=win[k]*x[2*j+1];
             }
         }
         /* to complex domain */
-        if (dtype==DTYPEI)
+        if (dtype==DType.I)
             cpxcpxf(xxI,null,1.0,nfft*2,xxx);
-        if (dtype==DTYPEIQ)
+        if (dtype==DType.IQ)
             cpxcpxf(xxI,xxQ,1.0,nfft*2,xxx);
         
         /* compute power spectrum */
@@ -303,12 +303,12 @@ int spectrumanalyzer(const(byte)[] data, int dtype, int n, double f_sf, int nfft
     }
 
     /* frequency and power */
-    if (dtype==DTYPEI) {
+    if (dtype==DType.I) {
         for (i=0;i<nfft;i++) {
             pspec[i]=10*log10(s[i]); /* dB */
             freq[i]=(i*(f_sf/2)/(nfft))/1e6; /* MHz */
         }
-    } else if (dtype==DTYPEIQ) {
+    } else if (dtype==DType.IQ) {
         for (i=0;i<dtype*nfft;i++) {
             if (i<nfft)
                 pspec[i]=10*log10(s[ nfft+i]); /* dB */
