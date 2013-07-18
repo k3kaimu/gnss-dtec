@@ -7,6 +7,8 @@ import sdr;
 import sdrcmn;
 
 import std.math;
+import std.stdio;
+
 
 /* sdr acquisition function -----------------------------------------------------
 * sdr acquisition function called from sdr channel thread
@@ -14,28 +16,22 @@ import std.math;
 *          double *power    O   normalized correlation power vector (2D array)
 * return : uint64_t             current buffer location
 *------------------------------------------------------------------------------*/
-ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, double *power, ref ulong cnt)
+ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, double* power, ref ulong cnt)
 {
-    import std.stdio;
     traceln("called");
-    //int i;
-    //char* data, datal;
     ulong buffloc,bufflocnow;
 
     /* memory allocation */
-    //data = cast(char*)sdrmalloc(char.sizeof * sdr.nsamp * sdr.dtype);
-    //datal = cast(char*)sdrmalloc(char.sizeof * sdr.nsamp * sdr.acq.lenf * sdr.dtype);
     byte[] data = new byte[sdr.nsamp * sdr.dtype];
     byte[] datal = new byte[sdr.nsamp * sdr.dtype * sdr.acq.lenf];
 
     /* current buffer location */
-    //WaitForSingleObject(hreadmtx,INFINITE);
     writefln("##### acq cnt: %s", cnt);
     if(cnt == 0)    // 最初のサイクルでは、先頭から読み込むようにする
     {
         ++cnt;
         immutable needBuffCnt = sdr.acq.intg * sdr.nsamp / sdrini.fendbuffsize;
-        size_t now = 0;
+        size_t now;
         do{
             synchronized(hreadmtx)
                 now = sdrstat.buffloccnt;
@@ -47,17 +43,14 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
         synchronized(hreadmtx)
             buffloc = sdrini.fendbuffsize * sdrstat.buffloccnt - sdr.acq.intg * sdr.nsamp;
     }
-    //ReleaseMutex(hreadmtx);
 
     /* acquisition integration */
     foreach(i; 0 .. sdr.acq.intg){
 
         /* wait until buffer is not full */
         do {
-            //WaitForSingleObject(hreadmtx,INFINITE);
             synchronized(hreadmtx)
                 bufflocnow = sdrini.fendbuffsize * sdrstat.buffloccnt - sdr.nsamp;
-            //ReleaseMutex(hreadmtx);
         } while (bufflocnow < buffloc);
 
         /* get current 1ms data */
@@ -97,6 +90,8 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
     delete datal;
     return buffloc;
 }
+
+
 /* check acquisition result -----------------------------------------------------
 * check GNSS signal exists or not
 * carrier frequency is computed
@@ -129,6 +124,8 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double *P,
 
     return sdr.acq.peakr>ACQTH;
 }
+
+
 /* parallel correlator ----------------------------------------------------------
 * fft based parallel correlator
 * args   : char   *data     I   sampling data vector (n x 1 or 2n x 1)
@@ -194,6 +191,8 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] d
     sdrfree(dataQ); 
     cpxfree(datax);
 }
+
+
 /* doppler fine search ----------------------------------------------------------
 * doppler frequency search with FFT
 * args   : char   *data     I   sampling data vector (n x 1 or 2n x 1)
