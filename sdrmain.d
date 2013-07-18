@@ -90,35 +90,39 @@ void startsdr()
         sdrch_IniEndIdx = i + 1;
     }
 
-    hsyncthread = spawn(&syncthread);
-    hkeythread = spawn(&keythread);
-    foreach(i; 0 .. sdrini.nch){
-        if (sdrch[i].sys == SYS_GPS && sdrch[i].ctype == CType.L1CA)
-            sdrch[i].hsdr = spawn(&sdrthread, i);
-        else
-            assert(0);
-    }
+    //hsyncthread = spawn(&syncthread);
+    //hkeythread = spawn(&keythread);
+    enforce(sdrini.nch == 1);
+    enforce(sdrch[0].sys == SYS_GPS && sdrch[0].ctype == CType.L1CA);
+    sdrthread(0);
+
+    //foreach(i; 0 .. sdrini.nch){
+    //    if (sdrch[i].sys == SYS_GPS && sdrch[i].ctype == CType.L1CA)
+    //        sdrch[i].hsdr = spawn(&sdrthread, i);
+    //    else
+    //        assert(0);
+    //}
 
     /* start grabber */
-    enforce(rcvgrabstart(&sdrini) >= 0);
+    //enforce(rcvgrabstart(&sdrini) >= 0);
 
-    tracing = false;
+    //tracing = false;
     
-    /* data grabber loop */
-    while (1) {
-        synchronized(hstopmtx)
-            stop = sdrstat.stopflag;
-        if (stop) break;
+    ///* data grabber loop */
+    //while (1) {
+    //    synchronized(hstopmtx)
+    //        stop = sdrstat.stopflag;
+    //    if (stop) break;
 
-        Thread.sleep(dur!"msecs"(100));
-        /* grab data */
-        //enforce(rcvgrabdata(&sdrini) >= 0);
-    }
-    tracing = true;
+    //    Thread.sleep(dur!"msecs"(100));
+    //    /* grab data */
+    //    //enforce(rcvgrabdata(&sdrini) >= 0);
+    //}
+    //tracing = true;
 
-    foreach(e; Thread.getAll)
-        if(e.name.startsWith("sdrchannel"))
-            e.join();
+    //foreach(e; Thread.getAll)
+    //    if(e.name.startsWith("sdrchannel"))
+    //        e.join();
 
     SDRPRINTF("GNSS-SDRLIB is finished!\n");
 }
@@ -244,6 +248,7 @@ void sdrthread(size_t index)
         SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
 }
 
+version(none):
 
 /* synchronization thread -------------------------------------------------------
 * synchronization thread for pseudo range computation  
