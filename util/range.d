@@ -226,3 +226,56 @@ unittest{
     result = stretch(input, 0.0);
     assert(result.empty);
 }
+
+
+/+
+/**
+区間をとります
+*/
+template intervalTake(string boundaries = "[)", pred...)
+{
+  static if(boundaries.length == 1)
+  {
+    auto intervalTake(R, R...)(R range, E subArgs)
+    {
+      static if(boundaries[0] == '[')
+      {
+        while(!range.empty && !naryFun!(pred[0])(range.front, subArgs))
+            range.popFront();
+        return range;
+      }
+      else static if(boundaries[0] == '(')
+      {
+        while(!range.empty && !naryFun!(pred[0])(range.front, subArgs))
+            range.popFront();
+
+        if(!range.empty)
+            range.popFront();
+        
+        return range;
+      }
+      else static if(boundaries[0] == ']')
+      {
+
+      }
+    }
+  }
+  else{
+    auto intervalTake(R, E...)(R range, E subArgs)
+    {
+
+        return IntervalTake(range, subArgs);
+    }
+
+
+    struct IntervalTake(R, E...)
+    {
+
+
+
+      private:
+        R _range;
+        E _subArgs;
+    }
+  }
+}+/
