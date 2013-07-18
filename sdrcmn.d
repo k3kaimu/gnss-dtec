@@ -12,10 +12,68 @@ import std.c.windows.windows;
 import std.numeric;
 import std.datetime;
 import core.bitop;
+import std.traits;
 
 /* global variables -----------------------------------------------------------*/
 __gshared short cost[CDIV];            /* carrier lookup table cos(t) */
 __gshared short sint[CDIV];            /* carrier lookup table sin(t) */
+
+
+/**
+nextが1である場合に、next2Pow(num)はnumより大きく、かつ、最小の2の累乗数を返します。
+
+もし、nextが0であれば、next2Powはnumより小さく、かつ、最大の2の累乗数を返します。
+nextがm > 1の場合には、next2Pow(num, m)は、next2Pow(num) << (m - 1)を返します。
+*/
+size_t nextPow2(T)(T num, size_t next = 1)
+if(isIntegral!T)
+in{
+    assert(num >= 1);
+}
+body{
+    return 1 << (bsr(num.to!size_t()) + next);
+}
+
+///
+unittest{
+    assert(nextPow2(10) == 16);           // デフォルトではnext = 1なので、次の2の累乗数を返す
+    assert(nextPow2(10, 0) == 8);         // next = 0だと、前の2の累乗数を返す
+    assert(nextPow2(10, 2) == 32);        // next = 2なので、next2Pow(10) << 1を返す。
+}
+
+
+/// ditto
+F nextPow2(F)(F num, size_t next = 1)
+if(isFloatingPoint!F)
+in{
+    assert(num >= 1);
+}
+body{
+    int n = void;
+    frexp(num, n);
+    return (cast(F)2.0) ^^ (n + next - 1);
+}
+
+///
+unittest{
+    assert(nextPow2(10.0) == 16.0);
+    assert(nextPow2(10.0, 0) == 8.0);
+    assert(nextPow2(10.0, 2) == 32.0);
+}
+
+
+
+
+/**
+numより小さく、かつ最大の2の累乗を返します。
+
+nextPow2(num, 0)に等価です
+*/
+auto previousPow2(T)(T num)
+{
+    return nextPow2(num, 0);
+}
+
 
 /**
 xよりも小さな2^nを計算します。
@@ -26,11 +84,19 @@ xよりも小さな2^nを計算します。
 *          int    next      I   increment multiplier
 * return : int                  FFT number of points (2^bits samples)
 *------------------------------------------------------------------------------*/
-uint calcfftnum(double x, size_t next = 0)
-{
-    immutable fix = x.to!size_t();
-
-    return 1 << (bsr(fix) + next);
+size_t calcfftnum(T)(T x, size_t next = 0)
+if(isIntegral!T || isFloatingPoint!T)
+in{
+    assert(x >= 1);
+}
+body{
+    static if(isIntegral!T)
+        return nextPow2(x, next);
+    else if(isFloatingPoint!T){
+        int exp = void;
+        frexp(x, exp);
+        return 1 << exp;
+    }
 }
 unittest{
     assert(calcfftnum(10) == 8);
@@ -45,9 +111,10 @@ unittest{
 *          double ti        I   sampling interval (s)
 * return : int                  FFT number of points (2^bits samples)
 *------------------------------------------------------------------------------*/
-uint calcfftnumreso(double reso, double ti)
+size_t calcfftnumreso(A, B)(A reso, B ti)
+if(is(A : real) && is(B : real))
 {
-    return calcfftnum(1/(reso*ti), 0);
+    return calcfftnum(1/(cast(real)reso*ti), 0);
 }
 
 
@@ -79,7 +146,7 @@ void sdrfree(void *p)
 * return : cpx_t*               allocated pointer
 *------------------------------------------------------------------------------*/
 /**/
-cpx_t *cpxmalloc(int n)
+cpx_t *cpxmalloc(size_t n)
 {
     return cast(cpx_t*)GC.malloc(cpx_t.sizeof * n + 32);
 }
@@ -147,7 +214,7 @@ void cpxifft(string file = __FILE__, size_t line = __LINE__)
 *          cpx_t *cpx       O   output complex array
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxcpx(string file = __FILE__, size_t line = __LINE__)(const short *I, const short *Q, double scale, int n, cpx_t *cpx)
+void cpxcpx(string file = __FILE__, size_t line = __LINE__)(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx)
 {
     traceln("called");
     float *p=cast(float *)cpx;
@@ -169,7 +236,7 @@ void cpxcpx(string file = __FILE__, size_t line = __LINE__)(const short *I, cons
 *          cpx_t *cpx       O   output complex array
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxcpxf(string file = __FILE__, size_t line = __LINE__)(const float *I, const float *Q, double scale, int n, cpx_t *cpx)
+void cpxcpxf(string file = __FILE__, size_t line = __LINE__)(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx)
 {
     traceln("called");
     float *p=cast(float *)cpx;
@@ -264,6 +331,8 @@ void dot_21(const short *a1, const short *a2, const short *b, int n,
         d2[0]+=(*p2) * (*q);
     }
 }
+
+
 /* dot products: d1={dot(a1,b1),dot(a1,b2)},d2={dot(a2,b1),dot(a2,b2)} ----------
 * args   : short  *a1       I   input short array
 *          short  *a2       I   input short array
@@ -288,6 +357,8 @@ void dot_22(const short *a1, const short *a2, const short *b1,
         d2[1]+=(*p2)*(*q2);
     }
 }
+
+
 /* dot products: d1={dot(a1,b1),dot(a1,b2),dot(a1,b3)},d2={...} -----------------
 * args   : short  *a1       I   input short array
 *          short  *a2       I   input short array
@@ -348,6 +419,8 @@ void sumvf(const float *data1, const float *data2, int n, float *out_)
     int i;
     for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
 }
+
+
 /* sum double vectors -----------------------------------------------------------
 * sum double vectors: out=data1.+data2
 * args   : double *data1    I   input double array
@@ -650,7 +723,7 @@ double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] dat
     int i,index;
     
     /* initialize local carrier table */
-    if (!cost[0]) { 
+    if (!cost[0]) {
         for (i=0;i<CDIV;i++) {
             cost[i]=cast(short)floor((cos(DPI/CDIV*i)/CSCALE+0.5));
             sint[i]=cast(short)floor((sin(DPI/CDIV*i)/CSCALE+0.5));

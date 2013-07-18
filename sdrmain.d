@@ -39,10 +39,12 @@ __gshared sdrspec_t sdrspec;
 * return : none
 * note : This function is only used in CLI application 
 *------------------------------------------------------------------------------*/
-void main(string[] args)
-{
-    sdrini.readIniFile(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
-    startsdr();
+version(MAIN_IS_SDRMAIN_MAIN){
+    void main(string[] args)
+    {
+        sdrini.readIniFile(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
+        startsdr();
+    }
 }
 
 
@@ -155,7 +157,7 @@ void sdrthread(size_t index)
             /* plot aquisition result */
             if (sdr.flagacq&&sdrini.pltacq) {
                 pltacq.z=acqpower;
-                plot(&pltacq); 
+                plot(&pltacq, "acq_" ~ sdr.satstr ~ "_"); 
             }
         }
         /* tracking */
@@ -190,13 +192,11 @@ void sdrthread(size_t index)
                     }
 
                     /* plot correator output */
-/+
                     if (loopcnt%(cast(int)(plttrk.pltms/sdr.trk.loopms))==0&&sdrini.plttrk&&loopcnt>200) {
                         plttrk.x=sdr.trk.prm2.corrx;
                         memcpy(plttrk.y,sdr.trk.sumI,double.sizeof*(sdr.trk.ncorrp*2+1));
-                        plotthread(&plttrk);
+                        plotthread(&plttrk, "trk_" ~ sdr.satstr ~ "_");
                     }
-+/
                     loopcnt++;
                 }
 

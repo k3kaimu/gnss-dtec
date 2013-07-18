@@ -11,6 +11,7 @@ import std.stdio;
 import std.c.math;
 import std.c.string;
 import std.process;
+import std.datetime;
 
 /* global variables -----------------------------------------------------------*/
 __gshared Thread hpltthread; /* plot thread handle */
@@ -130,7 +131,7 @@ int initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 
         /* pipe open */
         plt.pipe = pipe();
-        plt.processId = spawnProcess(`gnuplot\\gnuplot.exe`, pipe.readEnd);
+        plt.processId = spawnProcess(`gnuplot\gnuplot.exe`, pipe.readEnd);
         plt.fp = plt.pipe.writeEnd;
 
         Sleep(200);
@@ -274,8 +275,9 @@ void plotxy(string file = __FILE__, size_t line = __LINE__)(File fp, double *x, 
     fp.writeln("unset key");
     fp.writeln("plot '-' with p pt 6 ps 2");
 
-    for(i=0;i<n;i+=(skip+1))
+    for(i=0;i<n;i+=(skip+1)){
         fp.writefln("%.3f\t%.3f", x[i], y[i] * scale);
+    }
 
     fp.writeln("e");
     fp.flush();
@@ -377,13 +379,49 @@ void plotgnuplot(void *arg)
 * return : none
 * note : thread version don't waits drawing graphs
 *------------------------------------------------------------------------------*/
-void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
+void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string initial)
 {
+    
     traceln("called");
-    synchronized(hpltmtx){
+    /+synchronized(hpltmtx){
         hpltthread = new Thread(() => plotgnuplot(plt));
         hpltthread.start();
+    }+/
+    PlotObject obj;
+    obj.nx = plt.nx;
+    obj.ny = plt.ny;
+
+    final switch(plt.type){
+        case PlotType.Y: /* 1D plot */
+            obj.y = plt.y[0 .. plt.ny];
+            break;
+
+        case PlotType.XY: /* 2D plot*/
+            obj.x = plt.x[0 .. plt.nx];
+            obj.y = plt.y[0 .. plt.nx];
+            break;
+
+        case PlotType.SurfZ: /* 3D surface plot */
+            obj.z = plt.z[0 .. plt.nx * plt.ny];
+            break;
+
+        case PlotType.Box: /* box plot */
+            obj.x = plt.x[0 .. plt.nx];
+            obj.y = plt.y[0 .. plt.nx];
+            break;
     }
+
+    obj.type = plt.type;
+    obj.skip = plt.skip;
+    obj.flagabs = plt.flagabs;
+    obj.scale = plt.scale;
+    obj.pltno = plt.pltno;
+    obj.pltms = plt.pltms;
+
+    //immutable fileName = `SerializedData\` ~ initial ~ "_" ~ Clock.currTime.toISOExtString() ~ ".dat";
+
+    immutable fileName = `SerializedData\` ~ initial ~ "_" ~ Clock.currTime.toISOString() ~ ".dat";
+    fileName.serializedWrite(obj);
 }
 
 
@@ -393,8 +431,9 @@ void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 * return : none
 * note : function version waits drawing graphs
 *------------------------------------------------------------------------------*/
-void plot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
+void plot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string initial)
 {
     traceln("called");
-    plotgnuplot(plt);
+    /+plotgnuplot(plt);+/
+    plotthread(plt, initial);
 }

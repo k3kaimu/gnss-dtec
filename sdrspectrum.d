@@ -111,12 +111,12 @@ void specthread()
         if (spec.dtype==DType.I||spec.dtype==DType.IQ) {
             spec.histI.x=xI;
             spec.histI.y=yI;
-            plot(&spec.histI);
+            plot(&spec.histI, "histI_");
         }
         if (spec.dtype==DType.IQ) {
             spec.histQ.x=xQ;
             spec.histQ.y=yQ;
-            plot(&spec.histQ);
+            plot(&spec.histQ, "histQ");
         }
 
         /* checking stop flag */
@@ -135,7 +135,7 @@ void specthread()
         /* power spectrum plot */
         spec.pspec.x=freq;
         spec.pspec.y=pspec;
-        plot(&spec.pspec);
+        plot(&spec.pspec, "pspec_");
     }
     
     /* free plot structs */

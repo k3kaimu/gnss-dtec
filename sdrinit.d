@@ -499,7 +499,7 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys
     /* acqisition struct */
     if (initacqstruct(sys,ctype,&sdr.acq)<0) return -1;
     sdr.acq.nfft=sdr.nsamp;//calcfftnum(2*sdr.nsamp,0);
-    sdr.acq.nfftf=calcfftnumreso(ACQFFTFRESO,sdr.ti);
+    sdr.acq.nfftf = calcfftnumreso(ACQFFTFRESO,sdr.ti).to!int();
 
 
     /* memory allocation */

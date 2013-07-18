@@ -196,13 +196,17 @@ unittest{
 
 
 /* octal to binary ------------------------------------------------------------*/
-void oct2bin(string oct, byte[] bin, int skiplast, int flip)
+void oct2bin(string file = __FILE__, size_t line = __LINE__)(string oct, byte[] bin, int skiplast, int flip)
 in{
     assert(bin.length <= oct.length * 3);
 }
 body{
+    traceln("called");
     auto tmp = new byte[oct.length * 3];
-    tmp.put(oct.map!"a - '0'"().toBinaryDigits!false(3).map!"cast(byte)(a ? -1 : 1)"());
+    {
+        auto sink = tmp;
+        sink.put(oct.map!"a - '0'"().toBinaryDigits!false(3).map!"cast(byte)(a ? -1 : 1)"());
+    }
 
     if(skiplast)
         bin[] = tmp[0 .. bin.length];
@@ -230,7 +234,11 @@ in{
 }
 body{
     auto tmp = new short[oct.length * 4];
-    tmp.put(oct.map!"a - '0'"().toBinaryDigits!false(4).map!"cast(short)(a ? -1 : 1)"());
+
+    {
+        auto sink = tmp;
+        sink.put(oct.map!"a - '0'"().toBinaryDigits!false(4).map!"cast(short)(a ? -1 : 1)"());
+    }
 
     if(skiplast)
         bin[] = tmp[0 .. bin.length];
