@@ -6,6 +6,8 @@
 import sdr;
 
 import std.c.string;
+import std.range, std.algorithm, std.traits;
+import core.bitop;
 
 /* code chip length (chip) */
 immutable LEN_L1CA   =     1023        ;/* GPS/QZSS L1C/A */
@@ -31,6 +33,7 @@ immutable LEN_G1G2   =     511         ;/* GLONASS G1/G2 */
 immutable LEN_B1     =     2046        ;/* BeiDou B1 */
 immutable LEN_LEXS   =     10230       ;/* QZSS LEX short */
 immutable LEN_LEXL   =     1048575     ;/* QZSS LEX long */
+
 /* code chip rate (chip/s) */
 immutable CRATE_L1CA =     1.023E6     ;/* GPS/QZSS L1C/A */
 immutable CRATE_L1CP =     1.023E6     ;/* GPS/QZSS L1C Pilot */
@@ -57,70 +60,25 @@ immutable CRATE_LEXS =     2.5575E6    ;/* QZSS LEX short */
 immutable CRATE_LEXL =     2.5575E6    ;/* QZSS LEX long */
 
 /* global variables -----------------------------------------------------------*/
-static char legendre[10223]= 0;
+static char legendre[10223] = 0;
 
-/* flip array direction -------------------------------------------------------*/
-deprecated void fliparrays(short *in_, int n, short *out_)
-{
-    int i;
-    short *tmp;
-    tmp= cast(short*)malloc(n*short.sizeof);
-    if (tmp!=null) {
-        memcpy(tmp,in_,n);
-        for(i=0;i<n;i++) out_[n-i-1]=tmp[i];
-        free(tmp);
-    }
-}
-/* flip array direction -------------------------------------------------------*/
-deprecated void fliparrayc(char *in_, int n, char *out_)
-{
-    int i;
-    char *tmp;
-    tmp = cast(char*)malloc(n);
-    if (tmp!=null) {
-        memcpy(tmp,in_,n);
-        for(i=0;i<n;i++) out_[n-i-1]=tmp[i];
-        free(tmp);
-    }
-}
 
-void fliparray(T)(T[] in_, T[] out_)
+
+/**
+
+*/
+auto toBinaryDigits(bool fromLSB = true, R)(R rng, size_t nDigits)
+if(isInputRange!R && isIntegral!(Unqual!(ElementType!R)))
 in{
-    assert(in_.length == out_.length);
+    assert(nDigits <= (ElementType!R).sizeof * 8);
 }
 body{
-    auto tmp = in_.dup;
-    tmp.reverse;
-    out_[] = tmp[];
-}
+    alias E = Unqual!(ElementType!R);
 
-/* octal to binary ------------------------------------------------------------*/
-void oct2bin(string oct, int nbit, byte* bin, int skiplast, int flip)
-{
-    immutable n = oct.length;
-    int i,j,k;
-    static const byte[3][8] octlist=cast(byte[3][8])[[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]]; /* 0=>1, 1=>-1 */
-    size_t skip = 3 * n - nbit;
-    for (i=j=0;i<n;i++) {
-        for (k=0;k<3;k++) {
-            if (!skiplast&&i==0&&k<skip) continue;
-            if (skiplast&&i==n-1&&k>=3-skip) continue;
-            bin[j]=octlist[oct[i]-'0'][k];
-            j++;
-        }
-    }
-
-    bin[0 .. nbit].reverse;
-}
-
-
-auto octalToBinary(R, bool fromLSB = true)(R rng)
-if(isInputRange!R && isIntegral!(ElementType!R))
-{
     static struct Result(){
         bool front() @property pure nothrow @safe const
         {
-            return _front & _mask;
+            return (_front & _mask) != 0;
         }
 
 
@@ -134,7 +92,8 @@ if(isInputRange!R && isIntegral!(ElementType!R))
         {
           static if(fromLSB)
           {
-            _mask = ((_mask & 0x3) << 1) | (_mask >> 2);
+            immutable _maskmask = (1 << (_nDigs - 1)) - 1;
+            _mask = ((_mask & _maskmask) << 1) | (_mask >> (_nDigs - 1));
 
             if(_mask == 1){
                 _range.popFront();
@@ -146,9 +105,11 @@ if(isInputRange!R && isIntegral!(ElementType!R))
           }
           else
           {
-            _mask = ((_mask & 0x6) >> 1) | ((_mask << 2) & 0x7);
+            immutable _maskmask1 = (1 << _nDigs) - 2;
+            immutable _maskmask2 = (1 << _nDigs) - 1;
+            _mask = ((_mask & _maskmask1) >> 1) | ((_mask << (_nDigs - 1)) & _maskmask2);
 
-            if(_mask == 0x4){
+            if(_mask == (1 << (_nDigs - 1))){
                 _range.popFront();
                 if(!_range.empty)
                     _front = _range.front;
@@ -173,27 +134,28 @@ if(isInputRange!R && isIntegral!(ElementType!R))
         {
           static if(fromLSB)
           {
-            return _range.length * 3 - bsr(_mask);
+            return _range.length * _nDigs - bsr(_mask);
           }
           else
           {
-            return _range.length * 3 - (2 - bsr(_mask));
+            return _range.length * _nDigs - (_nDigs - 1 - bsr(_mask));
           }
         }
 
 
       private:
         R _range;
-        ElementType!R _front;
-        ubyte _mask;
+        E _front;
+        E _mask;
+        size_t _nDigs;
     }
 
     
-    if(!rng.empty){
+    if(!rng.empty && nDigits){
       static if(fromLSB)
-        return Result!()(rng, rng.front, 1);
+        return Result!()(rng, rng.front, 1, nDigits);
       else
-        return Result!()(rng, rng.front, 4);
+        return Result!()(rng, rng.front, 1 << (nDigits - 1), nDigits);
     }else{
         Result!() dst;
         dst._mask = 0;
@@ -201,38 +163,101 @@ if(isInputRange!R && isIntegral!(ElementType!R))
         return dst;
     }
 }
+unittest{
+    auto input = [0, 1, 2, 3, 4, 5, 6, 7];
+
+    auto binDigs = toBinaryDigits(input, 3);
+    assert(equal(binDigs, [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1]));
+
+    binDigs = toBinaryDigits(input, 2);
+    assert(equal(binDigs, [0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1]));
+
+    binDigs = toBinaryDigits(input, 1);
+    assert(equal(binDigs, [0, 1, 0, 1, 0, 1, 0, 1]));
+
+    binDigs = toBinaryDigits(input, 0);
+    assert(binDigs.empty);
+}
+unittest{
+    auto input = [0, 1, 2, 3, 4, 5, 6, 7];
+
+    auto binDigs = toBinaryDigits!false(input, 3);
+    assert(equal(binDigs, [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1]));
+
+    binDigs = toBinaryDigits!false(input, 2);
+    assert(equal(binDigs, [0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1]));
+
+    binDigs = toBinaryDigits!false(input, 1);
+    assert(equal(binDigs, [0, 1, 0, 1, 0, 1, 0, 1]));
+
+    binDigs = toBinaryDigits!false(input, 0);
+    assert(binDigs.empty);
+}
 
 
-/* hexadecimal to decimal ------------------------------------------------------*/
-int hexc2dec(char hex)
-{
-    if ('0'<=hex&&'9'>=hex) return (hex-'0');
-    if ('A'<=hex&&'F'>=hex) return (hex+10-'A');
-    if ('a'<=hex&&'f'>=hex) return (hex+10-'a');
-    return 0;
+/* octal to binary ------------------------------------------------------------*/
+void oct2bin(string oct, byte[] bin, int skiplast, int flip)
+in{
+    assert(bin.length <= oct.length * 3);
 }
-/* hexadecimal to binary -------------------------------------------------------*/
-void hex2bin(string hex, int nbit, short* bin, int skiplast, int flip)
-{
-    immutable n = hex.length;
-    int i,j,k;
-    static const char[4][16] hexlist = cast(char[4][16])[[1,1,1,1],[1,1,1,-1],[1,1,-1,1],[1,1,-1,-1],[1,-1,1,1],[1,-1,1,-1],[1,-1,-1,1],[1,-1,-1,-1], /* 0=>1, 1=>-1 */
-                                      [-1,1,1,1],[-1,1,1,-1],[-1,1,-1,1],[-1,1,-1,-1],[-1,-1,1,1],[-1,-1,1,-1],[-1,-1,-1,1],[-1,-1,-1,-1]];
-    immutable skip = 4 * n - nbit;
-    for (i=j=0;i<n;i++) {
-        for (k=0;k<4;k++) {
-            if (!skiplast&&i==0&&k<skip) continue;
-            if (skiplast&&i==n-1&&k>=4-skip) continue;
-            bin[j]=hexlist[hexc2dec(hex[i])][k];
-            j++;
-        }
-    }
-    //if (flip) fliparrays(bin,nbit,bin);
-    bin[0 .. nbit].reverse;
+body{
+    auto tmp = new byte[oct.length * 3];
+    tmp.put(oct.map!"a - '0'"().toBinaryDigits!false(3).map!"cast(byte)(a ? -1 : 1)"());
+
+    if(skiplast)
+        bin[] = tmp[0 .. bin.length];
+    else
+        bin[] = tmp[$ - bin.length .. $];
+
+    if(flip)
+        bin[].reverse;
 }
+unittest{
+    auto result = new byte[12];
+    oct2bin("7777", result, 0, 0);
+    assert(result, cast(byte[])[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
+
+    result[] = cast(byte)0;
+
+    oct2bin("7776", result[0 .. 11], 0, 0);
+    assert(result, cast(byte[])[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1]);
+}
+
+
+void hex2bin(string oct, short[] bin, int skiplast, int flip)
+in{
+    assert(bin.length <= oct.length * 4);
+}
+body{
+    auto tmp = new short[oct.length * 4];
+    tmp.put(oct.map!"a - '0'"().toBinaryDigits!false(4).map!"cast(short)(a ? -1 : 1)"());
+
+    if(skiplast)
+        bin[] = tmp[0 .. bin.length];
+    else
+        bin[] = tmp[$ - bin.length .. $];
+
+    if(flip)
+        bin[].reverse;
+}
+unittest{
+    auto result = new byte[12];
+    oct2bin("FFFF", result, 0, 0);
+    assert(result, cast(byte[])[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
+
+    result[] = cast(byte)0;
+
+    oct2bin("FFFE", result[0 .. 11], 0, 0);
+    assert(result, cast(byte[])[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1]);
+}
+
+
 /* C/A code (IS-GPS-200) ------------------------------------------------------*/
-static short *gencode_L1CA(int prn, int *len, double *crate)
-{
+short *gencode_L1CA(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGPSSATNO !< prn);
+}
+body{
     static const short[] delay = cast(short[])[ /* G2 delay (chips) */
           5,   6,   7,   8,  17,  18, 139, 140, 141, 251,   /*   1- 10 */
         252, 254, 255, 256, 257, 258, 469, 470, 471, 472,   /*  11- 20 */
@@ -266,32 +291,31 @@ static short *gencode_L1CA(int prn, int *len, double *crate)
         return null;
     }*/
 
-    if(auto code = cast(short*)malloc(short.sizeof*LEN_L1CA))
-    if(prn !< 1 && MAXGPSSATNO !< prn)
-    {
-        for (i=0;i<10;i++) R1[i]=R2[i]=cast(byte)-1;
-        for (i=0;i<LEN_L1CA;i++) {
-            G1[i]=R1[9];
-            G2[i]=R2[9];
-            C1=cast(byte)(R1[2]*R1[9]);
-            C2=cast(byte)(R2[1]*R2[2]*R2[5]*R2[7]*R2[8]*R2[9]);
-            for (j=9;j>0;j--) {
-                R1[j]=R1[j-1];
-                R2[j]=R2[j-1];
-            }
-            R1[0]=C1;
-            R2[0]=C2;
-        }
-        for (i=0,j=LEN_L1CA-delay[prn-1];i<LEN_L1CA;i++,j++) {
-            code[i]=cast(byte)(-G1[i]*G2[j%LEN_L1CA]);
-        }
-        *len=LEN_L1CA;
-        *crate=CRATE_L1CA;
+    //if(auto code = cast(short*)malloc(short.sizeof*LEN_L1CA))
+    short[] code = new short[LEN_L1CA];
 
-        return code;
+    for (i=0;i<10;i++) R1[i]=R2[i]=cast(byte)-1;
+    for (i=0;i<LEN_L1CA;i++) {
+        G1[i]=R1[9];
+        G2[i]=R2[9];
+        C1=cast(byte)(R1[2]*R1[9]);
+        C2=cast(byte)(R2[1]*R2[2]*R2[5]*R2[7]*R2[8]*R2[9]);
+        for (j=9;j>0;j--) {
+            R1[j]=R1[j-1];
+            R2[j]=R2[j-1];
+        }
+        R1[0]=C1;
+        R2[0]=C2;
     }
 
-    return null;
+    for (i=0,j=LEN_L1CA-delay[prn-1];i<LEN_L1CA;i++,j++) {
+        code[i]=cast(byte)(-G1[i]*G2[j%LEN_L1CA]);
+    }
+
+    *len=LEN_L1CA;
+    *crate=CRATE_L1CA;
+
+    return code.ptr;
 }
 /*  Legendre Sequence for L1C Code --------------------------------------------*/
 void gen_legendre_sequence()
@@ -305,8 +329,11 @@ void gen_legendre_sequence()
     legendre[0]=1;
 }
 /* L1CP code (IS-GPS-800) -----------------------------------------------------*/
-static short *gencode_L1CP(int prn, int *len, double *crate)
-{
+short *gencode_L1CP(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGPSSATNO !< prn);
+}
+body{
     static immutable short[] weil = cast(immutable short[])[ /* Weil Index */
        5111, 5109, 5108, 5106, 5103, 5101, 5100, 5098, 5095, 5094,   /*   1- 10 */
        5093, 5091, 5090, 5081, 5080, 5069, 5068, 5054, 5044, 5027,   /*  11- 20 */
@@ -356,17 +383,11 @@ static short *gencode_L1CP(int prn, int *len, double *crate)
     ];
     
     byte weilcode[10223];
-    short *code;
     int i,j,ind,w=weil[prn-1],p=insert[prn-1]-1;
     static immutable byte[7] insertbit = [-1,1,1,-1,1,-1,-1];
     
-    
-    if (prn<1||MAXGPSSATNO<prn) 
-        return null;
 
-    code = cast(short*)malloc(short.sizeof*LEN_L1CP);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_L1CP];
 
     /* Generate Legendre Sequence */
     if (!legendre[0]) gen_legendre_sequence();
@@ -382,11 +403,14 @@ static short *gencode_L1CP(int prn, int *len, double *crate)
     *len=LEN_L1CP;
     *crate=CRATE_L1CP;
 
-    return code;
+    return code.ptr;
 }
 /* L1CD code (IS-GPS-800) -----------------------------------------------------*/
-static short *gencode_L1CD(int prn, int *len, double *crate)
-{
+short *gencode_L1CD(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGPSSATNO !< prn);
+}
+body{
     static immutable short[] weil = cast(immutable short[])[ /* Weil Index */
        5097, 5110, 5079, 4403, 4121, 5043, 5042, 5104, 4940, 5035,   /*   1- 10 */
        4372, 5064, 5084, 5048, 4950, 5019, 5076, 3736, 4993, 5060,   /*  11- 20 */
@@ -434,16 +458,10 @@ static short *gencode_L1CD(int prn, int *len, double *crate)
         235,  512, 1078, 1078,  953, 5647,  669, 1311, 5827,   15    /* 201-210 */
     ];
     byte weilcode[10224];
-    short *code;
     int i,j,ind,w=weil[prn-1],p=insert[prn-1]-1;
     static immutable byte[7] insertbit = [-1,1,1,-1,1,-1,-1];
-        
-    if (prn<1||MAXGPSSATNO<prn)
-        return null;
 
-    code= cast(short*)malloc(short.sizeof*LEN_L1CD);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_L1CD];
 
     /* Generate Legendre Sequence */
     if (!legendre[0]) gen_legendre_sequence();
@@ -459,11 +477,14 @@ static short *gencode_L1CD(int prn, int *len, double *crate)
     *len=LEN_L1CD;
     *crate=CRATE_L1CD;
 
-    return code;
+    return code.ptr;
 }
 /* L1CO code (IS-GPS-800) -----------------------------------------------------*/
-static short *gencode_L1CO(int prn, int *len, double *crate)
-{
+short *gencode_L1CO(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGPSSATNO !< prn);
+}
+body{
     static immutable string[210] s1poly = [ /* S1 Polynomial Coefficient (Octal) */
       "5111","5421","5501","5403","6417","6141","6351","6501","6205","6235",   /*   1- 10 */
       "7751","6623","6733","7627","5667","5051","7665","6325","4365","4745",   /*  11- 20 */
@@ -536,20 +557,14 @@ static short *gencode_L1CO(int prn, int *len, double *crate)
     byte[LEN_L1CA] S1, S2;
     byte[11] T1, T2, R1, R2;
     byte C1, C2;
-    short *code;
     int i,j;
-    
-    if (prn<1||MAXGPSSATNO<prn)
-        return null;
 
-    code = cast(short*)malloc(short.sizeof*LEN_L1CO);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_L1CO];
 
-    oct2bin(s1init[prn-1], 11, R1.ptr, 0, 1); /* S1 Initial Condition */
-    oct2bin(s2init[prn-1], 11, R2.ptr, 0, 1); /* S2 Initial Condition (prn>=64) */
-    oct2bin(s1poly[prn-1], 11, T1.ptr, 1, 1); /* S1 Polynomial Coefficient */
-    oct2bin("5001", 11, T2.ptr, 1, 1);        /* S2 Polynomial Coefficient (Constant) */
+    oct2bin(s1init[prn-1], R1[], 0, 1); /* S1 Initial Condition */
+    oct2bin(s2init[prn-1], R2[], 0, 1); /* S2 Initial Condition (prn>=64) */
+    oct2bin(s1poly[prn-1], T1[], 1, 1); /* S1 Polynomial Coefficient */
+    oct2bin("5001", T2[], 1, 1);        /* S2 Polynomial Coefficient (Constant) */
     T1[10]=T2[10]=-1; /* last tap is always 1 */
     
     for (i=0;i<LEN_L1CO;i++) {
@@ -573,11 +588,14 @@ static short *gencode_L1CO(int prn, int *len, double *crate)
     *len=LEN_L1CO;
     *crate=CRATE_L1CO;
 
-    return code;
+    return code.ptr;
 }
 /* L2CM code (IS-GPS-200) -----------------------------------------------------*/
-static short *gencode_L2CM(int prn, int *len, double *crate)
-{
+short *gencode_L2CM(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && (prn !> 63 || prn !< 159) && MAXGPSSATNO !< prn);
+}
+body{
     static immutable string[210] reg = [ /* Initial Regster (Octal) */
       "742417664","756014035","002747144","066265724","601403471","703232733","124510070","617316361","047541621","733031046",   /*   1- 10 */
       "713512145","024437606","021264003","230655351","001314400","222021506","540264026","205521705","064022144","120161274",   /*  11- 20 */
@@ -603,18 +621,12 @@ static short *gencode_L2CM(int prn, int *len, double *crate)
     ];
     byte[27] R, T;
     byte C;
-    short *code;
     int i,j;
-
-    if (prn<1||(prn>63&&prn<159)||MAXGPSSATNO<prn)
-        return null;
     
-    code=cast(short*)malloc(short.sizeof*LEN_L2CM);
-    if(!code)
-        return null;
+    short[] code =new short[LEN_L2CM];
 
-    oct2bin(reg[prn-1], 27, R.ptr, 0, 0);  /* Initial Regster */
-    oct2bin("112225170", 27, T.ptr, 0, 0); /* Polynomial Coefficient:{3,6,8,11,14,16,18,21,22,23,24} */
+    oct2bin(reg[prn-1], R[], 0, 0);  /* Initial Regster */
+    oct2bin("112225170", T[], 0, 0); /* Polynomial Coefficient:{3,6,8,11,14,16,18,21,22,23,24} */
     
     for (i=0;i<LEN_L2CM;i++) {
         C=R[26];
@@ -628,11 +640,14 @@ static short *gencode_L2CM(int prn, int *len, double *crate)
     *len=LEN_L2CM;
     *crate=CRATE_L2CM;
 
-    return code;
+    return code.ptr;
 }
 /* L2CL code (IS-GPS-200) -----------------------------------------------------*/
-static short *gencode_L2CL(int prn, int *len, double *crate)
-{
+short *gencode_L2CL(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && (prn !> 63 || prn !< 159) && MAXGPSSATNO !< prn);
+}
+body{
     static immutable string[] reg = [ /* Initial Register (Octal) */
       "624145772","506610362","220360016","710406104","001143345","053023326","652521276","206124777","015563374","561522076",   /*   1- 10 */
       "023163525","117776450","606516355","003037343","046515565","671511621","605402220","002576207","525163451","266527765",   /*  11- 20 */
@@ -658,18 +673,12 @@ static short *gencode_L2CL(int prn, int *len, double *crate)
     ];
     byte[27] R, T;
     byte C;
-    short *code;
     int i,j;
-
-    if (prn<1||(prn>63&&prn<159)||MAXGPSSATNO<prn)
-        return null;
     
-    code=cast(short*)malloc(short.sizeof*LEN_L2CL);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_L2CL];
 
-    oct2bin(reg[prn-1], 27, R.ptr, 0, 0);  /* Initial Register */
-    oct2bin("112225170", 27, T.ptr, 0, 0); /* Polynomial Coefficient:{3,6,8,11,14,16,18,21,22,23,24} */
+    oct2bin(reg[prn-1], R[], 0, 0);  /* Initial Register */
+    oct2bin("112225170", T[], 0, 0); /* Polynomial Coefficient:{3,6,8,11,14,16,18,21,22,23,24} */
     
     for (i=0;i<LEN_L2CL;i++) {
         C=R[26];
@@ -683,11 +692,14 @@ static short *gencode_L2CL(int prn, int *len, double *crate)
     *len=LEN_L2CL;
     *crate=CRATE_L2CL;
 
-    return code;
+    return code.ptr;
 }
 /* L5I code (IS-GPS-705) ------------------------------------------------------*/
-static short *gencode_L5I(int prn, int *len, double *crate)
-{
+short *gencode_L5I(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGPSSATNO !< prn);
+}
+body{
     static immutable short[] adv = cast(immutable short[])[ /* XB Code Advance (chips) */
         266,  365,  804, 1138, 1509, 1559, 1756, 2084, 2170, 2303,   /*   1- 10 */
        2527, 2687, 2930, 3471, 3940, 4132, 4332, 4924, 5343, 5443,   /*  11- 20 */
@@ -715,15 +727,9 @@ static short *gencode_L5I(int prn, int *len, double *crate)
     byte CA, CB;
     byte[8190] XA;
     byte[8191] XB;
-    short *code;
     int i,j;
-
-    if (prn<1||MAXGPSSATNO<prn)
-        return null;
     
-    code=cast(short*)malloc(short.sizeof*LEN_L5I);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_L5I];
     
     for (i=0;i<13;i++) RA[i]=RB[i]=-1;
     for (i=0;i<8190;i++) {
@@ -746,11 +752,14 @@ static short *gencode_L5I(int prn, int *len, double *crate)
     *len=LEN_L5I;
     *crate=CRATE_L5I;
 
-    return code;
+    return code.ptr;
 }
 /* L5Q code (IS-GPS-705) ------------------------------------------------------*/
-static short *gencode_L5Q(int prn, int *len, double *crate)
-{
+short *gencode_L5Q(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGPSSATNO !< prn);
+}
+body{
     static immutable short[] adv = cast(immutable(short)[])[ /* XB Code Advance (chips) */
        1701,  323, 5292, 2020, 5429, 7136, 1041, 5947, 4315,  148,   /*   1- 10 */
         535, 1939, 5206, 5910, 3595, 5135, 6082, 6990, 3546, 1523,   /*  11- 20 */
@@ -779,15 +788,9 @@ static short *gencode_L5Q(int prn, int *len, double *crate)
     byte[8190] XA;
     byte[8191] XB;
 
-    short *code;
     int i,j;
 
-    if (prn<1||MAXGPSSATNO<prn)
-        return null;
-
-    code=cast(short*)malloc(short.sizeof*LEN_L5Q);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_L5Q];
     
     for (i=0;i<13;i++) RA[i]=RB[i]=-1;
     for (i=0;i<8190;i++) {
@@ -810,11 +813,14 @@ static short *gencode_L5Q(int prn, int *len, double *crate)
     *len=LEN_L5Q;
     *crate=CRATE_L5Q;
 
-    return code;
+    return code.ptr;
 }
 /* E1B code (Galileo SIS-ICD) -------------------------------------------------*/
-static short *gencode_E1B(int prn, int *len, double *crate)
-{
+short *gencode_E1B(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGALSATNO !< prn);
+}
+body{
     static immutable string[MAXGALSATNO] hex = [ /* HEX Code */
       "F5D710130573541B9DBD4FD9E9B20A0D59D144C54BC7935539D2E75810FB51E494093A0A19DD79C70C5A98E5657AA578097777E86BCC4651CC72F2F974DC766E07AEA3D0B557EF42FF57E6A58E805358CE9257669133B18F80FDBDFB38C5524C7FB1DE079842482990DF58F72321D9201F8979EAB159B2679C9E95AA6D53456C0DF75C2B4316D1E2309216882854253A1FA60CA2C94ECE013E2A8C943341E7D9E5A8464B3AD407E0AE465C3E3DD1BE60A8C3D50F831536401E776BE02A6042FC4A27AF653F0CFC4D4D013F115310788D68CAEAD3ECCCC5330587EB3C22A1459FC8E6FCCE9CDE849A5205E70C6D66D125814D698DD0EEBFEAE52CC65C5C84EEDF207379000E169D318426516AC5D1C31F2E18A65E07AE6E33FDD724B13098B3A444688389EFBBB5EEAB588742BB083B679D42FB26FF77919EAB21DE0389D9997498F967AE05AF0F4C7E177416E18C4D5E6987ED3590690AD127D872F14A8F4903A12329732A9768F82F295BEE391879293E3A97D51435A7F03ED7FBE275F102A83202DC3DE94AF4C712E9D006D182693E9632933E6EB773880CF147B922E74539E4582F79E39723B4C80E42EDCE4C08A8D02221BAE6D17734817D5B531C0D3C1AE723911F3FFF6AAC02E97FEA69E376AF4761E6451CA61FDB2F9187642EFCD63A09AAB680770C1593EEDD4FF4293BFFD6DD2C3367E85B14A654C834B6699421A",
       "96B856A629F581D1344FEF597835FE60434625D077ECF0D95FBE1155EA0431979E5AFF544AF591A332FDAEF98AB1EDD847A73F3AF15AAEE7E9A05C9D82C59EC325EF4CF264B8ADF2A8E8BA459354CB4B415CC50BF239ADBC31B3A9C87B0843CF3B9E6D646BA43F866276B053826F3A2334CC5E2EFB9F8F195B382E75EEA63F58A06B3F82A3B5C77C1800FD9498F803E524435B321210BB84690BED0BBBE16D363B3A90656A73720E27008852FB7DACC8284411B177728D9527C560859084A395A6F11A96AD9DB6B43E00642B000ED12BFD967868EAB1108552CD4FC89FBC408ACE7678C381EC91DD000319124EB5D5EF52C4CAC9AADEE2FA045C16CE492D7F43743CA77924C78696FCBF2F9F7F36D8E623752200C6FCBBD71ABBB6877F3C5D6E6740AB0389458A6B66440858B2D383244E853646FE2714211DEA9E6196252815BB704A20BFE556AC474F8998944E0CABBBE21A6400B87BFDCF937D12B2821D59298AF4AD378F0F42BD8C41693B8D993CF37C8B478F3BB5D33AD2A9FA24AD7B8FA895FDBC04964192F7BA3FF74E0E3A435B5DFE042E3115CACF29624C0645E9C917534A2EBC1F5665E4E1B1BC56208DBCD8A27CCB6474D5D0E20CA4072C960E5ACE41BDA3770DF3B681F2B318F6F8E1CB17C2857350FB6009AED665E13B2780D79217F73FAC7A8A48048DB0FB8A8A5007CDDC9A7B2DA8257C99F1CB605A18204",
@@ -867,25 +873,24 @@ static short *gencode_E1B(int prn, int *len, double *crate)
       "914BDB196CD56E3B7D7D3F1D7A5E4B0A1389578F111449DC2DF643E6E29F688227C3C07033C2A3818342B229F63C229FAC11EE1AB6F0FCE8608E03B46DC983318DF15FD8DBF2970EB342BE2E534BB0455BE58290A48FC60973553E94C4CB53566CE0250D9FCF055936523A8ABFC9287DB9DDEC54710859DF62829D2B6A100358EB64E6219451868D6BBC2AE4DCEA0C0E338B26B748D4A1A34AC16233046CB7D346D0D79A3CCDD4CDCB435B9B3075AEBEDB4C0F18C5DC006F5C208D882308510C75E729D08C779CA99D5A685E78D5628094AD137BAA635B7FC0F492C48A9CDBE63209C8231455012EB3E830B5B2A79ACD8FEA8016243EBC85BF5D6F46A48FE013D2B3B789BC5F743200BCDE03995BB2B6A640CFB099788E380B4E01D75409A8D8B3887DF2B1CD34960091653EEA6C52EDD745B9363BFFF666891D9C8BF511C3C07D38F49DA2892DCCEC81E1722F6EACB3214E3335C93E6141AB94E5EC31BABF8108F6BEBC3E60B1BFE37579B4D5DC8B77A347940CC1F6BFB5B46097B1EEEC4C354159BB3475E05FAB6BDE5672014D9489CB70DDF537F7209BB9EBF1FC6B8B94564AAAD5ADDD83CE6E51EFCF73DC6080D738C4FF1CBC87ED420A0B92FA459AD7BE58789F0A191D149F88173184A22874DF6D39DC1BCD4413648B178ECB03F8358547A68DE7B672BE9BA1FFC8BA392F8A58ED2806155C00F86B7669BEE4220D420",
       "97051FC67ACA30E8AEE73D3A8CF38BB13524D4E0EBD9BE68398C7C16227CABB1D0B0A0ABE7B6384ABA02905BA0C3C7363599D059C7B4C99DB165CD14FA12FA7912449CA7DD5E346D8010C85A757382270DAD15BA3CE36A76EF55F81A1E80BF366B37FE3A88EC722028C25E234E624040450A99CD808F942568AA7133981D72E7F2928894670AD5399482DF1B90E7E64062F830B736C79C30F36281495C76699CD48404673FA334F042F9E0E67DD7F3853BF71ABEAF6A9A5546855E840CE42B224D8F6490C6CE5FC02EBAF4FFC390107058F54CD635D4A7F2878099C1EF495750E6921BE2F39AD808C4210F287319F811A254CEF8CF153FC50AB2F3D694A530949E5F578D075DB96DDCF2BB90ED3DE09D9CA8E08662FD8982741DE1CE0A6B64C3D3D5004B5C04B2B0DFD976A20FACC94D1762D41EE03B40D2CF367612812EF4CC41D1BFE9CEB51AE3A22AF1BE7B85A057D3048D0E73FA0FDAF1119EFD76F0A41BE63128B22D64A5553E9549D411483BBCA1483EF30CF6A6D317AD2C7973EFA6D4C1121F703D2F48FCDA3177AD450D75D2A28D2C244AEA13F0E60AEED8ACBAB444D400DF5E280DB799B2D9A984DF1E2567D39D1DE58EF78CA6B4D8BC172B07DCB02D156CA96EEFAC69E556CFCE0AAB617C7FBB8C34871C1D35E74B7BD307D3F2E424C7A9AD676A1A69E0FE735EA50887A1DFAE6CA2FE4460FC7EF323ADE493020"
     ];
-    short *code;
-    int i;
-    if (prn<1||MAXGALSATNO<prn)
-        return null;
     
-    code=cast(short*)malloc(short.sizeof*LEN_E1B);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_E1B];
+    hex2bin(hex[prn-1], code, 0, 0);
 
-    hex2bin(hex[prn-1], LEN_E1B, code, 0, 0);
-    for (i=0;i<LEN_E1B;i++) code[i]=-code[i];
+    foreach(ref e; code)
+        e = -e;
+
     *len=LEN_E1B;
     *crate=CRATE_E1B;
 
-    return code;
+    return code.ptr;
 }
 /* E1C code (Galileo SIS-ICD) -------------------------------------------------*/
-static short *gencode_E1C(int prn, int *len, double *crate)
-{
+short *gencode_E1C(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGALSATNO !< prn);
+}
+body{
     static immutable string[MAXGALSATNO] hex = [ /* HEX Code */
       "B39340CA1C817D81EF4FAE4E95BF3504A7709089FB48560E9E3EF802180E85EB2194E05902C6C4C52021FEB7EC64FD416BCEBC8E39D64A4B5EE345291911AB8204A888C25B1CD3D9342A56C538636D3EAB957037D09E879AE5F3A39834FBB84A3D8D5090D7814246B62E9CA68533D2EC403B4FB9488467FF9758B0D15A8CEF89187A1D5897880040B6C3C5244E85A2AD14BCF2F5ABC44A7B1D4A87E8BDA05766218773ED4F70F8D1D07CBB1E8CA6298E64EE6DC5886D37495BA2EDB3E0B0B68AD9F300310B88898DDEEFD484538C31A9BCAA76ECAD0C16607D32189058B0862EE9D70CEA9D304755CE8037BA4C46C2573181748A212E4B2BDD04F9BC240518273DC17CBAFF21A03E9120FA7DCA18D56DD1D9A7E510C90CF219104385F531F2EFAFD185ECB6B911F9B7809D98D86F15516FFDDBE9BD1CF8662EB777C3F94EA3F962D7B79449FAAD39935429E92CAE5637E9BCF4E94D413D27934952409AB536BE4055AFBC4330CD1E4B5509EFE5F8EFC9ECBE9EF377DE7E37C479BB9D3EE7745E4609B0A6D2C5D92EB3C9E2278C1F2221FF907596AA5E096ACF8990EBA907E43AD320F8019CB6355A2BA8670EE5A4F463E8E56F8F1D3E7F4922510FB668E32C4CF23AD8496399638B095B47833E0CBB34977EB3E4242EAF870D86660D6A73F83E45D6E8A41EDCA3815079649544597C5C43B6C93FEBAD5700D22EDAF431FD340",
       "A64F94BB47BD4033C76D4924305907EC1F618B43C7535F3CFC093E5AF5DDD5C4339F3BB6D835B5C2C2053CD3D5693368D4E1A7CAC59425D1FD96809C67285CFD3FC05B01053CB0773221D7205778022F487BF99D1650566BE287FD7AE882AA8E8F52E5D4E3C0C2F971C9FF70AA378691EBD8ADE45CF213822D09FD05243F9726F6C69893845E57C37A7643E16B770E26F431FF69D437271905D270EB85D8D229D7D87662121F0BEEB1E895ED9589A9CF5833408A04197AC9025D8570AD9B75DB7E192EA0A089504996E9DC652975D83633619CFF80667D8B519536B3475248BA8213C8A4C66DE69B4B3774BF9142425C57F34A27B1E288119E3FFCC6AF6A21087F9394F09DDFBD42F32D059B8CD4104A519BA640765D5CDE490E62F10E695FBFD33CBC9D2208A532C8EC25DA28B8CC1B6850AB43D9B5C00B6E74B7A148791AB07B328D347058C7E6233E18C5ED172C9F9E9ACF29D913E2A1614BFC0893D4967ED033B2B9AE6B51F908F1CED57C14FEEA85CD4D9711216BE7F79FA6721B7DCCA033C80127AC6E5FCF58EB4005EC24CB4886D787355362D5E7031B9B2AC2A86D730AD734181E723A811FF510A4DF868001973FE83288D78E6F9B9441DAF5BE2974A2848FD917C3BCD346A431922246EC852E4AAD467E60C15D61DD3BF4A207BB57DB45DCADEFE3210BE74B9DACC918A394469F2E2C95AD1E211947948FE24F5E4",
@@ -938,25 +943,24 @@ static short *gencode_E1C(int prn, int *len, double *crate)
       "CD7AAC98501F29507EA4E0183E8A40D2E5117E47BB5D18D01A3732DE4C821DFE86521CBEA7DB29BE1148BD544ECC681689BCD1B41EAF755310B7659342F8EE11CB41550CC30E566E192796B66C1A83C0B28BACCFA6C393043A0A2CB89712BC1CCB174DE58E66896AF39C1CEED1E05B0435F8CF6FD920D100F51584FE24879987399481DBF27DDB6286B6353919E552E669290CE02AB4CD5113D7F484229F379C7332767EC69E4336439B05DE1C1E3563DD303A4F580BFF20A40E49CB0822F715ED0221EBCDB5DBAD751124B1715E82F37488265135B6C8BBCF4F801ECC4D3525FF189493AD4EFF0C042B070C4CA8FB1FDF43D79F06A6E4E3D35D7B07D4B728D5DC54EEDACBBBA1EDDCDC07ADF7DFCFEF835E44DF1FF66DAF2A7BAEBE218AC3B15E183044D6A8A89B3C101B40BED97ED5DF93BBC1B84931D56B8C822A6D058AC74CFA4C85D8B456698E82D5B7574C17B041E5F4BEED09F75012355CBC322B822C63F10C18A8F279E9A0E18E1FEF183D23E13894E31F6D046956FE8A647558228F6D4D6910151EC03937876B6ED7A078D33DAEB3F2239353BB8181E62B286BBC41588DE10F478A5CE5B508F205A41820356767B0A0ED4B8DB9EFE348362E9A90D6C30218B295B338B51C09239D02FC8A1E7DAAAB60AC37F5E67CFC88EEF69567B5C81A03B449F4ED38B9D295A36AA3503173F6F6F66D93CE72D753076040FACDE",
       "ADDCEDB50E907D20E826E6E8A0D30C20C74B2DF204EA784BAE9F618CAE33A3C937729DF9CB10BA2A4C33E0182A37200C0CC509729D828B8A2A20F283AC4F9306596684EA3FB5492A4C9F2DB459E7531C9F9C0950E7D9E93B3EE5912AE7E39AC8F4EC14B18F24E325003F477E347C5AC1B67CDB11AF3BBBBCD0AC3703024B5767AA67A208254F798684BFD1D3EACD757EEC77254950A146620400DB95E694574F739A991EBA771EBBDFF1056BB39A77DBE0636A032E17141332F951C57C6C90F348F165E3ABDD60D429D5D6BEC7E3E3463806F819EB2D212B3528A5EDE51F235AD100A35E890955F8A1DC51FDCB53EABCA2540997DD054C1F5B29462995B876B44D085904E55E1B838BEF600A992EB49CE078DF75AF3D0F137685AC0D07F0BE1EB87B63A41E74DDE869C8A683BDE60AF5D77FF18F7137495BCEFD0ED28F62F9C3E25D332B5F861D999FCDC0B4851A984A4DBB53401FD40351ADA4335C702BCC8D900C737507B990BDDBE91D201E3A0946DC968D43FD10D04B0B76667FF5B4291C2124B0124C6B710A6D1BCFAEB016B9DEEB0F7A4FE044CA4EA0CCD84B7682617C3A545071EC295B0663B3F577D562DE1D9DD80DE6A1EFD6D5991EB5246F1597B86D0E9A90CF6DB0EB2B8E7BAE9431E567F01AA98502C773742246467ABF911A91A51F6C1B9E0C3233DC1A37D17DB91A5F0F661B0EB5886964456C7818601BD0C"
     ];
-    short *code;
-    int i;
-    if (prn<1||MAXGALSATNO<prn)
-        return null;
     
-    code=cast(short*)malloc(short.sizeof*LEN_E1C);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_E1C];
+    hex2bin(hex[prn-1], code, 0, 0);
 
-    hex2bin(hex[prn-1], LEN_E1C, code, 0, 0);
-    for (i=0;i<LEN_E1C;i++) code[i]=-code[i];
+    foreach(ref e; code)
+        e = -e;
+
     *len=LEN_E1C;
     *crate=CRATE_E1C;
 
-    return code;
+    return code.ptr;
 }
 /* E5aI code (Galileo SIS-ICD) ------------------------------------------------*/
-static short *gencode_E5AI(int prn, int *len, double *crate)
-{
+short *gencode_E5AI(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGALSATNO !< prn);
+}
+body{
     static immutable string[MAXGALSATNO] reg = [ /* Base Register 2 Start Value (Octal) */
       "30305","14234","27213","20577","23312","33463","15614","12537","01527","30236",   /*   1- 10 */
       "27344","07272","36377","17046","06434","15405","24252","11631","24776","00630",   /*  11- 20 */
@@ -966,20 +970,16 @@ static short *gencode_E5AI(int prn, int *len, double *crate)
     ];
     byte[14] R1, T1, R2, T2;
     byte G1, G2, C1, C2;
-    short *code;
     int i,j;
     
-    if (prn<1||MAXGALSATNO<prn)
-        return null;
-    
-    code=cast(short*)malloc(short.sizeof*LEN_E5AI);
+    short[] code = new short[LEN_E5AI];
     if(!code)
         return null;
 
-    oct2bin("40503", 14, T1.ptr, 1, 1); /* Polynomial Cofficient */
-    oct2bin("50661", 14, T2.ptr, 1, 1); /* Polynomial Cofficient */
-    oct2bin("77777", 14, R1.ptr, 0, 0); /* Initial Regster */
-    oct2bin(reg[prn-1], 14, R2.ptr, 0, 1); /* Initial Regster */
+    oct2bin("40503", T1[], 1, 1); /* Polynomial Cofficient */
+    oct2bin("50661", T2[], 1, 1); /* Polynomial Cofficient */
+    oct2bin("77777", R1[], 0, 0); /* Initial Regster */
+    oct2bin(reg[prn-1], R2[], 0, 1); /* Initial Regster */
     
     for (i=0;i<LEN_E5AI;i++) {
         G1=R1[13];
@@ -999,11 +999,14 @@ static short *gencode_E5AI(int prn, int *len, double *crate)
     *len=LEN_E5AI;
     *crate=CRATE_E5AI;
 
-    return code;
+    return code.ptr;
 }
 /* E5AQ code (Galileo SIS-ICD) ------------------------------------------------*/
-static short *gencode_E5AQ(int prn, int *len, double *crate)
-{
+short *gencode_E5AQ(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGALSATNO !< prn);
+}
+body{
     static immutable string[MAXGALSATNO] reg = [ /* Base Register 2 Start Value (Octal) */
       "25652","05142","24723","31751","27366","24660","33655","27450","07626","01705",   /*   1- 10 */
       "12717","32122","16075","16644","37556","02477","02265","06430","25046","12735",   /*  11- 20 */
@@ -1013,20 +1016,14 @@ static short *gencode_E5AQ(int prn, int *len, double *crate)
     ];
     byte[14] R1, T1, R2, T2;
     byte G1, G2, C1, C2;
-    short *code;
     int i,j;
     
-    if (prn<1||MAXGALSATNO<prn)
-        return null;
-    
-    code=cast(short*)malloc(short.sizeof*LEN_E5AQ);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_E5AQ];
 
-    oct2bin("40503", 14, T1.ptr, 1, 1); /* Polynomial Cofficient */
-    oct2bin("50661", 14, T2.ptr, 1, 1); /* Polynomial Cofficient */
-    oct2bin("77777", 14, R1.ptr, 0, 0); /* Initial Register */
-    oct2bin(reg[prn-1], 14, R2.ptr, 0, 1); /* Initial Register */
+    oct2bin("40503", T1[], 1, 1); /* Polynomial Cofficient */
+    oct2bin("50661", T2[], 1, 1); /* Polynomial Cofficient */
+    oct2bin("77777", R1[], 0, 0); /* Initial Register */
+    oct2bin(reg[prn-1], R2[], 0, 1); /* Initial Register */
     
     for (i=0;i<LEN_E5AQ;i++) {
         G1=R1[13];
@@ -1046,11 +1043,14 @@ static short *gencode_E5AQ(int prn, int *len, double *crate)
     *len=LEN_E5AQ;
     *crate=CRATE_E5AQ;
 
-    return code;
+    return code.ptr;
 }
 /* E5bI code (Galileo SIS-ICD) ------------------------------------------------*/
-static short *gencode_E5BI(int prn, int *len, double *crate)
-{
+short *gencode_E5BI(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGALSATNO !< prn);
+}
+body{
     static immutable string[MAXGALSATNO] reg = [ /* Base Register 2 Start Value (Octal) */
       "07220","26047","00252","17166","14161","02540","01537","26023","01725","20637",   /*   1- 10 */
       "02364","27731","30640","34174","06464","07676","32231","10353","00755","26077",   /*  11- 20 */
@@ -1060,20 +1060,14 @@ static short *gencode_E5BI(int prn, int *len, double *crate)
     ];
     byte[14] R1, T1, R2, T2;
     byte G1, G2, C1, C2;
-    short *code;
     int i,j;
 
-    if (prn<1||MAXGALSATNO<prn)
-        return null;
-    
-    code = cast(short*)malloc(short.sizeof*LEN_E5BI);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_E5BI];
 
-    oct2bin("64021", 14, T1.ptr, 1, 1); /* Polynomial Cofficient */
-    oct2bin("51445", 14, T2.ptr, 1, 1); /* Polynomial Cofficient */
-    oct2bin("77777", 14, R1.ptr, 0, 0); /* Initial Register */
-    oct2bin(reg[prn-1], 14, R2.ptr, 0, 1); /* Initial Register */
+    oct2bin("64021", T1[], 1, 1); /* Polynomial Cofficient */
+    oct2bin("51445", T2[], 1, 1); /* Polynomial Cofficient */
+    oct2bin("77777", R1[], 0, 0); /* Initial Register */
+    oct2bin(reg[prn-1], R2[], 0, 1); /* Initial Register */
     
     for (i=0;i<LEN_E5BI;i++) {
         G1=R1[13];
@@ -1093,11 +1087,14 @@ static short *gencode_E5BI(int prn, int *len, double *crate)
     *len=LEN_E5BI;
     *crate=CRATE_E5BI;
 
-    return code;
+    return code.ptr;
 }
 /* E5bQ code (Galileo SIS-ICD) ------------------------------------------------*/
-static short *gencode_E5BQ(int prn, int *len, double *crate)
-{
+short *gencode_E5BQ(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGALSATNO !< prn);
+}
+body{
     static immutable string[MAXGALSATNO] reg = [ /* Base Register 2 Start Value (Octal) */
       "03331","06143","25322","23371","00413","36235","17750","04745","13005","37140",   /*   1- 10 */
       "30155","20237","03461","31662","27146","05547","02456","30013","00322","10761",   /*  11- 20 */
@@ -1107,20 +1104,14 @@ static short *gencode_E5BQ(int prn, int *len, double *crate)
     ];
     byte[14] R1, T1, R2, T2;
     byte G1, G2, C1, C2;
-    short *code;
     int i,j;
-
-    if (prn<1||MAXGALSATNO<prn)
-        return null;
     
-    code = cast(short*)malloc(short.sizeof*LEN_E5BQ);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_E5BQ];
 
-    oct2bin("64021", 14, T1.ptr, 1, 1); /* Polynomial Cofficient */
-    oct2bin("43143", 14, T2.ptr, 1, 1); /* Polynomial Cofficient */
-    oct2bin("77777", 14, R1.ptr, 0, 0); /* Initial Register */
-    oct2bin(reg[prn-1], 14, R2.ptr, 0, 1); /* Initial Register */
+    oct2bin("64021", T1[], 1, 1); /* Polynomial Cofficient */
+    oct2bin("43143", T2[], 1, 1); /* Polynomial Cofficient */
+    oct2bin("77777", R1[], 0, 0); /* Initial Register */
+    oct2bin(reg[prn-1], R2[], 0, 1); /* Initial Register */
     
     for (i=0;i<LEN_E5BQ;i++) {
         G1=R1[13];
@@ -1140,44 +1131,49 @@ static short *gencode_E5BQ(int prn, int *len, double *crate)
     *len=LEN_E5BQ;
     *crate=CRATE_E5BQ;
 
-    return code;
+    return code.ptr;
 }
 /* E1C Secondary code (Galileo SIS-ICD) ---------------------------------------*/
-static short *gencode_E1CO(int *len, double *crate)
+short *gencode_E1CO(int *len, double *crate)
 {
     static immutable string[] hex = [ /* HEX Code */
       "380AD90"
     ];
-    short* code = cast(short*)malloc(short.sizeof*LEN_E1CO);
-    if (!code)
-        return null;
-    
+    //short* code = cast(short*)malloc(short.sizeof*LEN_E1CO);
+    //if (!code)
+    //    return null;
+    short[] code = new short[LEN_E1CO];
 
-    hex2bin(hex[0], LEN_E1CO, code, 1, 0);
+    hex2bin(hex[0], code, 1, 0);
+
     *len=LEN_E1CO;
     *crate=CRATE_E1CO;
 
-    return code;
+    return code.ptr;
 }
 /* E5aI Secondary code (Galileo SIS-ICD) --------------------------------------*/
-static short *gencode_E5AIO(int *len, double *crate)
+short *gencode_E5AIO(int *len, double *crate)
 {
     static immutable string[] hex=[ /* HEX Code */
       "842E9"
     ];
-    short *code = cast(short *)malloc(short.sizeof*LEN_E5AIO);
-    if (!code)
-        return null;
+    //short *code = cast(short *)malloc(short.sizeof*LEN_E5AIO);
+    //if (!code)
+    //    return null;
+    short[] code = new short[LEN_E5AIO];
     
-    hex2bin(hex[0], LEN_E5AIO, code, 1, 0);
+    hex2bin(hex[0], code, 1, 0);
     *len=LEN_E5AIO;
     *crate=CRATE_E5AIO;
 
-    return code;
+    return code.ptr;
 }
 /* E5aQ Secondary code (Galileo SIS-ICD) --------------------------------------*/
-static short *gencode_E5AQO(int prn, int *len, double *crate)
-{
+short *gencode_E5AQO(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && (prn !> 36 || prn !< 40) && MAXGALSATNO !< prn);
+}
+body{
     static immutable string[MAXGALSATNO] hex = [ /* HEX Code */
       "83F6F69D8F6E15411FB8C9B1C","66558BD3CE0C7792E83350525","59A025A9C1AF0651B779A8381","D3A32640782F7B18E4DF754B7","B91FCAD7760C218FA59348A93",   /*   1-  5 */
       "BAC77E933A779140F094FBF98","537785DE280927C6B58BA6776","EFCAB4B65F38531ECA22257E2","79F8CAE838475EA5584BEFC9B","CA5170FEA3A810EC606B66494",   /*   6- 10 */
@@ -1190,40 +1186,36 @@ static short *gencode_E5AQO(int prn, int *len, double *crate)
       "25310A06675EB271F2A09EA1D","9F7993C621D4BEC81A0535703","D62999EACF1C99083C0B4A417","F665A7EA441BAA4EA0D01078C","46F3D3043F24CDEABD6F79543",   /*  41- 45 */
       "E2E3E8254616BD96CEFCA651A","E548231A82F9A01A19DB5E1B2","265C7F90A16F49EDE2AA706C8","364A3A9EB0F0481DA0199D7EA","9810A7A898961263A0F749F56"    /*  46- 50 */
     ];
-    short *code;
-    
-    if (prn<1||(prn>36&&prn<40)||MAXGALSATNO<prn)
-        return null;
-    
-    code=cast(short*)malloc(short.sizeof*LEN_E5AQO);
-    if(!code)
-        return null;
 
-    hex2bin(hex[prn-1], LEN_E5AQO, code, 1, 0);
+    short[] code = new short[LEN_E5AQO];
+
+    hex2bin(hex[prn-1], code, 1, 0);
     *len=LEN_E5AQO;
     *crate=CRATE_E5AQO;
 
-    return code;
+    return code.ptr;
 }
 /* E5bI Secondary code (Galileo SIS-ICD) --------------------------------------*/
-static short *gencode_E5BIO(int *len, double *crate)
+short *gencode_E5BIO(int *len, double *crate)
 {
     static immutable string[] hex = [ /* HEX Code */
       "E"
     ];
-    short *code = cast(short*)malloc(short.sizeof*LEN_E5BIO);
-    if (!code)
-        return null;
+
+    short[] code = new short[LEN_E5BIO];
     
-    hex2bin(hex[0], LEN_E5BIO, code, 1, 0);
+    hex2bin(hex[0], code, 1, 0);
     *len=LEN_E5BIO;
     *crate=CRATE_E5BIO;
 
-    return code;
+    return code.ptr;
 }
 /* E5bQ Secondary code (Galileo SIS-ICD) --------------------------------------*/
-static short *gencode_E5BQO(int prn, int *len, double *crate)
-{
+short *gencode_E5BQO(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXGALSATNO !< prn);
+}
+body{
     static immutable string[MAXGALSATNO] hex = [ /* HEX Code */
       "CFF914EE3C6126A49FD5E5C94","FC317C9A9BF8C6038B5CADAB3","A2EAD74B6F9866E414393F239","72F2B1180FA6B802CB84DF997","13E3AE93BC52391D09E84A982",   /*   1-  5 */
       "77C04202B91B22C6D3469768E","FEBC592DD7C69AB103D0BB29C","0B494077E7C66FB6C51942A77","DD0E321837A3D52169B7B577C","43DEA90EA6C483E7990C3223F",   /*   6- 10 */
@@ -1236,31 +1228,23 @@ static short *gencode_E5BQO(int prn, int *len, double *crate)
       "0FA4A205F0D76088D08EAF267","272E909FAEBC65215E263E258","3370F35A674922828465FC816","54EF96116D4A0C8DB0E07101F","DE347C7B27FADC48EF1826A2B",   /*  41- 45 */
       "01B16ECA6FC343AE08C5B8944","1854DB743500EE94D8FC768ED","28E40C684C87370CD0597FAB4","5E42C19717093353BCAAF4033","64310BAD8EB5B36E38646AF01"    /*  46- 50 */
     ];
-    short *code;
-    if (prn<1||MAXGALSATNO<prn)
-        return null;
-    
-    code=cast(short*)malloc(short.sizeof*LEN_E5BQO);
-    if(!code)
-        return null;
 
-    hex2bin(hex[prn-1], LEN_E5BQO, code, 1, 0);
+    short[] code = new short[LEN_E5BQO];
+
+    hex2bin(hex[prn-1], code, 1, 0);
     *len=LEN_E5BQO;
     *crate=CRATE_E5BQO;
 
-    return code;
+    return code.ptr;
 }
 /* GLONASS C/A code (GLONASS ICD) ---------------------------------------------*/
-static short *gencode_G1G2(int *len, double *crate)
+short *gencode_G1G2(int *len, double *crate)
 {
-    short *code;
     byte C;
     byte[9] R = -1;
     int i,j;
 
-    code= cast(short*)malloc(short.sizeof*LEN_G1G2);
-    if (!code)
-        return null;
+    short[] code = new short[LEN_G1G2];
     
     for (i=0;i<LEN_G1G2;i++) {
         code[i]=-R[6];
@@ -1271,30 +1255,28 @@ static short *gencode_G1G2(int *len, double *crate)
     *len=LEN_G1G2;
     *crate=CRATE_G1G2;
 
-    return code;
+    return code.ptr;
 }
 
 /* COMPASS B1 code (BeiDou SIS-ICD) -------------------------------------------*/
-static short *gencode_B1(int prn, int *len, double *crate)
-{
+short *gencode_B1(int prn, int *len, double *crate)
+in{
+    assert(prn !< 1 && MAXCMPSATNO !< prn);
+}
+body{
     static const byte[2][37] phase= cast(byte[2][37])[ /* Phase Assignment */
       [ 1, 3],[ 1, 4],[ 1, 5],[ 1, 6],[ 1, 8],[ 1, 9],[ 1,10],[ 1,11],[ 2, 7],[ 3, 4],
       [ 3, 5],[ 3, 6],[ 3, 8],[ 3, 9],[ 3,10],[ 3,11],[ 4, 5],[ 4, 6],[ 4, 8],[ 4, 9],
       [ 4,10],[ 4,11],[ 5, 6],[ 5, 8],[ 5, 9],[ 5,10],[ 5,11],[ 6, 8],[ 6, 9],[ 6,10],
       [ 6,11],[ 8, 9],[ 8,10],[ 8,11],[ 9,10],[ 9,11],[10,11]
     ];
-    short *code;
+
     byte G1,G2,C1,C2;
     byte R1[11]=cast(byte[11])[1,-1,1,-1,1,-1,1,-1,1,-1,1]; /* 1=>-1, 0=>1 */
     byte R2[11]=cast(byte[11])[1,-1,1,-1,1,-1,1,-1,1,-1,1]; /* 1=>-1, 0=>1 */
     int i,j;
 
-    if (prn<1||MAXCMPSATNO<prn)
-        return null;
-
-    code = cast(short*)malloc(short.sizeof*LEN_B1);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_B1];
 
     for (i=0;i<LEN_B1;i++) {
         G1=R1[10];
@@ -1312,27 +1294,24 @@ static short *gencode_B1(int prn, int *len, double *crate)
     *len=LEN_B1;
     *crate=CRATE_B1;
 
-    return code;
+    return code.ptr;
 }
 /* QZS LEX Short code (IS-QZSS) -----------------------------------------------*/
-static short *gencode_LEXS(int prn, int *len, double *crate)
-{
+short *gencode_LEXS(int prn, int *len, double *crate)
+in{
+    assert(prn !< 193 && 197 !< prn);
+}
+body{
     static immutable string[5] init_state = ["0255021","0327455","0531421","0615350","0635477"]; /* Initial shift register (octal) */
-    short *code;
     byte[10] R1;
     byte[20] R2;
     byte C1,C2;
     int i,j;
 
-    if (prn<193||197<prn) /* LEXS(1) 0 LEXS(2) 0 ...*/
-        return null;
-
-    code = cast(short*)calloc(LEN_LEXS*2,short.sizeof);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_LEXS*2];
 
     for (i=0;i<10;i++) R1[i]=-1; /* Initial Register */
-    oct2bin(init_state[prn-193], 20, R2.ptr, 0, 1); /* Initial Register */
+    oct2bin(init_state[prn-193], R2[], 0, 1); /* Initial Register */
     for (i=0;i<LEN_LEXS;i++) { 
         code[2*i]=cast(byte)(-R1[9]*R2[19]);
         C1=cast(byte)(R1[2]*R1[3]*R1[4]*R1[5]*R1[8]*R1[9]);
@@ -1345,27 +1324,24 @@ static short *gencode_LEXS(int prn, int *len, double *crate)
     *len=LEN_LEXS*2; 
     *crate=CRATE_LEXS*2;
 
-    return code;
+    return code.ptr;
 }
 /* QZS LEX Long code (IS-QZSS) ------------------------------------------------*/
-static short *gencode_LEXL(int prn, int *len, double *crate)
-{
+short *gencode_LEXL(int prn, int *len, double *crate)
+in{
+    assert(prn !< 193 && 197 !< prn);
+}
+body{
     static immutable string[5] init_state = ["0000304","0237663","0467237","0550370","1703243"]; /* Initial shift register (octal) */
-    short *code;
     byte[10] R1;
     byte[20] R2;
     byte C1,C2;
     int i,j;
     
-    if (prn<193||197<prn) /* 0 LEXL(1) 0 LEXL(2) ...*/
-        return null;
-    
-    code=cast(short*)calloc(LEN_LEXL*2,short.sizeof);
-    if(!code)
-        return null;
+    short[] code = new short[LEN_LEXL*2];
 
     for (i=0;i<10;i++) R1[i]=-1; /* Initial Register */
-    oct2bin(init_state[prn-193], 20, R2.ptr, 0, 1); /* Initial Register */
+    oct2bin(init_state[prn-193], R2[], 0, 1); /* Initial Register */
     for (i=0;i<LEN_LEXL;i++) {
         code[2*i+1]=-R1[9]*R2[19];
         C1=cast(byte)(R1[2]*R1[3]*R1[4]*R1[5]*R1[8]*R1[9]);
@@ -1378,7 +1354,7 @@ static short *gencode_LEXL(int prn, int *len, double *crate)
     *len=LEN_LEXL*2;
     *crate=CRATE_LEXL*2;
 
-    return code;
+    return code.ptr;
 }
 
 
@@ -1390,7 +1366,7 @@ static short *gencode_LEXL(int prn, int *len, double *crate)
 *          double *crate    O   code chip rate (chip/s)
 * return : short*               pointer of generated code
 *------------------------------------------------------------------------------*/
-extern short *gencode(int prn, int ctype, int *len, double *crate)
+short *gencode(int prn, int ctype, int *len, double *crate)
 {
     switch (ctype) {
         case CTYPE_L1CA  : return gencode_L1CA(prn,len,crate);

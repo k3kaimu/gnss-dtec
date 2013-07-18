@@ -71,11 +71,9 @@ if(!is(T == string))
 * return : int                  0:okay -1:error
 * note : this function is only used in CLI application
 *------------------------------------------------------------------------------*/
-int readinifile(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
+void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini, string iniFile)
 {
     traceln("called");
-    int ret;
-    string iniFile = "gnss-sdrcli.ini";
 
     enforce(exists("gnss-sdrcli.ini"), "error: gnss-sdrcli.ini doesn't exist");
 
@@ -105,7 +103,7 @@ int readinifile(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         assert(0);
     }();
 
-    if (ini.fend==FEND_FILE || ini.fend==FEND_FILESTEREO ) {
+    if (ini.fend == FEND_FILE || ini.fend == FEND_FILESTEREO){
         ini.file1 = iniFile.readIniValue!string("RCV", "FILE1");
         if(ini.file1.length)
             ini.useif1 = ON;
@@ -157,8 +155,6 @@ int readinifile(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         ini.pltspec = iniFile.readIniValue!int("SPECTRUM", "SPEC");
     }
 
-    /* sdr channel setting */
-    //for (i=0;i<sdrini.nch;i++) {
     foreach(i; 0 .. sdrini.nch){
         if (sdrini.ctype[i]==CTYPE_L1CA) {
             sdrini.nchL1++;
@@ -167,17 +163,15 @@ int readinifile(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         }else
             enforce(0, "ctype: %n is not supported.".formattedString(sdrini.ctype[i]));
     }
-    return 0;
 }
 /* check initial value ----------------------------------------------------------
 * checking value in sdrini struct
 * args   : sdrini_t *ini    I   sdrini struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int chk_initvalue(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
+void checkInitValue(string file = __FILE__, size_t line = __LINE__)(in ref sdrini_t ini)
 {
     traceln("called");
-    int ret;
 
     enforce(ini.f_sf[0] > 0 && ini.f_sf[0] < 100e6, "error: wrong freq. input sf1: %s".formattedString(ini.f_sf[0]));
     enforce(ini.f_if[0] >= 0 && ini.f_if[0] < 100e6, "error: wrong freq. input if1: %s".formattedString(ini.f_if[0]));
@@ -189,31 +183,18 @@ int chk_initvalue(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     enforce(ini.lexport >= 0 && ini.lexport <= short.max, "error: wrong rtcm port lex:%d".formattedString(ini.lexport));
 
     /* checking filepath */
-    if(ini.fend==FEND_FILE||ini.fend==FEND_FILESTEREO) {
-        if (ini.useif1&& !exists(ini.file1)) {
-            SDRPRINTF("error: file1 doesn't exist: %s\n",ini.file1);
-            return -1;
-        }
-        if (ini.useif2 && !exists(ini.file2)) {
-            SDRPRINTF("error: file2 doesn't exist: %s\n",ini.file2);
-            return -1;
-        }
-        if ((!ini.useif1) && (!ini.useif2)) {
-            SDRPRINTF("error: file1 or file2 are not selected\n");
-            return -1;
-        }
+    if(ini.fend == FEND_FILE || ini.fend == FEND_FILESTEREO){
+        enforce(!ini.useif1 || exists(ini.file1), "error: file1 doesn't exist: %s".formattedString(ini.file1));
+        enforce(!ini.useif2 || exists(ini.file2), "error: file1 or file2 are not selected".formattedString(ini.file2));
+        enforce(ini.useif1 || ini.useif2, "error: file1 or file2 are not selected");
     }
 
     /* checking rinex directory */
-    if (ini.rinex) {
-        if ((ret=exists(ini.rinexpath))<0) {
-            SDRPRINTF("error: rinex output directory doesn't exist: %s\n",ini.rinexpath);
-            return -1;
-        }
-    }
-
-    return 0;
+    if (ini.rinex) 
+        enforce(exists(ini.rinexpath), "error: rinex output directory doesn't exist: %s".formattedString(ini.rinexpath));
 }
+
+
 /* initialize mutex and event ---------------------------------------------------
 * create mutex and event handles
 * args   : none
@@ -567,7 +548,8 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(int chno, int sys,
 void freesdrch(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr)
 {
     traceln("called");
-    free(sdr.code);
+    //free(sdr.code);
+    sdr.code = null;
     free(sdr.lcode);
     cpxfree(sdr.xcode);
     free(sdr.nav.prebits);

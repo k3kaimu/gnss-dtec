@@ -50,7 +50,6 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
     //ReleaseMutex(hreadmtx);
 
     /* acquisition integration */
-    //for (i = 0; i < sdr.acq.intg; i++) {
     foreach(i; 0 .. sdr.acq.intg){
 
         /* wait until buffer is not full */

@@ -41,9 +41,10 @@ __gshared sdrspec_t sdrspec;
 * return : none
 * note : This function is only used in CLI application 
 *------------------------------------------------------------------------------*/
-void main()
+void main(string[] args)
 {
-    enforce(readinifile(&sdrini) >= 0);
+    sdrini.readIniFile(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
+    //enforce(readinifile(&sdrini) >= 0);
     startsdr();
 }
 
@@ -65,7 +66,7 @@ void startsdr()
 
     SDRPRINTF("GNSS-SDRLIB start!\n");
     
-    enforce(chk_initvalue(&sdrini) >= 0);
+    checkInitValue(sdrini);
 
     /* receiver initialization */
     enforce(rcvinit(&sdrini) >= 0);
