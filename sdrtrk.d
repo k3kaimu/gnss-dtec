@@ -18,42 +18,38 @@ import std.stdio;
 ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, ulong buffloc, ulong cnt)
 {
     traceln("called");
-    
-    //char *data=null;
-    ulong bufflocnow;
 
-    sdr.flagtrk=OFF;
+    sdr.flagtrk = OFF;
     
     /* memory allocation */
-    //data=cast(char*)sdrmalloc(char.sizeof*sdr.nsamp*sdr.dtype);
     byte[] data = new byte[sdr.nsamp * sdr.dtype];
     
     /* current buffer location */
-    //WaitForSingleObject(hreadmtx,INFINITE);
+    ulong bufflocnow;
     synchronized(hreadmtx)
         bufflocnow = sdrini.fendbuffsize*sdrstat.buffloccnt-sdr.nsamp; 
-    //ReleaseMutex(hreadmtx);
     
-    if (bufflocnow>buffloc) {
+    if (bufflocnow > buffloc) {
         auto tmp = cast(size_t)((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf));
         sdr.currnsamp = cast(int)tmp;
-        rcvgetbuff(&sdrini,buffloc,sdr.currnsamp,sdr.ftype,sdr.dtype,data);
+        rcvgetbuff(&sdrini, buffloc, sdr.currnsamp, sdr.ftype, sdr.dtype, data);
 
-        //memcpy(sdr.trk.oldI,sdr.trk.I,1+2*sdr.trk.ncorrp*double.sizeof);
-        //memcpy(sdr.trk.oldQ,sdr.trk.Q,1+2*sdr.trk.ncorrp*double.sizeof);
         {
-            immutable copySize = 1+2*sdr.trk.ncorrp;
+            immutable copySize = 1 + 2 * sdr.trk.ncorrp;
             sdr.trk.oldI[0 .. copySize] = sdr.trk.I[0 .. copySize];
             sdr.trk.oldQ[0 .. copySize] = sdr.trk.Q[0 .. copySize];
         }
 
         sdr.trk.oldremcode = sdr.trk.remcode;
         sdr.trk.oldremcarr = sdr.trk.remcarr;
+
         /* correlation */
-        correlator(data,sdr.dtype,sdr.ti,sdr.currnsamp,sdr.trk.carrfreq,sdr.trk.oldremcarr,sdr.trk.codefreq, sdr.trk.oldremcode,sdr.trk.prm1.corrp,sdr.trk.ncorrp,sdr.trk.Q,sdr.trk.I,&sdr.trk.remcode,&sdr.trk.remcarr,sdr.code,sdr.clen);
+        correlator(data, sdr.dtype, sdr.ti, sdr.currnsamp, sdr.trk.carrfreq, sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
+                   sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code,sdr.clen);
+        
         /* navigation data */
-        sdrnavigation(sdr,buffloc,cnt);
-        sdr.flagtrk=ON;
+        sdrnavigation(sdr, buffloc, cnt);
+        sdr.flagtrk = ON;
     }
     
     //sdrfree(data);
@@ -87,32 +83,31 @@ void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] da
     int i;
     int smax=s[ns-1];
 
-    dataI=cast(short*)sdrmalloc(short.sizeof * n+32);
+    dataI = cast(short*)sdrmalloc(short.sizeof * n+32);
     scope(exit) sdrfree(dataI);
-    dataQ=cast(short*)sdrmalloc(short.sizeof * n+32);
+    dataQ = cast(short*)sdrmalloc(short.sizeof * n+32);
     scope(exit) sdrfree(dataQ);
-    code_e=cast(short*)sdrmalloc(short.sizeof * (n+2*smax));
+    code_e = cast(short*)sdrmalloc(short.sizeof * (n+2*smax));
     scope(exit) sdrfree(code_e);
     
-    code=code_e+smax;
+    code = code_e + smax;
     
     /* mix local carrier */
-    *remp=mixcarr(data,dtype,ti,n,freq,phi0,dataI,dataQ);
+    *remp = mixcarr(data,dtype,ti,n,freq,phi0,dataI,dataQ);
     
     /* resampling code */
-    *remc=rescode(codein,coden,coff,smax,ti*crate,n,code_e);
+    *remc = rescode(codein,coden,coff,smax,ti*crate,n,code_e);
 
     /* multiply code and integrate */
     dot_23(dataI,dataQ,code,code-s[0],code+s[0],n,I,Q);
     for (i=1;i<ns;i++) {
         dot_22(dataI,dataQ,code-s[i],code+s[i],n,I+1+i*2,Q+1+i*2);
     }
-    for (i=0;i<1+2*ns;i++) {
-        I[i]*=CSCALE;
-        Q[i]*=CSCALE;
-    }
 
-    dataI=dataQ=code_e=null;
+    I[0 .. 1 + 2 * ns] *= CSCALE;
+    Q[0 .. 1 + 2 * ns] *= CSCALE;
+
+    //dataI=dataQ=code_e=null;
 }
 /* cumulative sum of correlation output -----------------------------------------
 * phase/frequency lock loop (2nd order PLL with 1st order FLL)
@@ -127,18 +122,16 @@ void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] da
 void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(double *I, double *Q, sdrtrk_t *trk, int flag1, int flag2)
 {
     traceln("called");
-    int i;
+    immutable loopMax = 1+2*trk.ncorrp;
+
     if (!flag1||(flag1&&flag2)) {
-        for (i=0;i<1+2*trk.ncorrp;i++) {
-            trk.oldsumI[i]=trk.sumI[i];
-            trk.oldsumQ[i]=trk.sumQ[i];
-            trk.sumI[i]=0;
-            trk.sumQ[i]=0;
-        }
-    }
-    for (i=0;i<1+2*trk.ncorrp;i++) {
-        trk.sumI[i]+=I[i];
-        trk.sumQ[i]+=Q[i];
+        trk.oldsumI[0 .. loopMax] = trk.sumI[0 .. loopMax];
+        trk.oldsumQ[0 .. loopMax] = trk.sumQ[0 .. loopMax];
+        trk.sumI[0 .. loopMax] = I[0 .. loopMax];
+        trk.sumQ[0 .. loopMax] = Q[0 .. loopMax];
+    }else{
+        trk.sumI[0 .. loopMax] += I[0 .. loopMax];
+        trk.sumQ[0 .. loopMax] += Q[0 .. loopMax];
     }
 }
 /* phase/frequency lock loop ----------------------------------------------------
@@ -152,11 +145,13 @@ void pll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
 {
     traceln("called");
     double carrErr,freqErr;
-    double IP=sdr.trk.sumI[0],QP=sdr.trk.sumQ[0];
-    double oldIP=sdr.trk.oldsumI[0],oldQP=sdr.trk.oldsumQ[0];
+    immutable IP = sdr.trk.sumI[0],
+              QP = sdr.trk.sumQ[0];
+    immutable oldIP = sdr.trk.oldsumI[0],
+              oldQP = sdr.trk.oldsumQ[0];
     
-    carrErr=atan(QP/IP)/DPI;
-    freqErr=atan2(cast(real)oldIP*QP-IP*oldQP,fabs(oldIP*IP)+fabs(oldQP*QP))/PI;
+    carrErr=atan(QP / IP) / DPI;
+    freqErr=atan2(cast(real)oldIP*QP-IP*oldQP, fabs(oldIP*IP)+fabs(oldQP*QP))/PI;
 
     /* 2nd order PLL with 1st order FLL */
     sdr.trk.carrNco+=prm.pllaw*(carrErr-sdr.trk.carrErr)+prm.pllw2*prm.dt*carrErr+prm.fllw*prm.dt*freqErr;
@@ -173,19 +168,26 @@ void pll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
 *------------------------------------------------------------------------------*/
 void dll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm_t *prm)
 {
+    real abs(real i, real q){ return (i^^2 + q^^2) ^^ 0.5; }
+
     traceln("called");
     double codeErr;
     int ne=sdr.trk.prm1.ne, nl=sdr.trk.prm1.nl;
-    double IE=sdr.trk.sumI[ne],IL=sdr.trk.sumI[nl];
-    double QE=sdr.trk.sumQ[ne],QL=sdr.trk.sumQ[nl];
+    immutable IE = sdr.trk.sumI[ne],
+              IL = sdr.trk.sumI[nl],
+              QE = sdr.trk.sumQ[ne],
+              QL = sdr.trk.sumQ[nl],
+              IEQE = abs(IE, QE),
+              ILQL = abs(IL, QL);
 
-    codeErr=(sqrt(IE*IE+QE*QE)-sqrt(IL*IL+QL*QL))/(sqrt(IE*IE+QE*QE)+sqrt(IL*IL+QL*QL));
+    codeErr = (IEQE - ILQL) / (IEQE + ILQL);
     
     /* 2nd order DLL */
-    sdr.trk.codeNco+=+prm.dllaw*(codeErr-sdr.trk.codeErr)+prm.dllw2*prm.dt*codeErr;
+    sdr.trk.codeNco += prm.dllaw * (codeErr - sdr.trk.codeErr)
+                     + prm.dllw2 * prm.dt * codeErr;
     
-    sdr.trk.codefreq=sdr.crate-sdr.trk.codeNco+(sdr.trk.carrfreq-sdr.f_if)/(FREQ1/sdr.crate); /* carrier aiding */
-    sdr.trk.codeErr=codeErr;
+    sdr.trk.codefreq = sdr.crate - sdr.trk.codeNco + (sdr.trk.carrfreq - sdr.f_if) / (FREQ1 / sdr.crate); /* carrier aiding */
+    sdr.trk.codeErr = codeErr;
 }
 /* set observation data ---------------------------------------------------------
 * calculate doppler/carrier phase/SNR

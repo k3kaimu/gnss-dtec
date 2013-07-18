@@ -13,9 +13,6 @@ import core.thread;
 import std.algorithm;
 
 /* global variables -----------------------------------------------------------*/
-//#ifdef GUI
-//GCHandle hform;
-//#endif
 /* thread handle and mutex */
 __gshared Tid hmainthread;
 __gshared Tid hkeythread;
@@ -28,6 +25,7 @@ __gshared Mutex hfftmtx;
 __gshared Mutex hpltmtx;
 __gshared Mutex hobsmtx;
 //__gshared HANDLE hlexeve;
+
 /* sdr structs */
 __gshared sdrini_t sdrini;
 __gshared sdrstat_t sdrstat;
@@ -44,7 +42,6 @@ __gshared sdrspec_t sdrspec;
 void main(string[] args)
 {
     sdrini.readIniFile(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
-    //enforce(readinifile(&sdrini) >= 0);
     startsdr();
 }
 
@@ -128,7 +125,6 @@ void sdrthread(size_t index)
 {
     sdrch_t* sdr = &(sdrch[index]);
     Thread.getThis.name = "sdrchannel_" ~ index.to!string();
-    //sdrch_t *sdr = cast(sdrch_t*)arg; 
     sdrplt_t pltacq,plttrk;
     ulong buffloc = 0,bufflocnow = 0,cnt = 0,loopcnt = 0;
     int stop = 0,cntsw = 0, swsync, swreset;
@@ -150,11 +146,11 @@ void sdrthread(size_t index)
         /* acquisition */
         if (!sdr.flagacq) {
             /* memory allocation */
-            if (acqpower!=null) free(acqpower);
-            acqpower=cast(double*)calloc(double.sizeof,sdr.acq.nfft*sdr.acq.nfreq);
+            if (acqpower != null) free(acqpower);
+            acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft*sdr.acq.nfreq);
             
             /* fft correlation */
-            buffloc=sdracquisition(sdr,acqpower, cnt);
+            buffloc=sdracquisition(sdr, acqpower, cnt);
             
             /* plot aquisition result */
             if (sdr.flagacq&&sdrini.pltacq) {
@@ -232,6 +228,8 @@ void sdrthread(size_t index)
     else
         SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
 }
+
+
 /* synchronization thread -------------------------------------------------------
 * synchronization thread for pseudo range computation  
 * args   : void   *arg      I   not used
@@ -277,7 +275,6 @@ void syncthread()
 
         /* copy all tracking data */
         synchronized(hobsmtx){
-            //for (i=nsat=0;i<sdrini.nch;i++) {
             nsat = 0;
             foreach(i; 0 .. sdrini.nch){
                 if (sdrch[i].flagnavdec&&sdrch[i].nav.eph.week!=0) {
@@ -289,8 +286,8 @@ void syncthread()
         }
         
         /* find minimum tow channel (nearest satellite) */
-        oldreftow=reftow;
-        reftow=3600*24*7;
+        oldreftow = reftow;
+        reftow = 3600*24*7;
 
         foreach(i; 0 .. nsat){
             if (trk[i].tow[isat[0]]<reftow)
@@ -303,7 +300,6 @@ void syncthread()
 
         /* select same timing index  */
         foreach(i; 0 .. nsat){
-            //for (j=0;j<MAXOBS;j++) {
             foreach(j; 0 .. MAXOBS){
                 if (trk[i].tow[j]==reftow)
                     ind[i]=j;
@@ -311,7 +307,7 @@ void syncthread()
         }
 
         /* decide reference satellite (most distant satellite) */
-        maxcodei=0;
+        maxcodei = 0;
         refi=0;
         foreach(i; 0 .. nsat){
             codei[i]=trk[i].codei[ind[i]];
@@ -323,43 +319,43 @@ void syncthread()
         }
 
         /* reference satellite */
-        diffsamp=trk[refi].cntout[ind[refi]]-sdrch[isat[refi]].nav.firstsfcnt;
-        sampref=sdrch[isat[refi]].nav.firstsf+cast(ulong)(sdrch[isat[refi]].nsamp*(-cast(int)(PTIMING)+diffsamp)); /* reference sample */
-        sampbase=trk[refi].codei[OBSINTERPN-1]-10*sdrch[isat[refi]].nsamp;
-        samprefd=cast(double)(sampref-sampbase);            
+        diffsamp = trk[refi].cntout[ind[refi]]-sdrch[isat[refi]].nav.firstsfcnt;
+        sampref = sdrch[isat[refi]].nav.firstsf+cast(ulong)(sdrch[isat[refi]].nsamp*(-cast(int)(PTIMING)+diffsamp)); /* reference sample */
+        sampbase = trk[refi].codei[OBSINTERPN-1]-10*sdrch[isat[refi]].nsamp;
+        samprefd = cast(double)(sampref-sampbase);            
         
         /* computation observation data */
         foreach(i; 0 .. nsat){
             obs[i].sat=sdrch[isat[i]].sat;
             obs[i].week=sdrch[isat[i]].nav.eph.week;
             obs[i].tow=reftow+cast(double)(PTIMING)/1000; 
-            obs[i].P=CLIGHT*sdrch[isat[i]].ti*(cast(double)(codei[i]-sampref)-remcode[i]); /* pseudo range */
+            obs[i].P = CLIGHT * sdrch[isat[i]].ti * (cast(double)(codei[i]-sampref) - remcode[i]); /* pseudo range */
 
             /* uint64 to double for interp1 */
             uint64todouble(trk[i].codei.ptr,sampbase,OBSINTERPN,codeid.ptr);
-            obs[i].L = interp1(codeid.ptr,trk[i].L.ptr,OBSINTERPN,samprefd);
-            obs[i].D = interp1(codeid.ptr,trk[i].D.ptr,OBSINTERPN,samprefd);
+            obs[i].L = interp1(codeid.ptr, trk[i].L.ptr, OBSINTERPN, samprefd);
+            obs[i].D = interp1(codeid.ptr, trk[i].D.ptr, OBSINTERPN, samprefd);
             obs[i].S = trk[i].S[0];
         }
-        out_.nsat=nsat;
+        out_.nsat = nsat;
         sdrobs2obsd(obs.ptr, nsat, out_.obsd);
 
         /* rinex obs output */
         if (sdrini.rinex) {
-            if (writerinexobs(out_.rinexobs,&out_.opt,out_.obsd,out_.nsat)<0) {
-                sdrstat.stopflag=ON; stop=ON;
+            if (writerinexobs(out_.rinexobs, &out_.opt, out_.obsd, out_.nsat) < 0) {
+                sdrstat.stopflag = ON; stop = ON;
             }
         }
 
         /* rtcm obs output */
-        if (sdrini.rtcm&&out_.soc.flag) 
+        if (sdrini.rtcm && out_.soc.flag) 
             sendrtcmobs(out_.obsd,&out_.soc,out_.nsat);
                 
         /* navigation data output */
         foreach(i;0 .. sdrini.nch){
             if ((sdrch[i].nav.eph.update)&&(sdrch[i].nav.eph.cnt==3)) {
-                sdrch[i].nav.eph.cnt=0;
-                sdrch[i].nav.eph.update=OFF;
+                sdrch[i].nav.eph.cnt = 0;
+                sdrch[i].nav.eph.update = OFF;
 
                 /* rtcm nav output */
                 if (sdrini.rtcm&&out_.soc.flag) 
@@ -368,7 +364,7 @@ void syncthread()
                 /* rinex nav output */
                 if (sdrini.rinex) {
                     if (writerinexnav(out_.rinexnav,&out_.opt,&sdrch[i].nav.eph)<0) {
-                        sdrstat.stopflag=ON; stop=ON;
+                        sdrstat.stopflag = ON; stop = ON;
                     }
                 }
             }
