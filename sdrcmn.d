@@ -11,70 +11,34 @@ import std.math;
 import std.c.windows.windows;
 import std.numeric;
 import std.datetime;
+import core.bitop;
 
 /* global variables -----------------------------------------------------------*/
 __gshared short cost[CDIV];            /* carrier lookup table cos(t) */
 __gshared short sint[CDIV];            /* carrier lookup table sin(t) */
 
-
-
-//__gshared LARGE_INTEGER nFreq, nStart, nStop;
-TickDuration startTick;
-
-extern(D):
-/* stopwatch function (start) ---------------------------------------------------
-* args   : none
-* return : none
-*------------------------------------------------------------------------------*/
-void tic(string file = __FILE__, size_t line = __LINE__)()
-{
-    traceln("called");
-    //QueryPerformanceFrequency(&nFreq);
-    //QueryPerformanceCounter(&nStart);
-    startTick = Clock.currAppTick;
-}
-/* stopwatch function (stop) ----------------------------------------------------
-* args   : none
-* return : none
-*------------------------------------------------------------------------------*/
-void toc(string file = __FILE__, size_t line = __LINE__)()
-{
-    traceln("called");
-    //DWORD dwTime;
-    //QueryPerformanceCounter(&nStop);
-    //dwTime=cast(DWORD)((nStop.QuadPart-nStart.QuadPart)*1000/nFreq.QuadPart);
-    //SDRPRINTF("timer:%03dms\n",dwTime);
-    immutable diff = Clock.currAppTick - startTick;
-    writefln("timer:%s[ms]", diff.msecs);
-}
-/* calculation log2(x) ----------------------------------------------------------
-* args   : double x         I   x data
-* return : double               log2(x)
-*------------------------------------------------------------------------------*/
-double log2(double x)
-{  
-    return log(x)/log(2.0);
-}
+/**
+xよりも小さな2^nを計算します。
+*/
 /* calculation FFT number of points (2^bits samples) ----------------------------
 * calculation FFT number of points (round up)
 * args   : double x         I   number of points (not 2^bits samples)
 *          int    next      I   increment multiplier
 * return : int                  FFT number of points (2^bits samples)
 *------------------------------------------------------------------------------*/
-uint calcfftnum(double x, size_t next)
+uint calcfftnum(double x, size_t next = 0)
 {
-//    int nn=cast(int)(log2(x)+0.5)+next;
-//    return cast(int)pow(2.0,nn);
-    size_t size = x.to!size_t();
+    immutable fix = x.to!size_t();
 
-    size_t cnt;
-    while(size){
-        size >>= 1;
-        ++cnt;
-    }
-
-    return 1 << (cnt + next);
+    return 1 << (bsr(fix) + next);
 }
+unittest{
+    assert(calcfftnum(10) == 8);
+    assert(calcfftnum(10, 1) == 16);
+    assert(calcfftnum(10, 2) == 32);
+}
+
+
 /* calculation FFT number of points (2^bits samples) ----------------------------
 * calculation FFT number of points using FFT resolution
 * args   : double reso      I   FFT resolution
@@ -83,11 +47,10 @@ uint calcfftnum(double x, size_t next)
 *------------------------------------------------------------------------------*/
 uint calcfftnumreso(double reso, double ti)
 {
-//    double n=1/(reso*ti);
-//    int nn=cast(int)(log2(n)+0.5);
-//    return cast(int)pow(2.0,nn);
     return calcfftnum(1/(reso*ti), 0);
 }
+
+
 /* sdr malloc -------------------------------------------------------------------
 * memorry allocation
 * args   : int    size      I   sizee of allocation
@@ -97,6 +60,8 @@ void* sdrmalloc(size_t size)
 {
     return GC.malloc(size);
 }
+
+
 /* sdr free ---------------------------------------------------------------------
 * free data
 * args   : void   *p        I/O input/output complex data
@@ -106,51 +71,52 @@ void sdrfree(void *p)
 {
     GC.free(p);
 }
+
+
 /* complex malloc ---------------------------------------------------------------
 * memorry allocation of complex data
 * args   : int    n         I   number of allocation
 * return : cpx_t*               allocated pointer
 *------------------------------------------------------------------------------*/
-/**/cpx_t *cpxmalloc(int n)
+/**/
+cpx_t *cpxmalloc(int n)
 {
-    //return cast(cpx_t *)fftwf_malloc(sizeof(cpx_t)*n+32);
     return cast(cpx_t*)GC.malloc(cpx_t.sizeof * n + 32);
 }
+
+
 /* complex free -----------------------------------------------------------------
 * free complex data
 * args   : cpx_t  *cpx      I/O input/output complex data
 * return : none
 *------------------------------------------------------------------------------*/
-/**/void cpxfree(cpx_t *cpx)
+void cpxfree(cpx_t *cpx)
 {
-    //fftwf_free(cpx);
     GC.free(cpx);
 }
+
+
 /* complex FFT -----------------------------------------------------------------
 * cpx=fft(cpx)
 * args   : cpx_t  *cpx      I/O input/output complex data
 *          int    n         I   number of input/output data
 * return : none
 *------------------------------------------------------------------------------*/
-/**/void cpxfft(string file = __FILE__, size_t line = __LINE__)
-    (cpx_t *cpx, int n)
+/**/
+void cpxfft(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpx, int n)
 {
     traceln("called");
     fftwf_plan p;
-    
-    //WaitForSingleObject(hfftmtx,INFINITE); /* for simultaneous access problem */
+
     synchronized(hfftmtx){
         fftwf_plan_with_nthreads(NFFTTHREAD);  //fft execute in multi threads 
-        p=fftwf_plan_dft_1d(n,cpx,cpx,FFTW_FORWARD,FFTW_ESTIMATE);
+        p = fftwf_plan_dft_1d(n,cpx,cpx,FFTW_FORWARD,FFTW_ESTIMATE);
         fftwf_execute(p); /* fft */
         fftwf_destroy_plan(p);
     }
-    //ReleaseMutex(hfftmtx);  
-    //import std.stdio;
-    //writefln("%s(%s): %s.%s : FFT n:%s", file, line, md, fn, n);
-    //auto result = fft!float(cpx[0 .. n]);
-    //cpx[0 .. n] = result[0 .. n];
 }
+
+
 /* complex IFFT -----------------------------------------------------------------
 * cpx=ifft(cpx)
 * args   : cpx_t  *cpx      I/O input/output complex data
@@ -163,20 +129,15 @@ void cpxifft(string file = __FILE__, size_t line = __LINE__)
     traceln("called");
     fftwf_plan p;
     
-    //WaitForSingleObject(hfftmtx,INFINITE); /* for simultaneous access problem */
     synchronized(hfftmtx){
         fftwf_plan_with_nthreads(NFFTTHREAD); /* ifft execute in multi threads */
         p=fftwf_plan_dft_1d(n,cpx,cpx,FFTW_BACKWARD,FFTW_ESTIMATE);
         fftwf_execute(p); /* ifft */
         fftwf_destroy_plan(p);
     }
-    //ReleaseMutex(hfftmtx);
-    //
-    //import std.stdio;
-    //writefln("%s(%s): %s : FFT n:%s", file, line, fn, n);
-    //auto result = inverseFft!float(cpx[0 .. n]);
-    //cpx[0 .. n] = result[0 .. n];
 }
+
+
 /* convert short vector to complex vector ---------------------------------------
 * cpx=complex(I,Q)
 * args   : short  *I        I   input data array (real)
@@ -197,6 +158,8 @@ void cpxcpx(string file = __FILE__, size_t line = __LINE__)(const short *I, cons
         p[1]=Q?Q[i]*cast(float)scale:0.0f;
     }
 }
+
+
 /* convert float vector to complex vector ---------------------------------------
 * cpx=complex(I,Q)
 * args   : float  *I        I   input data array (real)
@@ -217,6 +180,8 @@ void cpxcpxf(string file = __FILE__, size_t line = __LINE__)(const float *I, con
         p[1]=Q?Q[i]*cast(float)scale:0.0f;
     }
 }
+
+
 /* FFT convolution --------------------------------------------------------------
 * conv=sqrt(abs(ifft(fft(cpxa).*conj(cpxb))).^2) 
 * args   : cpx_t  *cpxa     I   input complex data array
@@ -249,6 +214,8 @@ void cpxconv(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpxa, cpx_t 
             conv[i]=(p[0]*p[0]+p[1]*p[1])/m2;
     }
 }
+
+
 /* power spectrum calculation ---------------------------------------------------
 * power spectrum: pspec=abs(fft(cpx)).^2
 * args   : cpx_t  *cpx      I   input complex data array
@@ -272,86 +239,10 @@ void cpxpspec(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpx, int n,
         else
             pspec[i]=(p[0]*p[0]+p[1]*p[1]);
     }
-}/+
-/* fundamental functions using SIMD --------------------------------------------
-* note : SSE2 instructions are used
-*------------------------------------------------------------------------------*/
-#if defined(SSE2)
-/* multiply and add: xmm{int32}+=src1[8]{int16}.*src2[8]{int16} ---------------*/
-#define MULADD_INT16(xmm,src1,src2) { \
-    __m128i _x1,_x2; \
-    _x1=_mm_load_si128 ((__m128i *)(src1)); \
-    _x2=_mm_loadu_si128((__m128i *)(src2)); \
-    _x2=_mm_madd_epi16(_x2,_x1); \
-    xmm=_mm_add_epi32(xmm,_x2); \
 }
-/* sum: dst{any}=sum(xmm{int32}) ----------------------------------------------*/
-#define SUM_INT32(dst,xmm) { \
-    int _sum[4]; \
-    _mm_storeu_si128((__m128i *)_sum,xmm); \
-    dst=_sum[0]+_sum[1]+_sum[2]+_sum[3]; \
-}
-/* expand int8: (xmm1,xmm2){int16}=xmm3{int8} ---------------------------------*/
-#define EXPAND_INT8(xmm1,xmm2,xmm3,zero) { \
-    xmm1=_mm_unpacklo_epi8(zero,xmm3); \
-    xmm2=_mm_unpackhi_epi8(zero,xmm3); \
-    xmm1=_mm_srai_epi16(xmm1,8); \
-    xmm2=_mm_srai_epi16(xmm2,8); \
-}
-/* load int8: (xmm1,xmm2){int16}=src[16]{int8} --------------------------------*/
-#define LOAD_INT8(xmm1,xmm2,src,zero) { \
-    __m128i _x; \
-    _x  =_mm_loadu_si128((__m128i *)(src)); \
-    EXPAND_INT8(xmm1,xmm2,_x,zero); \
-}
-/* load int8 complex: (xmm1,xmm2){int16}=src[16]{int8,int8} -------------------*/
-#define LOAD_INT8C(xmm1,xmm2,src,zero,mask8) { \
-    __m128i _x1,_x2; \
-    _x1 =_mm_loadu_si128((__m128i *)(src)); \
-    _x2 =_mm_srli_epi16(_x1,8); \
-    _x1 =_mm_and_si128(_x1,mask8); \
-    _x1 =_mm_packus_epi16(_x1,_x2); \
-    EXPAND_INT8(xmm1,xmm2,_x1,zero); \
-}
-/* multiply int16: dst[16]{int16}=(xmm1,xmm2){int16}.*(xmm3,xmm4){int16} ------*/
-#define MUL_INT16(dst,xmm1,xmm2,xmm3,xmm4) { \
-    xmm1=_mm_mullo_epi16(xmm1,xmm3); \
-    xmm2=_mm_mullo_epi16(xmm2,xmm4); \
-    _mm_storeu_si128((__m128i *)(dst)    ,xmm1); \
-    _mm_storeu_si128((__m128i *)((dst)+8),xmm2); \
-}
-/* multiply int8: dst[16]{int16}=src[16]{int8}.*(xmm1,xmm2){int16} ------------*/
-#define MUL_INT8(dst,src,xmm1,xmm2,zero) { \
-    __m128i _x1,_x2; \
-    LOAD_INT8(_x1,_x2,src,zero); \
-    MUL_INT16(dst,_x1,_x2,xmm1,xmm2); \
-}
-/* double to int32: xmm{int32}=(xmm1,xmm2){double} ----------------------------*/
-#define DBLTOINT32(xmm,xmm1,xmm2) { \
-    __m128i _int1,_int2; \
-    _int1=_mm_cvttpd_epi32(xmm1); \
-    _int2=_mm_cvttpd_epi32(xmm2); \
-    _int2=_mm_slli_si128(_int2,8); \
-    xmm=_mm_add_epi32(_int1,_int2); \
-}
-/* double to int16: xmm{int16}=(xmm1,...,xmm4){double}&mask{int32} ------------*/
-#define DBLTOINT16(xmm,xmm1,xmm2,xmm3,xmm4,mask) { \
-    __m128i _int3,_int4; \
-    DBLTOINT32(_int3,xmm1,xmm2); \
-    DBLTOINT32(_int4,xmm3,xmm4); \
-    _int3=_mm_and_si128(_int3,mask); \
-    _int4=_mm_and_si128(_int4,mask); \
-    xmm=_mm_packs_epi32(_int3,_int4); \
-}
-/* multiply int8 with lut:dst[16]{int16}=(xmm1,xmm2){int8}.*xmm3{int8}[index] -*/
-#define MIX_INT8(dst,xmm1,xmm2,xmm3,index,zero) { \
-    __m128i _x,_x1,_x2; \
-    _x=_mm_shuffle_epi8(xmm3,index); \
-    EXPAND_INT8(_x1,_x2,_x,zero); \
-    MUL_INT16(dst,_x1,_x2,xmm1,xmm2); \
-}
-#endif /* SSE2 */
-+/
+
+
+
 /* dot products: d1=dot(a1,b),d2=dot(a2,b) --------------------------------------
 * args   : short  *a1       I   input short array
 *          short  *a2       I   input short array
@@ -366,26 +257,12 @@ void dot_21(const short *a1, const short *a2, const short *b, int n,
 {
     const(short)* p1=a1, p2=a2, q=b;
     
-//#if !defined(SSE2)
     d1[0]=d2[0]=0.0;
     
     for (;p1<a1+n;p1++,p2++,q++) {
         d1[0]+=(*p1) * (*q);
         d2[0]+=(*p2) * (*q);
     }
-/+#else
-    __m128i xmm1,xmm2;
-    
-    xmm1=_mm_setzero_si128();
-    xmm2=_mm_setzero_si128();
-    
-    for (;p1<a1+n;p1+=8,p2+=8,q+=8) {
-        MULADD_INT16(xmm1,p1,q);
-        MULADD_INT16(xmm2,p2,q);
-    }
-    SUM_INT32(d1[0],xmm1);
-    SUM_INT32(d2[0],xmm2);
-#endif+/
 }
 /* dot products: d1={dot(a1,b1),dot(a1,b2)},d2={dot(a2,b1),dot(a2,b2)} ----------
 * args   : short  *a1       I   input short array
@@ -402,7 +279,6 @@ void dot_22(const short *a1, const short *a2, const short *b1,
 {
     const(short)* p1=a1, p2=a2, q1=b1, q2=b2;
     
-//#if !defined(SSE2)
     d1[0]=d1[1]=d2[0]=d2[1]=0.0;
     
     for (;p1<a1+n;p1++,p2++,q1++,q2++) {
@@ -411,25 +287,6 @@ void dot_22(const short *a1, const short *a2, const short *b1,
         d2[0]+=(*p2)*(*q1);
         d2[1]+=(*p2)*(*q2);
     }
-/+#else
-    __m128i xmm1,xmm2,xmm3,xmm4;
-    
-    xmm1=_mm_setzero_si128();
-    xmm2=_mm_setzero_si128();
-    xmm3=_mm_setzero_si128();
-    xmm4=_mm_setzero_si128();
-    
-    for (;p1<a1+n;p1+=8,p2+=8,q1+=8,q2+=8) {
-        MULADD_INT16(xmm1,p1,q1);
-        MULADD_INT16(xmm2,p1,q2);
-        MULADD_INT16(xmm3,p2,q1);
-        MULADD_INT16(xmm4,p2,q2);
-    }
-    SUM_INT32(d1[0],xmm1);
-    SUM_INT32(d1[1],xmm2);
-    SUM_INT32(d2[0],xmm3);
-    SUM_INT32(d2[1],xmm4);
-#endif+/
 }
 /* dot products: d1={dot(a1,b1),dot(a1,b2),dot(a1,b3)},d2={...} -----------------
 * args   : short  *a1       I   input short array
@@ -448,7 +305,6 @@ void dot_23(const short *a1, const short *a2, const short *b1,
 {
     const(short)* p1=a1, p2=a2, q1=b1, q2=b2, q3=b3;
     
-//#if !defined(SSE2)
     d1[0]=d1[1]=d1[2]=d2[0]=d2[1]=d2[2]=0.0;
     
     for (;p1<a1+n;p1++,p2++,q1++,q2++,q3++) {
@@ -459,32 +315,9 @@ void dot_23(const short *a1, const short *a2, const short *b1,
         d2[1]+=(*p2)*(*q2);
         d2[2]+=(*p2)*(*q3);
     }
-/+#else
-    __m128i xmm1,xmm2,xmm3,xmm4,xmm5,xmm6;
-    
-    xmm1=_mm_setzero_si128();
-    xmm2=_mm_setzero_si128();
-    xmm3=_mm_setzero_si128();
-    xmm4=_mm_setzero_si128();
-    xmm5=_mm_setzero_si128();
-    xmm6=_mm_setzero_si128();
-   
-    for (;p1<a1+n;p1+=8,p2+=8,q1+=8,q2+=8,q3+=8) {
-        MULADD_INT16(xmm1,p1,q1);
-        MULADD_INT16(xmm2,p1,q2);
-        MULADD_INT16(xmm3,p1,q3);
-        MULADD_INT16(xmm4,p2,q1);
-        MULADD_INT16(xmm5,p2,q2);
-        MULADD_INT16(xmm6,p2,q3);
-    }
-    SUM_INT32(d1[0],xmm1);
-    SUM_INT32(d1[1],xmm2);
-    SUM_INT32(d1[2],xmm3);
-    SUM_INT32(d2[0],xmm4);
-    SUM_INT32(d2[1],xmm5);
-    SUM_INT32(d2[2],xmm6);
-#endif+/
 }
+
+
 /* multiply char/short vectors --------------------------------------------------
 * multiply char/short vectors: out=data1.*data2
 * args   : char   *data1    I   input char array
@@ -493,11 +326,14 @@ void dot_23(const short *a1, const short *a2, const short *b1,
 *          short  *out      O   output short array
 * return : none
 *------------------------------------------------------------------------------*/
-void mulvcs(const char *data1, const short *data2, int n, short *out_)
+
+void mulvcs(const(byte)* data1, const short *data2, int n, short *out_)
 {   
     int i;
     for (i=0;i<n;i++) out_[i]=cast(short)(data1[i]*data2[i]);
 }
+
+
 /* sum float vectors ------------------------------------------------------------
 * sum float vectors: out=data1.+data2
 * args   : float  *data1    I   input float array
@@ -510,24 +346,7 @@ void mulvcs(const char *data1, const short *data2, int n, short *out_)
 void sumvf(const float *data1, const float *data2, int n, float *out_)
 {
     int i;
-//#if !defined(AVX)
     for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
-/+#else
-    int m=n/8;
-    __m256 xmm1,xmm2,xmm3;
-    
-    if (n<8) {
-        for (i=0;i<n;i++) out[i]=data1[i]+data2[i];
-    }else {
-        for (i=0;i<8*m;i+=8) {
-            xmm1=_mm256_loadu_ps(&data1[i]);
-            xmm2=_mm256_loadu_ps(&data2[i]);
-            xmm3=_mm256_add_ps(xmm1,xmm2);
-            _mm256_storeu_ps(&out[i],xmm3);
-        }
-        for (;i<n;i++)  out[i]=data1[i]+data2[i];
-    }
-#endif+/
 }
 /* sum double vectors -----------------------------------------------------------
 * sum double vectors: out=data1.+data2
@@ -541,25 +360,10 @@ void sumvf(const float *data1, const float *data2, int n, float *out_)
 void sumvd(const double *data1, const double *data2, int n, double *out_)
 {
     int i;
-//#if !defined(AVX)
     for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
-/+#else
-    int m=n/4;
-    __m256d xmm1,xmm2,xmm3;
-    
-    if (n<8) {
-        for (i=0;i<n;i++) out[i]=data1[i]+data2[i];
-    }else {
-        for (i=0;i<4*m;i+=4) {
-            xmm1=_mm256_loadu_pd(&data1[i]);
-            xmm2=_mm256_loadu_pd(&data2[i]);
-            xmm3=_mm256_add_pd(xmm1,xmm2);
-            _mm256_storeu_pd(&out[i],xmm3);
-        }
-        for (;i<n;i++)  out[i]=data1[i]+data2[i];
-    }
-#endif+/
 }
+
+
 /* maximum value and index (int array) ------------------------------------------
 * calculate maximum value and index
 * args   : double *data     I   input int array
@@ -586,6 +390,8 @@ int maxvi(const int *data, int n, int exinds, int exinde, int *ind)
     }
     return max;
 }
+
+
 /* maximum value and index (float array) ----------------------------------------
 * calculate maximum value and index
 * args   : float  *data     I   input float array
@@ -612,6 +418,8 @@ float maxvf(const float *data, int n, int exinds, int exinde, int *ind)
     }
     return max;
 }
+
+
 /* maximum value and index (double array) ---------------------------------------
 * calculate maximum value and index
 * args   : double *data     I   input double array
@@ -638,6 +446,8 @@ double maxvd(const double *data, int n, int exinds, int exinde, int *ind)
     }
     return max;
 }
+
+
 /* mean value (double array) ----------------------------------------------------
 * calculate mean value
 * args   : double *data     I   input double array
@@ -659,6 +469,8 @@ double meanvd(const double *data, int n, int exinds, int exinde)
     }
     return mean/(n-ne);
 }
+
+
 /* 1D interpolation -------------------------------------------------------------
 * interpolation of 1D data
 * args   : double *x,*y     I   x and y data array
@@ -697,6 +509,8 @@ double interp1(double *x, double *y, int n, double t)
     }
     return z;
 }
+
+
 /* convert uint64_t to double ---------------------------------------------------
 * convert uint64_t array to double array (subtract base value)
 * args   : uint64_t *data   I   input uint64_t array
@@ -710,6 +524,8 @@ void uint64todouble(ulong *data, ulong base, int n, double *out_)
     int i;
     for (i=0;i<n;i++) out_[i]=cast(double)(data[i]-base);
 }
+
+
 /* index to subscribe -----------------------------------------------------------
 * 1D index to subscribe (index of 2D array)
 * args   : int    *ind      I   input data
@@ -723,6 +539,8 @@ void ind2sub(int ind, int nx, int ny, int *subx, int *suby)
     *subx = ind%nx;
     *suby = ny*ind/(nx*ny);
 }
+
+
 /* vector circle shift function  ------------------------------------------------
 * circle shift of vector data
 * args   : void   *dst      O   input data
@@ -743,6 +561,8 @@ void shiftright(void *dst, void *src, size_t size, int n)
         free(tmp);
     }
 }
+
+
 /* resample data to (2^bits) samples --------------------------------------------
 * resample data to (2^bits) samples
 * args   : char   *data     I   data
@@ -773,51 +593,9 @@ void resdata(const char *data, int dtype, int n, int m, char *rdata)
             p[0]=data[ind];
         }
     }
-/+#else
-    int index[4];
-    __m128d x1,x2,xmm1,xmm2,xmm3,xmm4;
-    __m128i ind;
-    
-    xmm1=_mm_set_pd(n,0);
-    xmm2=_mm_set_pd(n*3,n*2);
-    xmm3=_mm_set1_pd(n*4);
-    xmm4=_mm_set1_pd(1.0/m);
-    
-    if (dtype==DTYPEIQ) { /* complex */
-        for (p=rdata;p<rdata+m;p+=8) {
-            x1=_mm_mul_pd(xmm1,xmm4);
-            x2=_mm_mul_pd(xmm2,xmm4);
-            DBLTOINT32(ind,x1,x2);
-            ind=_mm_slli_epi32(ind,1);
-            _mm_storeu_si128((__m128i *)index,ind);
-            p[0]=data[index[0]];
-            p[1]=data[index[0]+1];
-            p[2]=data[index[1]];
-            p[3]=data[index[1]+1];
-            p[4]=data[index[2]];
-            p[5]=data[index[2]+1];
-            p[6]=data[index[3]];
-            p[7]=data[index[3]+1];
-            xmm1=_mm_add_pd(xmm1,xmm3);
-            xmm2=_mm_add_pd(xmm2,xmm3);
-        }
-    }
-    if (dtype==DTYPEI) { /* real */
-        for (p=rdata;p<rdata+m;p+=4) {
-            x1=_mm_mul_pd(xmm1,xmm4);
-            x2=_mm_mul_pd(xmm2,xmm4);
-            DBLTOINT32(ind,x1,x2);
-            _mm_storeu_si128((__m128i *)index,ind);
-            p[0]=data[index[0]];
-            p[1]=data[index[1]];
-            p[2]=data[index[2]];
-            p[3]=data[index[3]];
-            xmm1=_mm_add_pd(xmm1,xmm3);
-            xmm2=_mm_add_pd(xmm2,xmm3);
-        }
-    }
-#endif+/
 }
+
+
 /* resample code ----------------------------------------------------------------
 * resample code
 * args   : char   *code     I   code
@@ -847,43 +625,9 @@ double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code
     }
     traceln("return");
     return coff-smax*ci;
-    
-/+#else
-    int i,index[4],x[4],nbit,scale;
-    __m128i xmm1,xmm2,xmm3,xmm4,xmm5;
-    
-    coff-=smax*ci;
-    coff-=floor(coff/len)*len; /* 0<=coff<len */
-    
-    for (i=len,nbit=31;i;i>>=1,nbit--) ;
-    scale=1<<nbit; /* scale factor */
-    
-    for (i=0;i<4;i++,coff+=ci) {
-        x[i]=(int)(coff*scale+0.5);
-    }
-    xmm1=_mm_loadu_si128((__m128i *)x);
-    xmm2=_mm_set1_epi32(len*scale-1);
-    xmm3=_mm_set1_epi32(len*scale);
-    xmm4=_mm_set1_epi32((int)(ci*4*scale+0.5));
-    
-    for (p=rcode;p<rcode+n+2*smax;p+=4) {
-        
-        xmm5=_mm_cmpgt_epi32(xmm1,xmm2);
-        xmm5=_mm_and_si128(xmm5,xmm3);
-        xmm1=_mm_sub_epi32(xmm1,xmm5);
-        xmm5=_mm_srai_epi32(xmm1,nbit);
-        _mm_storeu_si128((__m128i *)index,xmm5);
-        p[0]=code[index[0]];
-        p[1]=code[index[1]];
-        p[2]=code[index[2]];
-        p[3]=code[index[3]];
-        xmm1=_mm_add_epi32(xmm1,xmm4);
-    }
-    coff+=ci*(n+2*smax)-4*ci;
-    coff-=floor(coff/len)*len;
-    return coff-smax*ci;
-#endif+/
 }
+
+
 /* mix local carrier ------------------------------------------------------------
 * mix local carrier to data
 * args   : char   *data     I   data
@@ -895,11 +639,11 @@ double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code
 *          short  *I,*Q     O   carrier mixed data I, Q component
 * return : double               phase remainder
 *------------------------------------------------------------------------------*/
-double mixcarr(string file = __FILE__, size_t line = __LINE__)(const char *data, int dtype, double ti, int n, double freq, double phi0, short *I, short *Q)
+double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, int dtype, double ti, int n, double freq, double phi0, short *I, short *Q)
 {
     traceln("called");
 
-    const(char)* p;
+    const(byte)* p;
     double phi,ps,prem;
 
 //#if !defined(SSE2)
@@ -917,14 +661,14 @@ double mixcarr(string file = __FILE__, size_t line = __LINE__)(const char *data,
     ps=freq*CDIV*ti; /* phase step */
 
     if (dtype==DTYPEIQ) { /* complex */
-        for (p=data;p<data+n*2;p+=2,I++,Q++,phi+=ps) {
+        for (p=data.ptr;p<data.ptr+n*2;p+=2,I++,Q++,phi+=ps) {
             index=(cast(int)phi)&CMASK;
             *I=cast(short)(cost[index]*p[0]);
             *Q=cast(short)(cost[index]*p[1]);
         }
     }
     if (dtype==DTYPEI) { /* real */
-        for (p=data;p<data+n;p++,I++,Q++,phi+=ps) {
+        for (p=data.ptr;p<data.ptr+n;p++,I++,Q++,phi+=ps) {
             index=(cast(int)phi)&CMASK;
             *I=cast(short)(cost[index]*p[0]);
             *Q=cast(short)(sint[index]*p[0]);
@@ -932,77 +676,5 @@ double mixcarr(string file = __FILE__, size_t line = __LINE__)(const char *data,
     }
     prem=phi*DPI/CDIV;
     while(prem>DPI) prem-=DPI;
-    return prem;    
-/+#else
-    static char cost[16]={0},sint[16]={0};
-    int i;
-    __m128d xmm1,xmm2,xmm3,xmm4,xmm5,xmm6,xmm7,xmm8,xmm9;
-    __m128i dat1,dat2,dat3,dat4,ind1,ind2,xcos,xsin;
-    __m128i zero=_mm_setzero_si128();
-    __m128i mask4=_mm_set1_epi32(15);
-    __m128i mask8=_mm_set1_epi16(255);
-    
-    if (!cost[0]) {
-        for (i=0;i<16;i++) {
-            cost[i]=(char)floor((cos(PI/8*i)/CSCALE+0.5));
-            sint[i]=(char)floor((sin(PI/8*i)/CSCALE+0.5));
-        }
-    }
-    phi=phi0/DPI*16-floor(phi0/DPI)*16;
-    ps=freq*16*ti;
-    xmm1=_mm_set_pd(phi+ps,phi); phi+=ps*2;
-    xmm2=_mm_set_pd(phi+ps,phi); phi+=ps*2;
-    xmm3=_mm_set_pd(phi+ps,phi); phi+=ps*2;
-    xmm4=_mm_set_pd(phi+ps,phi); phi+=ps*2;
-    xmm5=_mm_set_pd(phi+ps,phi); phi+=ps*2;
-    xmm6=_mm_set_pd(phi+ps,phi); phi+=ps*2;
-    xmm7=_mm_set_pd(phi+ps,phi); phi+=ps*2;
-    xmm8=_mm_set_pd(phi+ps,phi); phi+=ps*2;
-    xmm9=_mm_set1_pd(ps*16);
-    xcos=_mm_loadu_si128((__m128i *)cost);
-    xsin=_mm_loadu_si128((__m128i *)sint);
-    
-    if (dtype==DTYPEIQ) { /* complex */
-        for (p=data;p<data+n*2;p+=32,I+=16,Q+=16) {
-            LOAD_INT8C(dat1,dat2,p   ,zero,mask8);
-            LOAD_INT8C(dat3,dat4,p+16,zero,mask8);
-            
-            DBLTOINT16(ind1,xmm1,xmm2,xmm3,xmm4,mask4);
-            DBLTOINT16(ind2,xmm5,xmm6,xmm7,xmm8,mask4);
-            ind1=_mm_packus_epi16(ind1,ind2);
-            MIX_INT8(I,dat1,dat3,xcos,ind1,zero);
-            MIX_INT8(Q,dat2,dat4,xcos,ind1,zero);
-            xmm1=_mm_add_pd(xmm1,xmm9);
-            xmm2=_mm_add_pd(xmm2,xmm9);
-            xmm3=_mm_add_pd(xmm3,xmm9);
-            xmm4=_mm_add_pd(xmm4,xmm9);
-            xmm5=_mm_add_pd(xmm5,xmm9);
-            xmm6=_mm_add_pd(xmm6,xmm9);
-            xmm7=_mm_add_pd(xmm7,xmm9);
-            xmm8=_mm_add_pd(xmm8,xmm9);
-        }
-    }
-    if (dtype==DTYPEI) { /* real */
-        for (p=data;p<data+n;p+=16,I+=16,Q+=16) {
-            LOAD_INT8(dat1,dat2,p,zero);
-            
-            DBLTOINT16(ind1,xmm1,xmm2,xmm3,xmm4,mask4);
-            DBLTOINT16(ind2,xmm5,xmm6,xmm7,xmm8,mask4);
-            ind1=_mm_packus_epi16(ind1,ind2);
-            MIX_INT8(I,dat1,dat2,xcos,ind1,zero);
-            MIX_INT8(Q,dat1,dat2,xsin,ind1,zero);
-            xmm1=_mm_add_pd(xmm1,xmm9);
-            xmm2=_mm_add_pd(xmm2,xmm9);
-            xmm3=_mm_add_pd(xmm3,xmm9);
-            xmm4=_mm_add_pd(xmm4,xmm9);
-            xmm5=_mm_add_pd(xmm5,xmm9);
-            xmm6=_mm_add_pd(xmm6,xmm9);
-            xmm7=_mm_add_pd(xmm7,xmm9);
-            xmm8=_mm_add_pd(xmm8,xmm9);
-        }
-    }
-    prem=phi0+freq*ti*n*DPI;
-    while(prem>DPI) prem-=DPI;
     return prem;
-#endif+/
 }
