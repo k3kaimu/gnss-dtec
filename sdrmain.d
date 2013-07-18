@@ -42,8 +42,15 @@ __gshared sdrspec_t sdrspec;
 version(MAIN_IS_SDRMAIN_MAIN){
     void main(string[] args)
     {
+        import std.datetime : StopWatch;
+        StopWatch sw;
+        sw.start();
+
         sdrini.readIniFile(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
         startsdr();
+
+        sw.stop();
+        writefln("total time = %s[ms]", sw.peek.msecs);
     }
 }
 
@@ -103,8 +110,9 @@ void startsdr()
             stop = sdrstat.stopflag;
         if (stop) break;
 
+        Thread.sleep(dur!"msecs"(100));
         /* grab data */
-        enforce(rcvgrabdata(&sdrini) >= 0);
+        //enforce(rcvgrabdata(&sdrini) >= 0);
     }
     tracing = true;
 
@@ -128,9 +136,10 @@ void sdrthread(size_t index)
     sdrch_t* sdr = &(sdrch[index]);
     Thread.getThis.name = "sdrchannel_" ~ index.to!string();
     sdrplt_t pltacq,plttrk;
-    ulong buffloc = 0,bufflocnow = 0,cnt = 0,loopcnt = 0;
+    ulong buffloc = 0, /*bufflocnow = 0,*/ cnt = 0,loopcnt = 0;
     int stop = 0,cntsw = 0, swsync, swreset;
     double *acqpower = null;
+    //double[] acqpower;
 
     /* plot setting */
     if (initpltstruct(&pltacq,&plttrk,sdr)<0) {
@@ -138,7 +147,7 @@ void sdrthread(size_t index)
         stop=ON;
     }
     SDRPRINTF("**** %s sdr thread start! ****\n",sdr.satstr);
-    Sleep(100);
+    //Sleep(100);
     
     /* check the exit flag */
     synchronized(hstopmtx)
@@ -152,10 +161,10 @@ void sdrthread(size_t index)
             acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft*sdr.acq.nfreq);
             
             /* fft correlation */
-            buffloc=sdracquisition(sdr, acqpower, cnt);
+            buffloc=sdracquisition(sdr, acqpower, cnt, buffloc);
             
             /* plot aquisition result */
-            if (sdr.flagacq&&sdrini.pltacq) {
+            if (sdr.flagacq && sdrini.pltacq) {
                 pltacq.z=acqpower;
                 plot(&pltacq, "acq_" ~ sdr.satstr ~ "_"); 
             }
@@ -163,7 +172,7 @@ void sdrthread(size_t index)
         /* tracking */
         if (sdr.flagacq) {
             traceln("start tracking");
-            bufflocnow = sdrtracking(sdr, buffloc, cnt);
+            immutable bufflocnow = sdrtracking(sdr, buffloc, cnt);
             traceln("end tracking");
             if (sdr.flagtrk) {
                 if (sdr.nav.swnavsync) cntsw = 0;
@@ -200,7 +209,7 @@ void sdrthread(size_t index)
                     loopcnt++;
                 }
 
-                writefln("carrier phase:%s, bufflocnow:%s, buffloc:%s", sdr.trk.L[0], bufflocnow, buffloc);
+                debug(LPrint) writefln("carrier phase:%s, bufflocnow:%s, buffloc:%s", sdr.trk.L[0], bufflocnow, buffloc);
 
                 /* LEX thread */
                 //if ((cntsw%LEXMS)==0) {
@@ -223,9 +232,9 @@ void sdrthread(size_t index)
     /* plot termination */
     quitpltstruct(&pltacq,&plttrk);
 
-    if (sdr.flagacq) 
-        SDRPRINTF("SDR channel %s thread finished! Delay=%d [ms]\n",sdr.satstr,cast(int)(bufflocnow-buffloc)/sdr.nsamp);
-    else
+    //if (sdr.flagacq) 
+    //    SDRPRINTF("SDR channel %s thread finished! Delay=%d [ms]\n",sdr.satstr,cast(int)(bufflocnow-buffloc)/sdr.nsamp);
+    //else
         SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
 }
 

@@ -19,44 +19,37 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
 {
     traceln("called");
 
-    sdr.flagtrk = OFF;
+    //sdr.flagtrk = OFF;
     
     /* memory allocation */
+    immutable tmp = cast(size_t)((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf));
+    sdr.currnsamp = cast(int)tmp;
+
     byte[] data = new byte[sdr.nsamp * sdr.dtype];
-    
-    /* current buffer location */
-    ulong bufflocnow;
-    synchronized(hreadmtx)
-        bufflocnow = sdrini.fendbuffsize*sdrstat.buffloccnt-sdr.nsamp; 
-    
-    if (bufflocnow > buffloc) {
-        auto tmp = cast(size_t)((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf));
-        sdr.currnsamp = cast(int)tmp;
-        rcvgetbuff(&sdrini, buffloc, sdr.currnsamp, sdr.ftype, sdr.dtype, data);
+    rcvgetbuff(&sdrini, buffloc, sdr.currnsamp, sdr.ftype, sdr.dtype, data);
 
-        {
-            immutable copySize = 1 + 2 * sdr.trk.ncorrp;
-            sdr.trk.oldI[0 .. copySize] = sdr.trk.I[0 .. copySize];
-            sdr.trk.oldQ[0 .. copySize] = sdr.trk.Q[0 .. copySize];
-        }
-
-        sdr.trk.oldremcode = sdr.trk.remcode;
-        sdr.trk.oldremcarr = sdr.trk.remcarr;
-
-        /* correlation */
-        correlator(data, sdr.dtype, sdr.ti, sdr.currnsamp, sdr.trk.carrfreq, sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
-                   sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code,sdr.clen);
-        
-        /* navigation data */
-        sdrnavigation(sdr, buffloc, cnt);
-        sdr.flagtrk = ON;
+    {
+        immutable copySize = 1 + 2 * sdr.trk.ncorrp;
+        sdr.trk.oldI[0 .. copySize] = sdr.trk.I[0 .. copySize];
+        sdr.trk.oldQ[0 .. copySize] = sdr.trk.Q[0 .. copySize];
     }
+
+    sdr.trk.oldremcode = sdr.trk.remcode;
+    sdr.trk.oldremcarr = sdr.trk.remcarr;
+
+    /* correlation */
+    correlator(data, sdr.dtype, sdr.ti, sdr.currnsamp, sdr.trk.carrfreq, sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
+               sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code,sdr.clen);
+    
+    /* navigation data */
+    sdrnavigation(sdr, buffloc, cnt);
+    sdr.flagtrk = ON;
     
     //sdrfree(data);
     delete data;
     
-    return bufflocnow;
-    //return buffloc + sdr.currnsamp * sdr.dtype;
+    //return bufflocnow;
+    return buffloc + sdr.currnsamp;
 }
 /* correlator -------------------------------------------------------------------
 * multiply sampling data and carrier (I/Q), multiply code (E/P/L), and integrate

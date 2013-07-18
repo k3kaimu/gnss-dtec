@@ -16,44 +16,18 @@ import std.stdio;
 *          double *power    O   normalized correlation power vector (2D array)
 * return : uint64_t             current buffer location
 *------------------------------------------------------------------------------*/
-ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, double* power, ref ulong cnt)
+ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, double* power, ref ulong cnt, ulong buffloc)
 {
     traceln("called");
-    ulong buffloc,bufflocnow;
 
     /* memory allocation */
     byte[] data = new byte[sdr.nsamp * sdr.dtype];
     byte[] datal = new byte[sdr.nsamp * sdr.dtype * sdr.acq.lenf];
 
-    /* current buffer location */
-    writefln("##### acq cnt: %s", cnt);
-    if(cnt == 0)    // 最初のサイクルでは、先頭から読み込むようにする
-    {
-        ++cnt;
-        immutable needBuffCnt = sdr.acq.intg * sdr.nsamp / sdrini.fendbuffsize;
-        size_t now;
-        do{
-            synchronized(hreadmtx)
-                now = sdrstat.buffloccnt;
-        }while(now < needBuffCnt);
-
-        buffloc = needBuffCnt * sdrini.fendbuffsize;
-        writefln("###### acq buffloc %s", buffloc);
-    }else{
-        synchronized(hreadmtx)
-            buffloc = sdrini.fendbuffsize * sdrstat.buffloccnt - sdr.acq.intg * sdr.nsamp;
-    }
-
     /* acquisition integration */
     foreach(i; 0 .. sdr.acq.intg){
 
-        /* wait until buffer is not full */
-        do {
-            synchronized(hreadmtx)
-                bufflocnow = sdrini.fendbuffsize * sdrstat.buffloccnt - sdr.nsamp;
-        } while (bufflocnow < buffloc);
-
-        /* get current 1ms data */
+        /* get new 1ms data */
         rcvgetbuff(&sdrini, buffloc, sdr.nsamp, sdr.ftype, sdr.dtype, data);
         buffloc += sdr.nsamp;
 
@@ -68,22 +42,22 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
     }
     /* fine doppler search */
     if (sdr.flagacq) {
-        buffloc+=sdr.acq.acqcodei; /* set buffer location at top of code */
-        rcvgetbuff(&sdrini,buffloc,sdr.nsamp*sdr.acq.lenf,sdr.ftype,sdr.dtype,datal);
+        buffloc += sdr.acq.acqcodei; /* set buffer location at top of code */
+        rcvgetbuff(&sdrini,buffloc, sdr.nsamp * sdr.acq.lenf, sdr.ftype, sdr.dtype, datal);
 
         /* fine doppler search */
-        sdr.acq.acqfreqf=carrfsearch(datal,sdr.dtype,sdr.ti,sdr.crate,sdr.nsamp*sdr.acq.lenf,sdr.acq.nfftf,sdr.clen*sdr.acq.lenf,sdr.lcode);
-        SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f, freqf=%.1f, diff=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,cast(int)sdr.acq.acqcodei, sdr.acq.acqfreq-sdr.f_if, sdr.acq.acqfreqf-sdr.f_if, sdr.acq.acqfreq-sdr.acq.acqfreqf);
+        sdr.acq.acqfreqf = carrfsearch(datal, sdr.dtype, sdr.ti, sdr.crate, sdr.nsamp * sdr.acq.lenf, sdr.acq.nfftf, sdr.clen * sdr.acq.lenf, sdr.lcode);
+        SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f, freqf=%.1f, diff=%.1f\n", sdr.satstr, sdr.acq.cn0, sdr.acq.peakr, cast(int)sdr.acq.acqcodei, sdr.acq.acqfreq - sdr.f_if, sdr.acq.acqfreqf - sdr.f_if, sdr.acq.acqfreq - sdr.acq.acqfreqf);
         
-        sdr.trk.carrfreq=sdr.acq.acqfreqf;
-        sdr.trk.codefreq=sdr.crate;
+        sdr.trk.carrfreq = sdr.acq.acqfreqf;
+        sdr.trk.codefreq = sdr.crate;
 
         /* check fine acquisition result */
-        if (fabs(sdr.acq.acqfreqf-sdr.acq.acqfreq)>sdr.acq.step) 
-            sdr.flagacq=OFF; /* reset */
+        if (std.math.abs(sdr.acq.acqfreqf-sdr.acq.acqfreq) > sdr.acq.step) 
+            sdr.flagacq = OFF; /* reset */
     } else {
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
-        Sleep(ACQSLEEP);
+        //Sleep(ACQSLEEP);
     }
     //sdrfree(data); sdrfree(datal);
     delete data;

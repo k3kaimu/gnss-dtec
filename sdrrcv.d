@@ -216,7 +216,7 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     case Fend.FILESTEREO: 
         filestereo_pushtomembuf(); /* copy to membuffer */
         //Sleep(1);
-        Thread.sleep(dur!"usecs"(3000));
+        //Thread.sleep(dur!"usecs"(2000));
         break;
     /* SiGe GN3S v2/v3 */
 /+    case Fend.GN3SV2:
@@ -229,7 +229,7 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     /* File */
     case Fend.FILE:
         file_pushtomembuf(); /* copy to membuffer */
-        Thread.sleep(dur!"usecs"(3000));
+        //Thread.sleep(dur!"usecs"(2000));
         //Sleep(1);
         break;
     default:
@@ -269,33 +269,51 @@ int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *i
 *          char   *expbuff  O   extracted data buffer
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, ulong buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
+int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
 {
     traceln("called");
-    switch (ini.fend) {
-    /* NSL stereo */
-/+    case Fend.STEREO: 
-        stereo_getbuff(buffloc,n,dtype,expbuf);
-        break;+/
-    /* STEREO Binary File */
-    case Fend.FILESTEREO: 
-        stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
-        break;
-    /* SiGe GN3S v2 */
-/+    case Fend.GN3SV2:
-        gn3s_getbuff_v2(buffloc,n,dtype,expbuf);
-        break;
-    /* SiGe GN3S v3 */
-    case Fend.GN3SV3:
-        gn3s_getbuff_v3(buffloc,n,dtype,expbuf);
-        break;+/
-    /* File */
-    case Fend.FILE:
-        file_getbuff(buffloc, n, ftype, dtype, expbuf);
-        break;
-    default:
-        enforce(0);
+
+    bool needNewBuffer()
+    {
+        bool b;
+
+        synchronized(hreadmtx)
+            b = sdrini.fendbuffsize * sdrstat.buffloccnt < n + buffloc;
+
+        return b;
     }
+
+
+    if(expbuf !is null){
+        while(needNewBuffer())
+            enforce(rcvgrabdata(&sdrini) >= 0);
+
+        switch (ini.fend) {
+        /* NSL stereo */
+    /+    case Fend.STEREO: 
+            stereo_getbuff(buffloc,n,dtype,expbuf);
+            break;+/
+        /* STEREO Binary File */
+        case Fend.FILESTEREO: 
+            stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
+            break;
+        /* SiGe GN3S v2 */
+    /+    case Fend.GN3SV2:
+            gn3s_getbuff_v2(buffloc,n,dtype,expbuf);
+            break;
+        /* SiGe GN3S v3 */
+        case Fend.GN3SV3:
+            gn3s_getbuff_v3(buffloc,n,dtype,expbuf);
+            break;+/
+        /* File */
+        case Fend.FILE:
+            file_getbuff(buffloc, n, ftype, dtype, expbuf);
+            break;
+        default:
+            enforce(0);
+        }
+    }
+
     return 0;
 }
 /* push data to memory buffer ---------------------------------------------------
