@@ -12,6 +12,8 @@ import std.c.stdio,
 import std.conv : to;
 import std.exception : enforce;
 
+version(none):
+
 /* constants -----------------------------------------------------------------*/
 /* sterei confugration file path */
 immutable DEF_FW_FILENAME       = "../../src/rcv/stereo/conf/stereo_fx2fw.ihx";

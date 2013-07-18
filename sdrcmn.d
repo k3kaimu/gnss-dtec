@@ -179,12 +179,10 @@ void cpxfft(cpx_t *cpx, int n)
     traceln("called");
     fftwf_plan p;
 
-    synchronized(hfftmtx){
-        fftwf_plan_with_nthreads(NFFTTHREAD);  //fft execute in multi threads 
-        p = fftwf_plan_dft_1d(n, cpx, cpx, FFTW_FORWARD, FFTW_ESTIMATE);
-        fftwf_execute(p); /* fft */
-        fftwf_destroy_plan(p);
-    }
+    fftwf_plan_with_nthreads(NFFTTHREAD);  //fft execute in multi threads 
+    p = fftwf_plan_dft_1d(n, cpx, cpx, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftwf_execute(p); /* fft */
+    fftwf_destroy_plan(p);
 }
 
 
@@ -211,12 +209,10 @@ void cpxifft(cpx_t *cpx, int n)
     traceln("called");
     fftwf_plan p;
     
-    synchronized(hfftmtx){
-        fftwf_plan_with_nthreads(NFFTTHREAD); /* ifft execute in multi threads */
-        p=fftwf_plan_dft_1d(n,cpx,cpx,FFTW_BACKWARD,FFTW_ESTIMATE);
-        fftwf_execute(p); /* ifft */
-        fftwf_destroy_plan(p);
-    }
+    fftwf_plan_with_nthreads(NFFTTHREAD); /* ifft execute in multi threads */
+    p=fftwf_plan_dft_1d(n,cpx,cpx,FFTW_BACKWARD,FFTW_ESTIMATE);
+    fftwf_execute(p); /* ifft */
+    fftwf_destroy_plan(p);
 }
 
 
@@ -410,15 +406,18 @@ void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, size_t n,
         d2[0] = result[1][0];
         d2[1] = result[1][1];
     }else{
-        const(short)* p1=a1, p2=a2, q1=b1, q2=b2;
+        const(short)* p1 = a1,
+                      p2 = a2,
+                      q1 = b1,
+                      q2 = b2;
         
-        d1[0]=d1[1]=d2[0]=d2[1]=0.0;
+        d1[0] = d1[1] = d2[0] = d2[1] = 0.0;
         
         for (;p1<a1+n;p1++,p2++,q1++,q2++) {
-            d1[0]+=(*p1)*(*q1);
-            d1[1]+=(*p1)*(*q2);
-            d2[0]+=(*p2)*(*q1);
-            d2[1]+=(*p2)*(*q2);
+            d1[0] += (*p1) * (*q1);
+            d1[1] += (*p1) * (*q2);
+            d2[0] += (*p2) * (*q1);
+            d2[1] += (*p2) * (*q2);
         }
     }
 }
@@ -456,15 +455,15 @@ void dot_23(const short *a1, const short *a2, const short *b1,
     }else{
         const(short)* p1=a1, p2=a2, q1=b1, q2=b2, q3=b3;
         
-        d1[0]=d1[1]=d1[2]=d2[0]=d2[1]=d2[2]=0.0;
+        d1[0] = d1[1] = d1[2] = d2[0] = d2[1] = d2[2] = 0.0;
         
         for (;p1<a1+n;p1++,p2++,q1++,q2++,q3++) {
-            d1[0]+=(*p1)*(*q1);
-            d1[1]+=(*p1)*(*q2);
-            d1[2]+=(*p1)*(*q3);
-            d2[0]+=(*p2)*(*q1);
-            d2[1]+=(*p2)*(*q2);
-            d2[2]+=(*p2)*(*q3);
+            d1[0] += (*p1) * (*q1);
+            d1[1] += (*p1) * (*q2);
+            d1[2] += (*p1) * (*q3);
+            d2[0] += (*p2) * (*q1);
+            d2[1] += (*p2) * (*q2);
+            d2[2] += (*p2) * (*q3);
         }
     }
 }
@@ -638,7 +637,6 @@ void sumvf(const float *data1, const float *data2, int n, float *out_)
 
 void sumvf(in float[] data1, in float[] data2, float[] out_)
 {
-    //sumvf(data1.ptr, data2.ptr, data1.length, out_.ptr);
     out_[] = data1[] + data2[];
 }
 
@@ -661,7 +659,6 @@ void sumvd(const double *data1, const double *data2, size_t n, double *out_)
 
 void sumvd(in double[] data1, in double[] data2, double[] out_)
 {
-    //sumvd(data1.ptr, data2.ptr, data1.length, out_.ptr);
     out_[] = data1[] + data2[];
 }
 
@@ -948,13 +945,17 @@ void ind2sub(int ind, int nx, int ny, int *subx, int *suby)
 *------------------------------------------------------------------------------*/
 void shiftright(void *dst, void *src, size_t size, int n)
 {
+    /*
     void *tmp;
-    tmp=malloc(size*n);
+    tmp = malloc(size*n);
     if (tmp !is null) {
         tmp[0 .. size*n] = src[0 .. size*n];
         dst[0 .. size*(n-1)] = tmp[0 .. size*(n-1)];
         free(tmp);
-    }
+    }*/
+    scope tmp = new void[size * n];
+    tmp[0 .. size*n] = src[0 .. size*n];
+    dst[0 .. size*(n-1)] = tmp[0 .. size*(n-1)];
 }
 
 

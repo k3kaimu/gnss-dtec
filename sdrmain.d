@@ -14,23 +14,12 @@ import std.algorithm;
 
 /* global variables -----------------------------------------------------------*/
 /* thread handle and mutex */
-__gshared Tid hmainthread;
-__gshared Tid hkeythread;
-__gshared Tid hsyncthread;
-__gshared Tid hspecthread;
-__gshared Mutex hstopmtx;
-__gshared Mutex hbuffmtx;
-__gshared Mutex hreadmtx;
-__gshared Mutex hfftmtx;
-__gshared Mutex hpltmtx;
-__gshared Mutex hobsmtx;
-//__gshared HANDLE hlexeve;
 
 /* sdr structs */
-__gshared sdrini_t sdrini;
-__gshared sdrstat_t sdrstat;
-__gshared sdrch_t sdrch[MAXSAT];
-__gshared sdrspec_t sdrspec;
+sdrini_t sdrini;
+sdrstat_t sdrstat;
+sdrch_t sdrch[MAXSAT];
+sdrspec_t sdrspec;
 
 
 /* main function ----------------------------------------------------------------
@@ -158,8 +147,8 @@ void sdrthread(size_t index)
     //    stop = sdrstat.stopflag;
     bool isStopped()
     {
-        synchronized(hstopmtx)
-            return sdrstat.stopflag != 0;
+        //synchronized(hstopmtx)
+        return sdrstat.stopflag != 0;
     }
 
     
@@ -192,7 +181,7 @@ void sdrthread(size_t index)
                 else swreset = OFF;
                 
                 /* correlation output accumulation */
-                cumsumcorr(sdr.trk.I,sdr.trk.Q,&sdr.trk,sdr.flagnavsync,swreset);
+                cumsumcorr(sdr.trk.I, sdr.trk.Q, &sdr.trk, sdr.flagnavsync, swreset);
                 
                 if (!sdr.flagnavsync) {
                     pll(sdr,&sdr.trk.prm1); /* PLL */
@@ -203,12 +192,10 @@ void sdrthread(size_t index)
                     dll(sdr,&sdr.trk.prm2); /* DLL */
 
                     /* calculate observation data */
-                    synchronized(hobsmtx){
-                        if (loopcnt%(SNSMOOTHMS/sdr.trk.loopms)==0)
-                            setobsdata(sdr, buffloc, cnt, &sdr.trk, 1); /* SN smoothing */
-                        else
-                            setobsdata(sdr, buffloc, cnt, &sdr.trk, 0);
-                    }
+                    if (loopcnt%(SNSMOOTHMS/sdr.trk.loopms)==0)
+                        setobsdata(sdr, buffloc, cnt, &sdr.trk, 1); /* SN smoothing */
+                    else
+                        setobsdata(sdr, buffloc, cnt, &sdr.trk, 0);
 
                     /* plot correator output */
                     if (loopcnt%(cast(int)(plttrk.pltms/sdr.trk.loopms))==0&&sdrini.plttrk&&loopcnt>200) {
@@ -220,12 +207,6 @@ void sdrthread(size_t index)
                 }
 
                 debug(LPrint) writefln("carrier phase:%s, bufflocnow:%s, buffloc:%s", sdr.trk.L[0], bufflocnow, buffloc);
-
-                /* LEX thread */
-                //if ((cntsw%LEXMS)==0) {
-                //    if (sdrini.nchL6 != 0 && sdr.sys == SYS_QZS && loopcnt > 2)
-                //        SetEvent(hlexeve);
-                //}
 
                 if (sdr.no==1&&cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
                 cnt++;

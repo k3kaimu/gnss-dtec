@@ -16,6 +16,8 @@ import std.c.string,
 import std.array,
        std.format;
 
+version(none):
+
 /* set rinex option struct ------------------------------------------------------
 * set value to rinex option struct (rtklib)
 * args   : rnxopt_t *opt    I/O rinex option struct

@@ -156,19 +156,19 @@ void pll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
 *------------------------------------------------------------------------------*/
 void dll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm_t *prm)
 {
-    real abs(real i, real q){ return (i^^2 + q^^2) ^^ 0.5; }
+    static real cpxAbs(real i, real q) pure nothrow @safe { return (i^^2 + q^^2) ^^ 0.5; }
 
     traceln("called");
-    double codeErr;
-    int ne=sdr.trk.prm1.ne, nl=sdr.trk.prm1.nl;
-    immutable IE = sdr.trk.sumI[ne],
+
+    immutable ne = sdr.trk.prm1.ne,
+              nl = sdr.trk.prm1.nl,
+              IE = sdr.trk.sumI[ne],
               IL = sdr.trk.sumI[nl],
               QE = sdr.trk.sumQ[ne],
               QL = sdr.trk.sumQ[nl],
-              IEQE = abs(IE, QE),
-              ILQL = abs(IL, QL);
-
-    codeErr = (IEQE - ILQL) / (IEQE + ILQL);
+              IEQE = cpxAbs(IE, QE),
+              ILQL = cpxAbs(IL, QL),
+              codeErr = (IEQE - ILQL) / (IEQE + ILQL);
     
     /* 2nd order DLL */
     sdr.trk.codeNco += prm.dllaw * (codeErr - sdr.trk.codeErr)

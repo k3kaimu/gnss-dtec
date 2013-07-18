@@ -1,8 +1,9 @@
-//##$ dmd -m64 -unittest -debug=LPrint -version=MAIN_IS_SDRMAIN_MAIN sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
+//##$ dmd -m64 -unittest -O -debug=LPrint -release -inline -version=MAIN_IS_SDRMAIN_MAIN sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
 
-// -debug=PrintBuffloc -version=TRACE -O -release -inline
+//　-version=Dnative -debug=PrintBuffloc -version=TRACE  -O -release -inline
 /*
 Change Log:
+2013/07/18          単一スレッド化
 2013/07/16 v2.0beta バッファ読み込みを、sdrスレッドが操るように修正
 */
 
@@ -12,8 +13,6 @@ module sdr;
 
 * Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
 *-----------------------------------------------------------------------------*/
-import core.thread;
-import std.concurrency;
 import std.complex;
 import std.stdio;
 import std.c.stdlib;
@@ -22,17 +21,6 @@ import std.math;
 import std.format : formattedWrite;
 import std.array  : appender;
 import std.traits : isSomeString;
-import std.process;
-public import std.c.windows.windows;
-public import std.c.windows.winsock;
-import std.c.time;
-import std.c.process;
-
-pragma(lib, "winmm.lib");
-pragma(lib, "ws2_32.lib");
-pragma(lib, "shell32.lib");
-pragma(lib, "User32.lib");
-pragma(lib, "kernel32.lib");
 pragma(lib, "msgpack_x64.lib");
 
 /* FEC */
@@ -46,16 +34,6 @@ pragma(lib, "libfftw3f-3.lib");
 /* RTKLIB */
 public import rtklib;
 pragma(lib, "rtklib.lib");
-
-/* STEREO */
-pragma(lib, "libnslstereo.a");
-
-/* GN3S */
-//C     #include "rcv/GN3S/src/GN3S.h"
-//import GN3S;
-
-/* USB */
-pragma(lib, "libusb.lib");
 
 /* constants -----------------------------------------------------------------*/
 immutable DPI = 2 * PI;
@@ -401,7 +379,7 @@ struct sdrnav_t
 
 struct sdrch_t
 {
-    Tid hsdr;
+    //Tid hsdr;
     int no;
     int sat;
     int sys;
@@ -437,9 +415,9 @@ struct sdrch_t
 
 struct sdrplt_t
 {
-    Pid processId;
-    Pipe pipe;
-    File fp;
+//    Pid processId;
+//    Pipe pipe;
+//    File fp;
     int nx;
     int ny;
     double *x;
@@ -460,7 +438,7 @@ struct sdrplt_t
 
 struct sdrsoc_t
 {
-    Tid hsoc;
+    //Tid hsoc;
     ushort port;
     SOCKET s_soc;
     SOCKET c_soc;
@@ -495,13 +473,6 @@ struct sdrspec_t
 void SDRPRINTF(T...)(T args)
 {
     writef(args);
-}
-
-void Sleep(
-  DWORD dwMilliseconds   // 中断の時間
-)
-{
-    Thread.sleep(dur!"msecs"(dwMilliseconds));
 }
 
 import core.memory;

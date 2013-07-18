@@ -187,12 +187,12 @@ void checkInitValue(string file = __FILE__, size_t line = __LINE__)(in ref sdrin
 void openhandles()
 {
     /* mutexes */
-    hstopmtx = new Mutex();
-    hbuffmtx = new Mutex();
-    hreadmtx = new Mutex();
-    hfftmtx = new Mutex();
-    hpltmtx = new Mutex();
-    hobsmtx = new Mutex();
+    //hstopmtx = new Mutex();
+    //hbuffmtx = new Mutex();
+    //hreadmtx = new Mutex();
+    //hfftmtx = new Mutex();
+    //hpltmtx = new Mutex();
+    //hobsmtx = new Mutex();
 
     ///* events */
     //hlexeve=CreateEvent(null,true,false,null);
@@ -229,17 +229,17 @@ int initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq,
     if (sdrini.pltacq) {
         setsdrplotprm(acq, PlotType.SurfZ, sdr.acq.nfreq, sdr.acq.nfft, 3, OFF, 1, PLT_H, PLT_W, PLT_MH, PLT_MW, sdr.no);
         if (initsdrplot(acq)<0) return -1;
-        settitle(acq,sdr.satstr);
-        setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
+        //settitle(acq,sdr.satstr);
+        //setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
     }
 
     /* tracking */
     if (sdrini.plttrk) {
         setsdrplotprm(trk, PlotType.XY, 1 + 2 * sdr.trk.ncorrp, 0, 0, ON, 0.001, PLT_H, PLT_W, PLT_MH, PLT_MW, sdr.no);
         if(initsdrplot(trk)<0) return -1;
-        settitle(trk, sdr.satstr);
-        setlabel(trk, "Code Offset (sample)","Correlation Output");
-        setyrange(trk, 0, 8 * sdr.trk.loopms);
+        //settitle(trk, sdr.satstr);
+        //setlabel(trk, "Code Offset (sample)","Correlation Output");
+        //setyrange(trk, 0, 8 * sdr.trk.loopms);
     }
 
     if (sdrini.fend == Fend.FILE||sdrini.fend == Fend.FILESTEREO)
@@ -518,7 +518,7 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys
 
     /* other code generation */
     for (i=0;i<sdr.acq.nfft;i++) rcode[i] = 0;
-    rescode(sdr.code,sdr.clen,0,0,sdr.ci,sdr.nsamp,rcode); /* resampled code */
+    rescode(sdr.code, sdr.clen, 0, 0, sdr.ci, sdr.nsamp, rcode); /* resampled code */
     cpxcpx(rcode,null,1.0,sdr.acq.nfft,sdr.xcode); /* FFT code */
     cpxfft(sdr.xcode,sdr.acq.nfft);
 

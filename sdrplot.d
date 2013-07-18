@@ -14,7 +14,7 @@ import std.process;
 import std.datetime;
 
 /* global variables -----------------------------------------------------------*/
-__gshared Thread hpltthread; /* plot thread handle */
+//__gshared Thread hpltthread; /* plot thread handle */
 
 /* modify gnuplot ini file ------------------------------------------------------
 * modify gnuplot ini file to set window size and position
@@ -26,25 +26,28 @@ __gshared Thread hpltthread; /* plot thread handle */
 *------------------------------------------------------------------------------*/
 int updatepltini(string file = __FILE__, size_t line = __LINE__)(int nx, int ny, int posx, int posy)
 {
-    traceln("called");
-    File file1 = File("gnuplot/gnuplot.ini", "w");
-    enforce(file1.isOpen);
-    
-    file1.writeln("set terminal windows");
+    static assert(0);
+    version(none){
+        traceln("called");
+        File file1 = File("gnuplot/gnuplot.ini", "w");
+        enforce(file1.isOpen);
+        
+        file1.writeln("set terminal windows");
 
 
-    File file2 = File("gnuplot/wgnuplot.ini", "w");
-    file2.writeln("[WGNUPLOT]");
-    file2.writefln("TextOrigin=263 200");
-    file2.writefln("TextSize=1393 790");
-    file2.writefln("TextMinimized=0");
-    file2.writefln("TextFont=Arial,14");
-    file2.writefln("TextWrap=1");
-    file2.writefln("TextLines=400");
-    file2.writefln("SysColors=0");
-    file2.writefln("GraphOrigin=%d %d", posx, posy);
-    file2.writefln("GraphSize=%d %d", nx, ny);
-    return 0;
+        File file2 = File("gnuplot/wgnuplot.ini", "w");
+        file2.writeln("[WGNUPLOT]");
+        file2.writefln("TextOrigin=263 200");
+        file2.writefln("TextSize=1393 790");
+        file2.writefln("TextMinimized=0");
+        file2.writefln("TextFont=Arial,14");
+        file2.writefln("TextWrap=1");
+        file2.writefln("TextLines=400");
+        file2.writefln("SysColors=0");
+        file2.writefln("GraphOrigin=%d %d", posx, posy);
+        file2.writefln("GraphSize=%d %d", nx, ny);
+        return 0;
+    }
 }
 
 
@@ -121,21 +124,21 @@ int initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
     posx=plt.pltmw+xi*plt.pltw;
     posy=plt.pltmh+yi*plt.plth;
 
-    //WaitForSingleObject(hpltmtx,INFINITE);
-    synchronized(hpltmtx){
+    ////WaitForSingleObject(hpltmtx,INFINITE);
+    //synchronized(hpltmtx){
 
-        /* update config file */
-        if ((updatepltini(plt.pltw,plt.plth,posx,posy)<0)){
-            SDRPRINTF("error: updatepltini\n"); return -1;
-        }
+    //    /* update config file */
+    //    if ((updatepltini(plt.pltw,plt.plth,posx,posy)<0)){
+    //        SDRPRINTF("error: updatepltini\n"); return -1;
+    //    }
 
-        /* pipe open */
-        plt.pipe = pipe();
-        plt.processId = spawnProcess(`gnuplot\gnuplot.exe`, pipe.readEnd);
-        plt.fp = plt.pipe.writeEnd;
+    //    /* pipe open */
+    //    plt.pipe = pipe();
+    //    plt.processId = spawnProcess(`gnuplot\gnuplot.exe`, pipe.readEnd);
+    //    plt.fp = plt.pipe.writeEnd;
 
-        Sleep(200);
-    }
+    //    Sleep(200);
+    //}
     //ReleaseMutex(hpltmtx);
 //#ifdef GUI
 //    /* hide window */
@@ -156,12 +159,12 @@ void quitsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
     traceln("called");
     /* pipe close */
     //if (plt.fp!=null)_pclose(plt.fp); plt.fp=null;
-    if(plt.fp.isOpen) plt.fp.close();
-    if(plt.processId !is null){
-        kill(plt.processId);
-        plt.processId.destroy();
-        plt.processId = null;
-    }
+    //if(plt.fp.isOpen) plt.fp.close();
+    //if(plt.processId !is null){
+    //    kill(plt.processId);
+    //    plt.processId.destroy();
+    //    plt.processId = null;
+    //}
 
 
     if (plt.x!=null) free(plt.x); plt.x=null;
@@ -179,9 +182,12 @@ void quitsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 *------------------------------------------------------------------------------*/
 void setxrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, double xmin, double xmax)
 {
-    traceln("called");
-    plt.fp.writefln("set xr[%.1f:%.1f]",xmin,xmax);
-    plt.fp.flush();
+    static assert(0);
+    version(none){
+        traceln("called");
+        plt.fp.writefln("set xr[%.1f:%.1f]",xmin,xmax);
+        plt.fp.flush();
+    }
 }
 
 
@@ -194,9 +200,12 @@ void setxrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, do
 *------------------------------------------------------------------------------*/
 void setyrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, double ymin, double ymax)
 {
-    traceln("called");
-    plt.fp.writefln("set yr[%.1f:%.1f]",ymin,ymax);
-    plt.fp.flush();
+    static assert(0);
+    version(none){
+        traceln("called");
+        plt.fp.writefln("set yr[%.1f:%.1f]",ymin,ymax);
+        plt.fp.flush();
+    }
 }
 
 
@@ -209,11 +218,14 @@ void setyrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, do
 *------------------------------------------------------------------------------*/
 void setlabel(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string xlabel, string ylabel)
 {
-    traceln("called");
-    with(*plt){
-        fp.writefln("set xl '%s'", xlabel);
-        fp.writefln("set yl '%s'", ylabel);
-        fp.flush();
+    static assert(0);
+    version(none){
+        traceln("called");
+        with(*plt){
+            fp.writefln("set xl '%s'", xlabel);
+            fp.writefln("set yl '%s'", ylabel);
+            fp.flush();
+        }
     }
 }
 
@@ -226,9 +238,12 @@ void setlabel(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, str
 *------------------------------------------------------------------------------*/
 void settitle(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string title)
 {
-    traceln("called");
-    plt.fp.writefln("set title '%s'", title);
-    plt.fp.flush();
+    static assert(0);
+    version(none){
+        traceln("called");
+        plt.fp.writefln("set title '%s'", title);
+        plt.fp.flush();
+    }
 }
 
 
@@ -243,17 +258,20 @@ void settitle(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, str
 *------------------------------------------------------------------------------*/
 void ploty(string file = __FILE__, size_t line = __LINE__)(File fp, double *y, int n, int skip, double scale)
 {
-    traceln("called");
-    int i;
-    fp.writeln("set grid");
-    fp.writeln("unset key");
-    fp.writeln("plot '-' with lp lw 1 pt 6 ps 2");
+    static assert(0);
+    version(none){
+        traceln("called");
+        int i;
+        fp.writeln("set grid");
+        fp.writeln("unset key");
+        fp.writeln("plot '-' with lp lw 1 pt 6 ps 2");
 
-    for(i=0;i<n;i+=(skip+1))
-        fp.writefln("%.3f", y[i] * scale);
+        for(i=0;i<n;i+=(skip+1))
+            fp.writefln("%.3f", y[i] * scale);
 
-    fp.writeln("e");
-    fp.flush();
+        fp.writeln("e");
+        fp.flush();
+    }
 }
 
 
@@ -269,18 +287,21 @@ void ploty(string file = __FILE__, size_t line = __LINE__)(File fp, double *y, i
 *------------------------------------------------------------------------------*/
 void plotxy(string file = __FILE__, size_t line = __LINE__)(File fp, double *x, double *y, int n, int skip, double scale)
 {
-    traceln("called");
-    int i;
-    fp.writeln("set grid");
-    fp.writeln("unset key");
-    fp.writeln("plot '-' with p pt 6 ps 2");
+    static assert(0);
+    version(none){
+        traceln("called");
+        int i;
+        fp.writeln("set grid");
+        fp.writeln("unset key");
+        fp.writeln("plot '-' with p pt 6 ps 2");
 
-    for(i=0;i<n;i+=(skip+1)){
-        fp.writefln("%.3f\t%.3f", x[i], y[i] * scale);
+        for(i=0;i<n;i+=(skip+1)){
+            fp.writefln("%.3f\t%.3f", x[i], y[i] * scale);
+        }
+
+        fp.writeln("e");
+        fp.flush();
     }
-
-    fp.writeln("e");
-    fp.flush();
 }
 
 
@@ -296,18 +317,21 @@ void plotxy(string file = __FILE__, size_t line = __LINE__)(File fp, double *x, 
 *------------------------------------------------------------------------------*/
 void plotsurfz(string file = __FILE__, size_t line = __LINE__)(File fp, double*z, int nx, int ny, int skip, double scale)
 {
-    traceln("called");
-    int i,j;
-    fp.writeln("unset key");
-    fp.writeln("splot '-' with pm3d");
+    static assert(0);
+    version(none){
+        traceln("called");
+        int i,j;
+        fp.writeln("unset key");
+        fp.writeln("splot '-' with pm3d");
 
-    for(i=0;i<ny;i+=(skip+1)) {
-        for(j=0;j<nx;j+=(skip+1))
-            fp.writefln("%.3f", z[j*ny+i]);
-        fp.writeln();
+        for(i=0;i<ny;i+=(skip+1)) {
+            for(j=0;j<nx;j+=(skip+1))
+                fp.writefln("%.3f", z[j*ny+i]);
+            fp.writeln();
+        }
+        fp.writeln("e");
+        fp.flush();
     }
-    fp.writeln("e");
-    fp.flush();
 }
 
 
@@ -323,19 +347,22 @@ void plotsurfz(string file = __FILE__, size_t line = __LINE__)(File fp, double*z
 *------------------------------------------------------------------------------*/
 void plotbox(string file = __FILE__, size_t line = __LINE__)(File fp, double *x, double *y, int n, int skip, double scale)
 {
-    traceln("called");
-    int i;
-    fp.writeln("set grid");
-    fp.writeln("unset key");
-    fp.writeln("set boxwidth 0.95");
-    fp.writeln(`set style fill solid border lc rgb "black"`);
-    fp.writeln("plot '-' with boxes");
+    static assert(0);
+    version(none){
+        traceln("called");
+        int i;
+        fp.writeln("set grid");
+        fp.writeln("unset key");
+        fp.writeln("set boxwidth 0.95");
+        fp.writeln(`set style fill solid border lc rgb "black"`);
+        fp.writeln("plot '-' with boxes");
 
-    for(i=0;i<n;i+=(skip+1))
-        fp.writefln("%.3f\t%.3f", x[i], y[i] * scale);
+        for(i=0;i<n;i+=(skip+1))
+            fp.writefln("%.3f\t%.3f", x[i], y[i] * scale);
 
-    fp.writeln("e");
-    fp.flush();
+        fp.writeln("e");
+        fp.flush();
+    }
 }
 
 
@@ -344,31 +371,34 @@ void plotbox(string file = __FILE__, size_t line = __LINE__)(File fp, double *x,
 * args   : void   *arg      I   sdr plot struct
 * return : none
 *------------------------------------------------------------------------------*/
-void plotgnuplot(void *arg)
+void plotgnuplot()(void *arg)
 {
-    int i;
-    sdrplt_t *plt = cast(sdrplt_t*)arg; /* input plt struct */
-    
-    /* selection of plot type */
-    final switch (plt.type) {
-        case PlotType.Y: /* 1D plot */
-            if (plt.flagabs)
-                for (i=0;i<plt.ny;i++) plt.y[i]=fabs(plt.y[i]);
-            ploty(plt.fp,plt.y,plt.ny,plt.skip,plt.scale);
-            break;
-        case PlotType.XY: /* 2D plot*/
-            if (plt.flagabs)
-                for (i=0;i<plt.nx;i++) plt.y[i]=fabs(plt.y[i]);
-            plotxy(plt.fp,plt.x,plt.y,plt.nx,plt.skip,plt.scale);
-            break;
-        case PlotType.SurfZ: /* 3D surface plot */
-            if (plt.flagabs)
-                for (i=0;i<plt.nx*plt.ny;i++) plt.z[i]=fabs(plt.z[i]);
-            plotsurfz(plt.fp,plt.z,plt.nx,plt.ny,plt.skip,plt.scale);
-            break;
-        case PlotType.Box: /* box plot */
-            plotbox(plt.fp,plt.x,plt.y,plt.nx,plt.skip,plt.scale);
-            break;
+    static assert(0);
+    version(none){
+        int i;
+        sdrplt_t *plt = cast(sdrplt_t*)arg; /* input plt struct */
+        
+        /* selection of plot type */
+        final switch (plt.type) {
+            case PlotType.Y: /* 1D plot */
+                if (plt.flagabs)
+                    for (i=0;i<plt.ny;i++) plt.y[i]=fabs(plt.y[i]);
+                ploty(plt.fp,plt.y,plt.ny,plt.skip,plt.scale);
+                break;
+            case PlotType.XY: /* 2D plot*/
+                if (plt.flagabs)
+                    for (i=0;i<plt.nx;i++) plt.y[i]=fabs(plt.y[i]);
+                plotxy(plt.fp,plt.x,plt.y,plt.nx,plt.skip,plt.scale);
+                break;
+            case PlotType.SurfZ: /* 3D surface plot */
+                if (plt.flagabs)
+                    for (i=0;i<plt.nx*plt.ny;i++) plt.z[i]=fabs(plt.z[i]);
+                plotsurfz(plt.fp,plt.z,plt.nx,plt.ny,plt.skip,plt.scale);
+                break;
+            case PlotType.Box: /* box plot */
+                plotbox(plt.fp,plt.x,plt.y,plt.nx,plt.skip,plt.scale);
+                break;
+        }
     }
 }
 
@@ -383,10 +413,7 @@ void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, s
 {
     
     traceln("called");
-    /+synchronized(hpltmtx){
-        hpltthread = new Thread(() => plotgnuplot(plt));
-        hpltthread.start();
-    }+/
+
     PlotObject obj;
     obj.nx = plt.nx;
     obj.ny = plt.ny;

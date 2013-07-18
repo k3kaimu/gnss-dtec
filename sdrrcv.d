@@ -44,20 +44,20 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         }
         break;+/
     /* STEREO Binary File */
-    case Fend.FILESTEREO: 
-        /* IF file open */
-        ini.fp1 = File(ini.file1, "rb");
-        enforce(ini.fp1.isOpen);
+    //case Fend.FILESTEREO: 
+    //    /* IF file open */
+    //    ini.fp1 = File(ini.file1, "rb");
+    //    enforce(ini.fp1.isOpen);
 
-        /* frontend buffer size */
-        ini.fendbuffsize = STEREO_DATABUFF_SIZE;
-        /* total buffer size */
-        ini.buffsize=STEREO_DATABUFF_SIZE*MEMBUFLEN;
+    //    /* frontend buffer size */
+    //    ini.fendbuffsize = STEREO_DATABUFF_SIZE;
+    //     total buffer size 
+    //    ini.buffsize=STEREO_DATABUFF_SIZE*MEMBUFLEN;
                 
-        /* memory allocation */
-        sdrstat.buff = cast(byte*)malloc(ini.buffsize).enforce();
-        scope(failure) free(sdrstat.buff);
-        break;
+    //    /* memory allocation */
+    //    sdrstat.buff = cast(byte*)malloc(ini.buffsize).enforce();
+    //    scope(failure) free(sdrstat.buff);
+    //    break;
 /+    /* SiGe GN3S v2/v3 */
     case Fend.GN3SV2: 
     case Fend.GN3SV3: 
@@ -139,10 +139,10 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
          stereo_quit();
         break;+/
     /* STEREO Binary File */
-    case Fend.FILESTEREO: 
-        if (ini.fp1.isOpen)/+ fclose(ini.fp1); ini.fp1=null;+/
-            ini.fp1.close();
-        break;
+    //case Fend.FILESTEREO: 
+    //    if (ini.fp1.isOpen) fclose(ini.fp1); ini.fp1=null;
+    //        ini.fp1.close();
+    //    break;
     /* SiGe GN3S v2/v3 */
 /+    case Fend.GN3SV2:
     case Fend.GN3SV3:
@@ -181,8 +181,8 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         }
         break;+/
     /* STEREO Binary File */
-    case Fend.FILESTEREO: 
-        break;
+    //case Fend.FILESTEREO: 
+    //    break;
     /* SiGe GN3S v2/v3 */
 /+    case Fend.GN3SV2:
     case Fend.GN3SV3:
@@ -213,11 +213,11 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         stereo_pushtomembuf(); /* copy to membuffer */
         break;+/;
     /* STEREO Binary File */
-    case Fend.FILESTEREO: 
-        filestereo_pushtomembuf(); /* copy to membuffer */
-        //Sleep(1);
-        //Thread.sleep(dur!"usecs"(2000));
-        break;
+    //case Fend.FILESTEREO: 
+    //    filestereo_pushtomembuf();  copy to membuffer 
+    //    //Sleep(1);
+    //    //Thread.sleep(dur!"usecs"(2000));
+    //    break;
     /* SiGe GN3S v2/v3 */
 /+    case Fend.GN3SV2:
     case Fend.GN3SV3:
@@ -247,9 +247,9 @@ int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *i
     traceln("called");
     switch (ini.fend) {
     /* STEREO Binary File */
-    case Fend.FILESTEREO: 
-        filestereo_pushtomembuf(); /* copy to membuffer */
-        break;
+    //case Fend.FILESTEREO: 
+    //    filestereo_pushtomembuf(); /* copy to membuffer */
+    //    break;
     /* File */
     case Fend.FILE:
         file_pushtomembuf(); /* copy to membuffer */
@@ -275,12 +275,7 @@ int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, si
 
     bool needNewBuffer()
     {
-        bool b;
-
-        synchronized(hreadmtx)
-            b = sdrini.fendbuffsize * sdrstat.buffloccnt < n + buffloc;
-
-        return b;
+        return sdrini.fendbuffsize * sdrstat.buffloccnt < n + buffloc;
     }
 
 
@@ -294,9 +289,9 @@ int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, si
             stereo_getbuff(buffloc,n,dtype,expbuf);
             break;+/
         /* STEREO Binary File */
-        case Fend.FILESTEREO: 
-            stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
-            break;
+        //case Fend.FILESTEREO: 
+        //    stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
+        //    break;
         /* SiGe GN3S v2 */
     /+    case Fend.GN3SV2:
             gn3s_getbuff_v2(buffloc,n,dtype,expbuf);
@@ -333,10 +328,10 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
     size_t nread1,nread2;
 
     //WaitForSingleObject(hbuffmtx,INFINITE);
-    synchronized(hbuffmtx){
+    //synchronized(hbuffmtx){
         if(sdrini.fp1.isOpen) nread1=fread(&sdrstat.buff1[(sdrstat.buffloccnt%MEMBUFLEN)*sdrini.dtype[0]*FILE_BUFFSIZE],1,sdrini.dtype[0]*FILE_BUFFSIZE,sdrini.fp1.getFP);
         if(sdrini.fp2.isOpen) nread2=fread(&sdrstat.buff2[(sdrstat.buffloccnt%MEMBUFLEN)*sdrini.dtype[1]*FILE_BUFFSIZE],1,sdrini.dtype[1]*FILE_BUFFSIZE,sdrini.fp2.getFP);
-    }
+    //}
     //ReleaseMutex(hbuffmtx);
 
     if ((sdrini.fp1.isOpen && nread1 < sdrini.dtype[0] * FILE_BUFFSIZE)||(sdrini.fp2.isOpen && nread2 < sdrini.dtype[1] * FILE_BUFFSIZE)) {
@@ -345,7 +340,7 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
     }
 
     //WaitForSingleObject(hreadmtx,INFINITE);
-    synchronized(hreadmtx)
+    //synchronized(hreadmtx)
         sdrstat.buffloccnt++;
     //ReleaseMutex(hreadmtx);
 }
@@ -361,41 +356,35 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
 void file_getbuff(string file = __FILE__, size_t line = __LINE__)(ulong buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
 {
     traceln("called");
-    ulong membuffloc=buffloc%(MEMBUFLEN*dtype*FILE_BUFFSIZE);
-    int nout;
+    long membuffloc=buffloc%(MEMBUFLEN*dtype*FILE_BUFFSIZE);
     
-    n=dtype*n;  
-    nout = cast(int)((membuffloc+n)-(MEMBUFLEN*dtype*FILE_BUFFSIZE));
+    n *= dtype;
+    immutable long nout = ((membuffloc+n)-(MEMBUFLEN*dtype*FILE_BUFFSIZE));
     
-    //WaitForSingleObject(hbuffmtx,INFINITE);
-    synchronized(hbuffmtx){
-        if (ftype==FType.Type1) {
-            if (nout>0) {
-                //memcpy(expbuf,&sdrstat.buff1[membuffloc],n-nout);
-                expbuf[0 .. n-nout] = sdrstat.buff1[membuffloc .. membuffloc + n-nout];
-                
-                //memcpy(&expbuf[(n-nout)],&sdrstat.buff1[0],nout);
-                expbuf[n-nout .. n] = sdrstat.buff1[0 .. nout];
-                
-            } else {
-                //memcpy(expbuf,&sdrstat.buff1[membuffloc],n);
-                expbuf[0 .. n] = sdrstat.buff1[membuffloc  .. membuffloc + n];
-            }
+    if (ftype==FType.Type1) {
+        if (nout>0) {
+            //memcpy(expbuf,&sdrstat.buff1[membuffloc],n-nout);
+            expbuf[0 .. n-nout] = sdrstat.buff1[membuffloc .. membuffloc + n-nout];
+            
+            //memcpy(&expbuf[(n-nout)],&sdrstat.buff1[0],nout);
+            expbuf[n-nout .. n] = sdrstat.buff1[0 .. nout];
+            
+        } else {
+            //memcpy(expbuf,&sdrstat.buff1[membuffloc],n);
+            expbuf[0 .. n] = sdrstat.buff1[membuffloc  .. membuffloc + n];
         }
-        
-        if (ftype==FType.Type2) {
-            if (nout>0) {
-                //memcpy(expbuf,&sdrstat.buff2[membuffloc],n-nout);
-                expbuf[0 .. n-nout] = sdrstat.buff2[membuffloc .. membuffloc + n-nout];
-                //memcpy(&expbuf[(n-nout)],&sdrstat.buff2[0],nout);
-                expbuf[n-nout .. n] = sdrstat.buff2[0 .. nout];
-            } else {
-                //memcpy(expbuf,&sdrstat.buff2[membuffloc],n);
-                expbuf[0 .. n] = sdrstat.buff2[membuffloc  .. membuffloc + n];
-            }
-        }
-        
     }
-    //ReleaseMutex(hbuffmtx);
+    
+    if (ftype==FType.Type2) {
+        if (nout>0) {
+            //memcpy(expbuf,&sdrstat.buff2[membuffloc],n-nout);
+            expbuf[0 .. n-nout] = sdrstat.buff2[membuffloc .. membuffloc + n-nout];
+            //memcpy(&expbuf[(n-nout)],&sdrstat.buff2[0],nout);
+            expbuf[n-nout .. n] = sdrstat.buff2[0 .. nout];
+        } else {
+            //memcpy(expbuf,&sdrstat.buff2[membuffloc],n);
+            expbuf[0 .. n] = sdrstat.buff2[membuffloc  .. membuffloc + n];
+        }
+    }
     
 }

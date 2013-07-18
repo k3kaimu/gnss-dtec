@@ -6,6 +6,8 @@
 * Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
 *------------------------------------------------------------------------------*/
 
+version(none):
+
 import sdr;
 
 import core.thread;
@@ -14,8 +16,6 @@ import std.c.string : memset;
 import std.math;
 import std.random;
 import std.concurrency;
-
-version(none):
 
 
 /* initialize spectrum analyzer -------------------------------------------------
