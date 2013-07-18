@@ -1,4 +1,4 @@
-//##$ dmd -m64 -release -inline -unittest sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace
+//##$ dmd -m64 -unittest -version=MAIN_IS_SDRMAIN_MAIN sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
 
 module sdr;
 /*------------------------------------------------------------------------------
@@ -27,6 +27,7 @@ pragma(lib, "ws2_32.lib");
 pragma(lib, "shell32.lib");
 pragma(lib, "User32.lib");
 pragma(lib, "kernel32.lib");
+pragma(lib, "msgpack_x64.lib");
 
 /* FEC */
 pragma(lib, "libfec.a");
@@ -542,4 +543,5 @@ public import sdracq,
               sdrspectrum,
               sdrtrk,
               util.range,
-              util.trace;
+              util.trace,
+              util.serialize;
