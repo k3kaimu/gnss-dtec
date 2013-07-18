@@ -26,22 +26,13 @@ __gshared Thread hpltthread; /* plot thread handle */
 int updatepltini(string file = __FILE__, size_t line = __LINE__)(int nx, int ny, int posx, int posy)
 {
     traceln("called");
-    char[] apppath1 = new char[1024],
-           apppath2 = new char[1024];
-    
-    SHGetFolderPath(null, CSIDL_APPDATA, null, 0,apppath1.ptr);
-
-    immutable gpini1Path = apppath1.to!string() ~ `\gnuplot.ini`;
-    writeln(gpini1Path);
-    File file1 = File(gpini1Path, "w");
+    File file1 = File("gnuplot/gnuplot.ini", "w");
     enforce(file1.isOpen);
     
     file1.writeln("set terminal windows");
 
-    SHGetFolderPath(null, CSIDL_APPDATA, null, 0, apppath2.ptr);
-    immutable gpini2Path = apppath1.to!string() ~ `\wgnuplot.ini`;
-    writeln(gpini2Path);
-    File file2 = File(gpini2Path, "w");
+
+    File file2 = File("gnuplot/wgnuplot.ini", "w");
     file2.writeln("[WGNUPLOT]");
     file2.writefln("TextOrigin=263 200");
     file2.writefln("TextSize=1393 790");
@@ -72,7 +63,7 @@ int updatepltini(string file = __FILE__, size_t line = __LINE__)(int nx, int ny,
 *          int    no        I   plot window number
 * return : none
 *------------------------------------------------------------------------------*/
-void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, int type, int nx, int ny, int skip, int abs, double s, int h, int w, int mh, int mw, int no)
+void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, PlotType type, int nx, int ny, int skip, bool abs, double s, int h, int w, int mh, int mw, int no)
 {
     traceln("called");
     plt.type=type;
@@ -102,12 +93,12 @@ int initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 
     /* memory allocation */
     switch (plt.type) {
-        case PLT_Y:
+        case PlotType.Y:
             plt.y = cast(double*)malloc(double.sizeof *plt.ny).enforce();
             scope(failure) free(plt.y);
 
             break;
-        case PLT_XY:
+        case PlotType.XY:
             plt.x = cast(double*)malloc(double.sizeof * plt.nx).enforce();
             scope(failure) free(plt.x);
 
@@ -115,7 +106,7 @@ int initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
             scope(failure) free(plt.y);
 
             break;
-        case PLT_SURFZ:
+        case PlotType.SurfZ:
             plt.z = cast(double*)malloc(double.sizeof * plt.nx * plt.ny).enforce();
             scope(failure) free(plt.z);
 
@@ -357,26 +348,24 @@ void plotgnuplot(void *arg)
     sdrplt_t *plt = cast(sdrplt_t*)arg; /* input plt struct */
     
     /* selection of plot type */
-    switch (plt.type) {
-        case PLT_Y: /* 1D plot */
+    final switch (plt.type) {
+        case PlotType.Y: /* 1D plot */
             if (plt.flagabs)
                 for (i=0;i<plt.ny;i++) plt.y[i]=fabs(plt.y[i]);
             ploty(plt.fp,plt.y,plt.ny,plt.skip,plt.scale);
             break;
-        case PLT_XY: /* 2D plot*/
+        case PlotType.XY: /* 2D plot*/
             if (plt.flagabs)
                 for (i=0;i<plt.nx;i++) plt.y[i]=fabs(plt.y[i]);
             plotxy(plt.fp,plt.x,plt.y,plt.nx,plt.skip,plt.scale);
             break;
-        case PLT_SURFZ: /* 3D surface plot */
+        case PlotType.SurfZ: /* 3D surface plot */
             if (plt.flagabs)
                 for (i=0;i<plt.nx*plt.ny;i++) plt.z[i]=fabs(plt.z[i]);
             plotsurfz(plt.fp,plt.z,plt.nx,plt.ny,plt.skip,plt.scale);
             break;
-        case PLT_BOX: /* box plot */
+        case PlotType.Box: /* box plot */
             plotbox(plt.fp,plt.x,plt.y,plt.nx,plt.skip,plt.scale);
-            break;
-        default:
             break;
     }
 }
