@@ -56,6 +56,7 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     delete data;
     
     return bufflocnow;
+    //return buffloc + sdr.currnsamp * sdr.dtype;
 }
 /* correlator -------------------------------------------------------------------
 * multiply sampling data and carrier (I/Q), multiply code (E/P/L), and integrate

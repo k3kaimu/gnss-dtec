@@ -216,7 +216,7 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     case Fend.FILESTEREO: 
         filestereo_pushtomembuf(); /* copy to membuffer */
         //Sleep(1);
-        Thread.sleep(dur!"usecs"(2000));
+        Thread.sleep(dur!"usecs"(3000));
         break;
     /* SiGe GN3S v2/v3 */
 /+    case Fend.GN3SV2:
@@ -229,7 +229,7 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     /* File */
     case Fend.FILE:
         file_pushtomembuf(); /* copy to membuffer */
-        Thread.sleep(dur!"usecs"(2000));
+        Thread.sleep(dur!"usecs"(3000));
         //Sleep(1);
         break;
     default:

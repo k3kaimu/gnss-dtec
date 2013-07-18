@@ -10,54 +10,54 @@ import std.range, std.algorithm, std.traits;
 import core.bitop;
 
 /* code chip length (chip) */
-immutable LEN_L1CA   =     1023        ;/* GPS/QZSS L1C/A */
-immutable LEN_L1CP   =     10230       ;/* GPS/QZSS L1C Pilot */
-immutable LEN_L1CD   =     10230       ;/* GPS/QZSS L1C Data */
-immutable LEN_L1CO   =     1800        ;/* GPS/QZSS L1C overlay */
-immutable LEN_L2CM   =     10230       ;/* GPS/QZSS L2CM */
-immutable LEN_L2CL   =     767250      ;/* GPS/QZSS L2CL */
-immutable LEN_L5I    =     10230       ;/* GPS/QZSS L5I */
-immutable LEN_L5Q    =     10230       ;/* GPS/QZSS L5Q */
-immutable LEN_E1B    =     4092        ;/* Galileo E1B (Data) */
-immutable LEN_E1C    =     4092        ;/* Galileo E1C (Pilot) */
-immutable LEN_E5AI   =     10230       ;/* Galileo E5aI (Data) */
-immutable LEN_E5AQ   =     10230       ;/* Galileo E5aQ (Pilot) */
-immutable LEN_E5BI   =     10230       ;/* Galileo E5bI (Data) */
-immutable LEN_E5BQ   =     10230       ;/* Galileo E5bQ (Pilot) */
-immutable LEN_E1CO   =     25          ;/* Galileo E1C overlay */
-immutable LEN_E5AIO  =     20          ;/* Galileo E5aI overlay */
-immutable LEN_E5AQO  =     100         ;/* Galileo E5aQ overlay */
-immutable LEN_E5BIO  =     4           ;/* Galileo E5bI overlay */
-immutable LEN_E5BQO  =     100         ;/* Galileo E5bQ overlay */
-immutable LEN_G1G2   =     511         ;/* GLONASS G1/G2 */
-immutable LEN_B1     =     2046        ;/* BeiDou B1 */
-immutable LEN_LEXS   =     10230       ;/* QZSS LEX short */
-immutable LEN_LEXL   =     1048575     ;/* QZSS LEX long */
+immutable LEN_L1CA   =     1023        ;    /* GPS/QZSS L1C/A */
+immutable LEN_L1CP   =     10230       ;    /* GPS/QZSS L1C Pilot */
+immutable LEN_L1CD   =     10230       ;    /* GPS/QZSS L1C Data */
+immutable LEN_L1CO   =     1800        ;    /* GPS/QZSS L1C overlay */
+immutable LEN_L2CM   =     10230       ;    /* GPS/QZSS L2CM */
+immutable LEN_L2CL   =     767250      ;    /* GPS/QZSS L2CL */
+immutable LEN_L5I    =     10230       ;    /* GPS/QZSS L5I */
+immutable LEN_L5Q    =     10230       ;    /* GPS/QZSS L5Q */
+immutable LEN_E1B    =     4092        ;    /* Galileo E1B (Data) */
+immutable LEN_E1C    =     4092        ;    /* Galileo E1C (Pilot) */
+immutable LEN_E5AI   =     10230       ;    /* Galileo E5aI (Data) */
+immutable LEN_E5AQ   =     10230       ;    /* Galileo E5aQ (Pilot) */
+immutable LEN_E5BI   =     10230       ;    /* Galileo E5bI (Data) */
+immutable LEN_E5BQ   =     10230       ;    /* Galileo E5bQ (Pilot) */
+immutable LEN_E1CO   =     25          ;    /* Galileo E1C overlay */
+immutable LEN_E5AIO  =     20          ;    /* Galileo E5aI overlay */
+immutable LEN_E5AQO  =     100         ;    /* Galileo E5aQ overlay */
+immutable LEN_E5BIO  =     4           ;    /* Galileo E5bI overlay */
+immutable LEN_E5BQO  =     100         ;    /* Galileo E5bQ overlay */
+immutable LEN_G1G2   =     511         ;    /* GLONASS G1/G2 */
+immutable LEN_B1     =     2046        ;    /* BeiDou B1 */
+immutable LEN_LEXS   =     10230       ;    /* QZSS LEX short */
+immutable LEN_LEXL   =     1048575     ;    /* QZSS LEX long */
 
 /* code chip rate (chip/s) */
-immutable CRATE_L1CA =     1.023E6     ;/* GPS/QZSS L1C/A */
-immutable CRATE_L1CP =     1.023E6     ;/* GPS/QZSS L1C Pilot */
-immutable CRATE_L1CD =     1.023E6     ;/* GPS/QZSS L1C Data */
-immutable CRATE_L1CO =     100         ;/* GPS/QZSS L1C overlay */
-immutable CRATE_L2CM =     0.5115E6    ;/* GPS/QZSS L2CM */
-immutable CRATE_L2CL =     0.5115E6    ;/* GPS/QZSS L2CL */
-immutable CRATE_L5I  =     10.23E6     ;/* GPS/QZSS L5I */
-immutable CRATE_L5Q  =     10.23E6     ;/* GPS/QZSS L5Q */
-immutable CRATE_E1B  =     1.023E6     ;/* Galileo E1B (Data) */
-immutable CRATE_E1C  =     1.023E6     ;/* Galileo E1C (Pilot) */
-immutable CRATE_E5AI =     10.23E6     ;/* Galileo E5aI (Data) */
-immutable CRATE_E5AQ =     10.23E6     ;/* Galileo E5aQ (Pilot) */
-immutable CRATE_E5BI =     10.23E6     ;/* Galileo E5bI (Data) */
-immutable CRATE_E5BQ =     10.23E6     ;/* Galileo E5bQ (Pilot) */
-immutable CRATE_E1CO =     250         ;/* Galileo E1C overlay */
-immutable CRATE_E5AIO=     1000        ;/* Galileo E5aI overlay */
-immutable CRATE_E5AQO=     1000        ;/* Galileo E5aQ overlay */
-immutable CRATE_E5BIO=     1000        ;/* Galileo E5bI overlay */
-immutable CRATE_E5BQO=     1000        ;/* Galileo E5bQ overlay */
-immutable CRATE_G1G2 =     0.511E6     ;/* GLONASS G1/G2 */
-immutable CRATE_B1   =     2.046E6     ;/* BeiDou B1 */
-immutable CRATE_LEXS =     2.5575E6    ;/* QZSS LEX short */
-immutable CRATE_LEXL =     2.5575E6    ;/* QZSS LEX long */
+immutable CRATE_L1CA =     1.023E6     ;    /* GPS/QZSS L1C/A */
+immutable CRATE_L1CP =     1.023E6     ;    /* GPS/QZSS L1C Pilot */
+immutable CRATE_L1CD =     1.023E6     ;    /* GPS/QZSS L1C Data */
+immutable CRATE_L1CO =     100         ;    /* GPS/QZSS L1C overlay */
+immutable CRATE_L2CM =     0.5115E6    ;    /* GPS/QZSS L2CM */
+immutable CRATE_L2CL =     0.5115E6    ;    /* GPS/QZSS L2CL */
+immutable CRATE_L5I  =     10.23E6     ;    /* GPS/QZSS L5I */
+immutable CRATE_L5Q  =     10.23E6     ;    /* GPS/QZSS L5Q */
+immutable CRATE_E1B  =     1.023E6     ;    /* Galileo E1B (Data) */
+immutable CRATE_E1C  =     1.023E6     ;    /* Galileo E1C (Pilot) */
+immutable CRATE_E5AI =     10.23E6     ;    /* Galileo E5aI (Data) */
+immutable CRATE_E5AQ =     10.23E6     ;    /* Galileo E5aQ (Pilot) */
+immutable CRATE_E5BI =     10.23E6     ;    /* Galileo E5bI (Data) */
+immutable CRATE_E5BQ =     10.23E6     ;    /* Galileo E5bQ (Pilot) */
+immutable CRATE_E1CO =     250         ;    /* Galileo E1C overlay */
+immutable CRATE_E5AIO=     1000        ;    /* Galileo E5aI overlay */
+immutable CRATE_E5AQO=     1000        ;    /* Galileo E5aQ overlay */
+immutable CRATE_E5BIO=     1000        ;    /* Galileo E5bI overlay */
+immutable CRATE_E5BQO=     1000        ;    /* Galileo E5bQ overlay */
+immutable CRATE_G1G2 =     0.511E6     ;    /* GLONASS G1/G2 */
+immutable CRATE_B1   =     2.046E6     ;    /* BeiDou B1 */
+immutable CRATE_LEXS =     2.5575E6    ;    /* QZSS LEX short */
+immutable CRATE_LEXL =     2.5575E6    ;    /* QZSS LEX long */
 
 /* global variables -----------------------------------------------------------*/
 static char legendre[10223] = 0;
@@ -163,6 +163,7 @@ body{
         return dst;
     }
 }
+///
 unittest{
     auto input = [0, 1, 2, 3, 4, 5, 6, 7];
 
@@ -178,6 +179,7 @@ unittest{
     binDigs = toBinaryDigits(input, 0);
     assert(binDigs.empty);
 }
+///
 unittest{
     auto input = [0, 1, 2, 3, 4, 5, 6, 7];
 
@@ -1376,7 +1378,7 @@ body{
 *------------------------------------------------------------------------------*/
 short *gencode(int prn, CType ctype, int *len, double *crate)
 {
-    switch (ctype) {
+    final switch (ctype) {
         case CType.L1CA  : return gencode_L1CA(prn,len,crate);
         case CType.L1CP  : return gencode_L1CP(prn,len,crate);
         case CType.L1CD  : return gencode_L1CD(prn,len,crate);
@@ -1403,8 +1405,5 @@ short *gencode(int prn, CType ctype, int *len, double *crate)
         case CType.LEXL  : return gencode_LEXL(prn,len,crate);
         case CType.L1SAIF: return gencode_L1CA(prn,len,crate);
         case CType.L1SBAS: return gencode_L1CA(prn,len,crate);
-        default         : 
-            SDRPRINTF("error: gencode prn:%d ctype:%d",prn,ctype);
-            return null;
     }
 }

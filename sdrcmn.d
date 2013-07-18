@@ -14,6 +14,7 @@ import std.datetime;
 import core.bitop;
 import std.traits;
 import std.range;
+import std.algorithm;
 
 version(unittest) import std.stdio;
 
@@ -325,15 +326,23 @@ void cpxpspec(string file = __FILE__, size_t line = __LINE__)(cpx_t *cpx, int n,
 void dot_21(const short *a1, const short *a2, const short *b, int n,
                    double *d1, double *d2)
 {
-    const(short)* p1=a1, p2=a2, q=b;
-    
-    d1[0]=d2[0]=0.0;
-    
-    for (;p1<a1+n;p1++,p2++,q++) {
-        d1[0]+=(*p1) * (*q);
-        d2[0]+=(*p2) * (*q);
+    version(Dnative){
+        immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b[0 .. n]);
+        d1[0] = result[0][0];
+        d2[0] = result[1][0];
+    }else{
+
+        const(short)* p1=a1, p2=a2, q=b;
+        
+        d1[0]=d2[0]=0.0;
+        
+        for (;p1<a1+n;p1++,p2++,q++) {
+            d1[0]+=(*p1) * (*q);
+            d2[0]+=(*p2) * (*q);
+        }
     }
 }
+
 
 
 /* dot products: d1={dot(a1,b1),dot(a1,b2)},d2={dot(a2,b1),dot(a2,b2)} ----------
@@ -346,18 +355,26 @@ void dot_21(const short *a1, const short *a2, const short *b, int n,
 *          short  *d2       O   output short array
 * return : none
 *------------------------------------------------------------------------------*/
-void dot_22(const short *a1, const short *a2, const short *b1,
-                   const short *b2, int n, double *d1, double *d2)
+void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, int n,
+            double *d1, double *d2)
 {
-    const(short)* p1=a1, p2=a2, q1=b1, q2=b2;
-    
-    d1[0]=d1[1]=d2[0]=d2[1]=0.0;
-    
-    for (;p1<a1+n;p1++,p2++,q1++,q2++) {
-        d1[0]+=(*p1)*(*q1);
-        d1[1]+=(*p1)*(*q2);
-        d2[0]+=(*p2)*(*q1);
-        d2[1]+=(*p2)*(*q2);
+    version(Dnative){
+        immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b1[0 .. n], b2[0 .. n]);
+        d1[0] = result[0][0];
+        d1[1] = result[0][1];
+        d2[0] = result[1][0];
+        d2[1] = result[1][1];
+    }else{
+        const(short)* p1=a1, p2=a2, q1=b1, q2=b2;
+        
+        d1[0]=d1[1]=d2[0]=d2[1]=0.0;
+        
+        for (;p1<a1+n;p1++,p2++,q1++,q2++) {
+            d1[0]+=(*p1)*(*q1);
+            d1[1]+=(*p1)*(*q2);
+            d2[0]+=(*p2)*(*q1);
+            d2[1]+=(*p2)*(*q2);
+        }
     }
 }
 
@@ -377,18 +394,151 @@ void dot_23(const short *a1, const short *a2, const short *b1,
                    const short *b2, const short *b3, int n, double *d1,
                    double *d2)
 {
-    const(short)* p1=a1, p2=a2, q1=b1, q2=b2, q3=b3;
-    
-    d1[0]=d1[1]=d1[2]=d2[0]=d2[1]=d2[2]=0.0;
-    
-    for (;p1<a1+n;p1++,p2++,q1++,q2++,q3++) {
-        d1[0]+=(*p1)*(*q1);
-        d1[1]+=(*p1)*(*q2);
-        d1[2]+=(*p1)*(*q3);
-        d2[0]+=(*p2)*(*q1);
-        d2[1]+=(*p2)*(*q2);
-        d2[2]+=(*p2)*(*q3);
+    version(Dnative){
+        immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b1[0 .. n], b2[0 .. n], b3[0 .. n]);
+
+        d1[0] = result[0][0];
+        d1[1] = result[0][1];
+        d1[2] = result[0][2];
+        d2[0] = result[1][0];
+        d2[1] = result[1][1];
+        d2[2] = result[1][2];
+    }else{
+        const(short)* p1=a1, p2=a2, q1=b1, q2=b2, q3=b3;
+        
+        d1[0]=d1[1]=d1[2]=d2[0]=d2[1]=d2[2]=0.0;
+        
+        for (;p1<a1+n;p1++,p2++,q1++,q2++,q3++) {
+            d1[0]+=(*p1)*(*q1);
+            d1[1]+=(*p1)*(*q2);
+            d1[2]+=(*p1)*(*q3);
+            d2[0]+=(*p2)*(*q1);
+            d2[1]+=(*p2)*(*q2);
+            d2[2]+=(*p2)*(*q3);
+        }
     }
+}
+
+
+/**
+unittestをみれば使い方わかる
+*/
+auto dot(T, size_t N)(const(T)[][N] a...)
+if(N > 1)
+{
+    return dotImpl!(T, T, N)(a);
+}
+
+
+auto dot(T)(const(T)[] a)
+{
+    return dotImpl!(T, T, 1)([a]);
+}
+
+
+auto dot(R, T, size_t N)(const(T)[][N] a...)
+{
+    return dotImpl!(R, T, N)(a);
+}
+
+
+auto dot(R, T)(const(T)[] a)
+{
+    return dotImpl!(R, T, 1)([a]);
+}
+
+
+private auto dotImpl(R, T, size_t N)(const(T)[][N] a)
+{
+    static struct Result
+    {
+        auto opCall(U)(const(U)[] b)
+        if(is(typeof(T.init * U.init)  : R))
+        {
+            return opCallImpl([b]);
+        }
+
+
+        auto opCall(U, size_t M)(const(U)[][M] b...)
+        if(M > 1 && is(typeof(T.init * U.init)  : R))
+        {
+            return opCallImpl(b);
+        }
+
+
+      private:
+        const(T)[][N] _inputA;
+
+        R[M][N] opCallImpl(U, size_t M)(const(U)[][M] b)
+        if(is(typeof(T.init * U.init)  : R))
+        {
+            static string generateMinArgs()
+            {
+                string dst;
+
+                foreach(i; 0 .. N){
+                    immutable idxStr = i.to!string();
+                    dst ~= "_inputA[" ~ idxStr ~ "].length, ";
+                }
+
+                foreach(i; 0 .. M){
+                    immutable idxStr = i.to!string();
+                    dst ~= "b[" ~ idxStr ~ "].length, ";
+                }
+
+                if(dst.length)
+                    return dst[0 .. $-2];
+                else
+                    return dst;
+            }
+
+
+            static string generateForeachBody()
+            {
+                string dst;
+
+                foreach(i; 0 .. N){
+                    immutable iStr = i.to!string(),
+                              resultStr = "result[" ~ iStr ~ "][",
+                              aStr = "] += _inputA[" ~ iStr ~ "][i] * b[";
+
+                    foreach(j; 0 .. M){
+                        immutable jStr = j.to!string();
+
+                        dst ~= resultStr ~ jStr ~ aStr ~ jStr ~ "][i];\n";
+                    }
+                }
+
+                return dst;
+            }
+
+
+            immutable size = mixin("min(" ~ generateMinArgs ~ ")");
+
+            R[M][N] result = 0;
+
+            foreach(i; 0 .. size)
+                mixin(generateForeachBody());
+
+            return result;
+        }
+    }
+
+    Result dst = {_inputA : a};
+    return dst;
+}
+
+///
+unittest{
+    // 返り値はint[2][2]
+    auto result22 = dot([0, 1, 2], [3, 4, 5])([6, 7, 8], [9, 10, 11]);
+    assert(result22[0][0] == dot([0, 1, 2])([6, 7, 8])[0][0]);
+    assert(result22[0][1] == dot([0, 1, 2])([9, 10, 11])[0][0]);
+    assert(result22[1][0] == dot([3, 4, 5])([6, 7, 8])[0][0]);
+    assert(result22[1][1] == dot([3, 4, 5])([9, 10, 11])[0][0]);
+
+    auto result11 = dot([0, 1, 2])([3, 4, 5, 6]);
+    assert(result11[0][0] == 0*3 + 1*4 + 2*5);
 }
 
 
