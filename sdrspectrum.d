@@ -1,3 +1,5 @@
+
+
 /*-------------------------------------------------------------------------------
 * sdrspec.c : SDR spectrum analyzer functions
 *
@@ -12,6 +14,9 @@ import std.c.string : memset;
 import std.math;
 import std.random;
 import std.concurrency;
+
+version(none):
+
 
 /* initialize spectrum analyzer -------------------------------------------------
 * create spectrum analyzer thread

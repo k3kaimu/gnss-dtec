@@ -10,6 +10,7 @@ module util.trace;
 
 import std.conv : to;
 import std.stdio;
+import std.traits;
 
 
 /**

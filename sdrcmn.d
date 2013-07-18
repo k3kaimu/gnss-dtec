@@ -953,8 +953,6 @@ void shiftright(void *dst, void *src, size_t size, int n)
     if (tmp !is null) {
         tmp[0 .. size*n] = src[0 .. size*n];
         dst[0 .. size*(n-1)] = tmp[0 .. size*(n-1)];
-        //memcpy(tmp,src,size*n);
-        //memcpy(dst,tmp,size*(n-1));
         free(tmp);
     }
 }

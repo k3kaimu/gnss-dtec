@@ -517,7 +517,7 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys
     scope(failure) cpxfree(sdr.xcode);
 
     /* other code generation */
-    for (i=0;i<sdr.acq.nfft;i++) rcode[i]=0;
+    for (i=0;i<sdr.acq.nfft;i++) rcode[i] = 0;
     rescode(sdr.code,sdr.clen,0,0,sdr.ci,sdr.nsamp,rcode); /* resampled code */
     cpxcpx(rcode,null,1.0,sdr.acq.nfft,sdr.xcode); /* FFT code */
     cpxfft(sdr.xcode,sdr.acq.nfft);

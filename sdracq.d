@@ -90,7 +90,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double *P,
     sdr.acq.cn0=10*log10(maxP/meanP/sdr.ctime);
 
     /* peak ratio */
-    maxP2=maxvd(&P[freqi*sdr.acq.nfft],sdr.nsamp,exinds,exinde,&maxi);
+    maxP2=maxvd(&P[freqi*sdr.acq.nfft], sdr.nsamp, exinds, exinde, &maxi);
 
     sdr.acq.peakr=maxP/maxP2;
     sdr.acq.acqcodei=codei;
