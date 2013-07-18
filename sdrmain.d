@@ -36,6 +36,8 @@ version(MAIN_IS_SDRMAIN_MAIN){
         sw.start();
 
         sdrini.readIniFile(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
+        checkInitValue(sdrini);
+
         startsdr();
 
         sw.stop();
@@ -53,65 +55,17 @@ version(MAIN_IS_SDRMAIN_MAIN){
 *------------------------------------------------------------------------------*/
 void startsdr()
 {
-    int stop;
-
-    /* mutexes and events */
-    openhandles();
-    scope(exit) closehandles();
-
-    SDRPRINTF("GNSS-SDRLIB start!\n");
-    
-    checkInitValue(sdrini);
+    writeln("GNSS-SDRLIB start!");
 
     /* receiver initialization */
     enforce(rcvinit(&sdrini) >= 0);
     scope(exit) rcvquit(&sdrini);
 
-    /* initialize sdr channel struct */
-    size_t sdrch_IniEndIdx;
-    scope(exit) {
-        foreach(i; 0 .. sdrch_IniEndIdx)
-            freesdrch(&sdrch[i]);
-    }
-
-    foreach(i; 0 .. sdrini.nch){
-        enforce(initsdrch(i+1, sdrini.sys[i], sdrini.sat[i], sdrini.ctype[i], sdrini.dtype[sdrini.ftype[i]-1], sdrini.ftype[i], sdrini.f_sf[sdrini.ftype[i]-1], sdrini.f_if[sdrini.ftype[i]-1],&sdrch[i]) >= 0);
-        sdrch_IniEndIdx = i + 1;
-    }
-
-    //hsyncthread = spawn(&syncthread);
-    //hkeythread = spawn(&keythread);
     enforce(sdrini.nch == 1);
+    enforce(initsdrch(1, sdrini.sys[0], sdrini.sat[0], sdrini.ctype[0], sdrini.dtype[sdrini.ftype[0]-1], sdrini.ftype[0], sdrini.f_sf[sdrini.ftype[0]-1], sdrini.f_if[sdrini.ftype[0]-1],&sdrch[0]) >= 0);
     enforce(sdrch[0].sys == SYS_GPS && sdrch[0].ctype == CType.L1CA);
-    sdrthread(0);
-
-    //foreach(i; 0 .. sdrini.nch){
-    //    if (sdrch[i].sys == SYS_GPS && sdrch[i].ctype == CType.L1CA)
-    //        sdrch[i].hsdr = spawn(&sdrthread, i);
-    //    else
-    //        assert(0);
-    //}
-
-    /* start grabber */
-    //enforce(rcvgrabstart(&sdrini) >= 0);
-
-    //tracing = false;
     
-    ///* data grabber loop */
-    //while (1) {
-    //    synchronized(hstopmtx)
-    //        stop = sdrstat.stopflag;
-    //    if (stop) break;
-
-    //    Thread.sleep(dur!"msecs"(100));
-    //    /* grab data */
-    //    //enforce(rcvgrabdata(&sdrini) >= 0);
-    //}
-    //tracing = true;
-
-    //foreach(e; Thread.getAll)
-    //    if(e.name.startsWith("sdrchannel"))
-    //        e.join();
+    sdrthread(0);   // start SDR
 
     SDRPRINTF("GNSS-SDRLIB is finished!\n");
 }
@@ -129,25 +83,18 @@ void sdrthread(size_t index)
     sdrch_t* sdr = &(sdrch[index]);
     Thread.getThis.name = "sdrchannel_" ~ index.to!string();
     sdrplt_t pltacq,plttrk;
-    ulong buffloc = 0, /*bufflocnow = 0,*/ cnt = 0,loopcnt = 0;
-    int /*stop = 0,*/cntsw = 0, swsync, swreset;
+    ulong buffloc = 0, cnt = 0,loopcnt = 0;
+    int cntsw = 0, swsync, swreset;
     double *acqpower = null;
-    //double[] acqpower;
 
     /* plot setting */
-    if (initpltstruct(&pltacq,&plttrk,sdr)<0) {
-        sdrstat.stopflag=ON;
-        //stop=ON;
-    }
+    enforce(initpltstruct(&pltacq,&plttrk,sdr) !< 0);
+
     SDRPRINTF("**** %s sdr thread start! ****\n",sdr.satstr);
-    //Sleep(100);
-    
+
     /* check the exit flag */
-    //synchronized(hstopmtx)
-    //    stop = sdrstat.stopflag;
     bool isStopped()
     {
-        //synchronized(hstopmtx)
         return sdrstat.stopflag != 0;
     }
 
@@ -170,9 +117,8 @@ void sdrthread(size_t index)
         }
         /* tracking */
         if (sdr.flagacq) {
-            traceln("start tracking");
             immutable bufflocnow = sdrtracking(sdr, buffloc, cnt);
-            traceln("end tracking");
+
             if (sdr.flagtrk) {
                 if (sdr.nav.swnavsync) cntsw = 0;
                 if ((cntsw%sdr.trk.loopms)==0) swsync = ON;
@@ -215,18 +161,11 @@ void sdrthread(size_t index)
             }
         }
         sdr.trk.buffloc = buffloc;
-
-        ///* check the exit flag */
-        //synchronized(hstopmtx)
-        //    stop = sdrstat.stopflag;
     }
     /* plot termination */
     quitpltstruct(&pltacq,&plttrk);
 
-    //if (sdr.flagacq) 
-    //    SDRPRINTF("SDR channel %s thread finished! Delay=%d [ms]\n",sdr.satstr,cast(int)(bufflocnow-buffloc)/sdr.nsamp);
-    //else
-        SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
+    SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
 }
 
 version(none):

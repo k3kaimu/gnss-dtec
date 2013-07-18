@@ -70,17 +70,17 @@ int updatepltini(string file = __FILE__, size_t line = __LINE__)(int nx, int ny,
 void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, PlotType type, int nx, int ny, int skip, bool abs, double s, int h, int w, int mh, int mw, int no)
 {
     traceln("called");
-    plt.type=type;
-    plt.nx=nx;
-    plt.ny=ny;
-    plt.skip=skip;
-    plt.flagabs=abs;
-    plt.scale=s;
-    plt.plth=h;
-    plt.pltw=w;
-    plt.pltmh=mh;
-    plt.pltmw=mw;  
-    plt.pltno=no;
+    plt.type = type;
+    plt.nx = nx;
+    plt.ny = ny;
+    plt.skip = skip;
+    plt.flagabs = abs;
+    plt.scale = s;
+    plt.plth = h;
+    plt.pltw = w;
+    plt.pltmh = mh;
+    plt.pltmw = mw;  
+    plt.pltno = no;
 }
 
 
@@ -89,7 +89,7 @@ void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt
 * args   : sdrplt_t *plt    I   sdr plot struct
 * return : none
 *------------------------------------------------------------------------------*/
-int initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
+void initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 {
     traceln("called");
     int xi,yi;
@@ -119,33 +119,10 @@ int initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
             break;
     }
     /* figure position */
-    xi=(plt.pltno-1)%PLT_WN;
-    yi=(plt.pltno-1-xi)/PLT_WN;
-    posx=plt.pltmw+xi*plt.pltw;
-    posy=plt.pltmh+yi*plt.plth;
-
-    ////WaitForSingleObject(hpltmtx,INFINITE);
-    //synchronized(hpltmtx){
-
-    //    /* update config file */
-    //    if ((updatepltini(plt.pltw,plt.plth,posx,posy)<0)){
-    //        SDRPRINTF("error: updatepltini\n"); return -1;
-    //    }
-
-    //    /* pipe open */
-    //    plt.pipe = pipe();
-    //    plt.processId = spawnProcess(`gnuplot\gnuplot.exe`, pipe.readEnd);
-    //    plt.fp = plt.pipe.writeEnd;
-
-    //    Sleep(200);
-    //}
-    //ReleaseMutex(hpltmtx);
-//#ifdef GUI
-//    /* hide window */
-//    plt.hw=FindWindow(null,"c:\\Windows\\system32\\cmd.exe");
-//    ShowWindow(plt.hw,SW_HIDE);
-//#endif
-    return 0;
+    xi = (plt.pltno-1) % PLT_WN;
+    yi = (plt.pltno-1-xi) / PLT_WN;
+    posx = plt.pltmw + xi * plt.pltw;
+    posy = plt.pltmh + yi * plt.plth;
 }
 
 
@@ -157,19 +134,9 @@ int initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 void quitsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 {
     traceln("called");
-    /* pipe close */
-    //if (plt.fp!=null)_pclose(plt.fp); plt.fp=null;
-    //if(plt.fp.isOpen) plt.fp.close();
-    //if(plt.processId !is null){
-    //    kill(plt.processId);
-    //    plt.processId.destroy();
-    //    plt.processId = null;
-    //}
-
-
-    if (plt.x!=null) free(plt.x); plt.x=null;
-    if (plt.y!=null) free(plt.y); plt.y=null;
-    if (plt.z!=null) free(plt.z); plt.z=null;
+    if (plt.x != null) free(plt.x); plt.x = null;
+    if (plt.y != null) free(plt.y); plt.y = null;
+    if (plt.z != null) free(plt.z); plt.z = null;
 }
 
 
@@ -443,9 +410,6 @@ void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, s
     obj.flagabs = plt.flagabs;
     obj.scale = plt.scale;
     obj.pltno = plt.pltno;
-    obj.pltms = plt.pltms;
-
-    //immutable fileName = `SerializedData\` ~ initial ~ "_" ~ Clock.currTime.toISOExtString() ~ ".dat";
 
     immutable fileName = `SerializedData\` ~ initial ~ "_" ~ Clock.currTime.toISOString() ~ ".dat";
     fileName.serializedWrite(obj);
@@ -461,6 +425,5 @@ void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, s
 void plot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string initial)
 {
     traceln("called");
-    /+plotgnuplot(plt);+/
     plotthread(plt, initial);
 }
