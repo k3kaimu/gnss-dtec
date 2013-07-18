@@ -115,31 +115,8 @@ void startsdr()
 
     SDRPRINTF("GNSS-SDRLIB is finished!\n");
 }
-/* sdr termination --------------------------------------------------------------
-* sdr termination process  
-* args   : sdrini_t *ini    I   sdr init struct
-* args   : int    stop      I   stop position in function 0: run all
-* return : none
-*------------------------------------------------------------------------------*/
-void quitsdr(sdrini_t *ini, int stop)
-{
-    if (stop == 1) return;
 
-    /* sdr termination */
-    rcvquit(ini);
-    if (stop == 2) return;
 
-    /* free memory */
-    //for (i=0;i<ini.nch;i++) freesdrch(&sdrch[i]);
-    foreach(i; 0 .. ini.nch)
-        freesdrch(&sdrch[i]);
-
-    if (stop == 3) return;
-
-    /* mutexes and events */
-    closehandles();
-    if (stop == 4) return;
-}
 /* sdr channel thread -----------------------------------------------------------
 * sdr channel thread for signal acquisition and tracking  
 * args   : void   *arg      I   sdr channel struct
