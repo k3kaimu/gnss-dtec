@@ -16,7 +16,7 @@ import std.stdio;
 *          double *power    O   normalized correlation power vector (2D array)
 * return : uint64_t             current buffer location
 *------------------------------------------------------------------------------*/
-ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, double* power, ref ulong cnt, ulong buffloc)
+ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* sdr, double* power, ref ulong cnt, ulong buffloc)
 {
     traceln("called");
 
@@ -53,11 +53,10 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
         sdr.trk.codefreq = sdr.crate;
 
         /* check fine acquisition result */
-        if (std.math.abs(sdr.acq.acqfreqf-sdr.acq.acqfreq) > sdr.acq.step)
+        if (std.math.abs(sdr.acq.acqfreqf - sdr.acq.acqfreq) > sdr.acq.step)
             sdr.flagacq = OFF; /* reset */
     }else
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
-
 
     return buffloc;
 }
@@ -71,13 +70,13 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sd
 * return : int                  acquisition flag (0: not acquired, 1: acquired) 
 * note : first/second peak ratio and c/n0 computation
 *------------------------------------------------------------------------------*/
-bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double *P, sdrch_t *sdr)
+bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P, sdrch_t* sdr)
 {
     traceln("called");
-    int maxi,codei,freqi;
+    int maxi, codei, freqi;
     
-    immutable maxP = maxvd(P,sdr.acq.nfft*sdr.acq.nfreq,-1,-1,&maxi);
-    ind2sub(maxi,sdr.acq.nfft,sdr.acq.nfreq,&codei,&freqi);
+    immutable maxP = maxvd(P, sdr.acq.nfft * sdr.acq.nfreq, -1, -1, &maxi);
+    ind2sub(maxi, sdr.acq.nfft, sdr.acq.nfreq, &codei, &freqi);
 
     immutable exinds = (a => (a < 0) ? (a + sdr.nsamp) : a)(codei-2*sdr.nsampchip),
               exinde = (a => (a >= sdr.nsamp) ? (a - sdr.nsamp) : a)(codei + 2 * sdr.nsampchip),
@@ -111,8 +110,8 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double *P,
 * return : none
 * notes  : P=abs(ifft(conj(fft(code)).*fft(data.*e^(2*pi*freq*t*i)))).^2
 *------------------------------------------------------------------------------*/
-void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double *freq,
-                        int nfreq, double crate, int m, cpx_t* codex, double *P)
+void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double* freq,
+                        int nfreq, double crate, int m, cpx_t* codex, double* P)
 {
     traceln("called");
 
@@ -184,11 +183,11 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
         cpxcpx(rcodeI, null, 1.0, datax);
 
     }
-    else if (dtype==DType.IQ) {  /* complex */
+    else if (dtype == DType.IQ) {  /* complex */
         foreach(i; 0 .. n){
-            rdataI[i]=data[2*i];
-            rdataQ[i]=data[2*i+1];
-        }
+            rdataI[i] = data[i*2];
+            rdataQ[i] = data[i*2 + 1];
+        } 
 
         mulvcs(rdataI, rcode, rcodeI);
         mulvcs(rdataQ, rcode, rcodeQ);
@@ -206,7 +205,7 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
         maxvd(fftxc[m/2 .. $], -1,-1, ind);
     
     if (dtype==DType.I)
-        return cast(double)ind/(m*ti);
+        return cast(double)ind / (m*ti);
     else
-        return (m/2.0-ind)/(m*ti);
+        return (m/2.0 - ind) / (m*ti);
 }
