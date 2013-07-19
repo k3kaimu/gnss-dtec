@@ -88,7 +88,8 @@ void sdrthread(size_t index)
     double *acqpower = null;
 
     /* plot setting */
-    enforce(initpltstruct(&pltacq,&plttrk,sdr) !< 0);
+    initpltstruct(&pltacq,&plttrk,sdr);
+    //enforce(initpltstruct(&pltacq,&plttrk,sdr) !< 0);
 
     SDRPRINTF("**** %s sdr thread start! ****\n",sdr.satstr);
 

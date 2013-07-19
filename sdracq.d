@@ -159,8 +159,6 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
 {
     traceln("called");
 
-    int ind=0;
-
     scope rdataI = new byte[m],
           rdataQ = new byte[m],
           rcode = new short[m],
@@ -199,13 +197,14 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
     /* compute power spectrum */
     cpxpspec(datax, 0, fftxc);
 
-    if (dtype==DType.I)
-        maxvd(fftxc[0 .. m/2], -1, -1, ind);
-    if (dtype==DType.IQ)
-        maxvd(fftxc[m/2 .. $], -1,-1, ind);
-    
-    if (dtype==DType.I)
-        return cast(double)ind / (m*ti);
-    else
-        return (m/2.0 - ind) / (m*ti);
+    int ind = void;
+    final switch(dtype){
+        case DType.I:
+            maxvd(fftxc[0 .. m/2], -1, -1, ind);
+            return (cast(double)ind) / (m * ti);
+
+        case DType.IQ:
+            maxvd(fftxc[m/2 .. $], -1, -1, ind);
+            return (m / 2.0 - ind) / (m * ti);
+    }
 }

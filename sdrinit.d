@@ -222,13 +222,14 @@ void closehandles()
 *          sdrch_t  *sdr    I   sdr channel struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq, sdrplt_t *trk, sdrch_t *sdr)
+void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq, sdrplt_t *trk, sdrch_t *sdr)
 {
     traceln("called");
     /* acquisition */
     if (sdrini.pltacq) {
         setsdrplotprm(acq, PlotType.SurfZ, sdr.acq.nfreq, sdr.acq.nfft, 3, OFF, 1, PLT_H, PLT_W, PLT_MH, PLT_MW, sdr.no);
-        if (initsdrplot(acq)<0) return -1;
+        //if (initsdrplot(acq)<0) return -1;
+        initsdrplot(acq);
         //settitle(acq,sdr.satstr);
         //setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
     }
@@ -236,7 +237,8 @@ int initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq,
     /* tracking */
     if (sdrini.plttrk) {
         setsdrplotprm(trk, PlotType.XY, 1 + 2 * sdr.trk.ncorrp, 0, 0, ON, 0.001, PLT_H, PLT_W, PLT_MH, PLT_MW, sdr.no);
-        if(initsdrplot(trk)<0) return -1;
+        //if(initsdrplot(trk)<0) return -1;
+        initsdrplot(trk);
         //settitle(trk, sdr.satstr);
         //setlabel(trk, "Code Offset (sample)","Correlation Output");
         //setyrange(trk, 0, 8 * sdr.trk.loopms);
@@ -246,8 +248,6 @@ int initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq,
         trk.pltms = PLT_MS_FILE;
     else
         trk.pltms = PLT_MS;
-    
-    return 0;
 }
 /* termination plot struct ------------------------------------------------------
 * termination plot struct

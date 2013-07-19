@@ -415,9 +415,6 @@ struct sdrch_t
 
 struct sdrplt_t
 {
-//    Pid processId;
-//    Pipe pipe;
-//    File fp;
     int nx;
     int ny;
     double *x;
