@@ -172,39 +172,33 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
         resamplingCode(code, 0, 0, ti * crate, n, sink);
     }
 
-    if (dtype==DType.I) {  /* real */
-        rdataI[0 .. n] = data[0 .. n];
-
-        mulvcs(rdataI, rcode, rcodeI);
-    
-        /* to frequency domain */
-        cpxcpx(rcodeI, null, 1.0, datax);
-
-    }
-    else if (dtype == DType.IQ) {  /* complex */
-        foreach(i; 0 .. n){
-            rdataI[i] = data[i*2];
-            rdataQ[i] = data[i*2 + 1];
-        } 
-
-        mulvcs(rdataI, rcode, rcodeI);
-        mulvcs(rdataQ, rcode, rcodeQ);
-    
-        /* to frequency domain */
-        cpxcpx(rcodeI, rcodeQ, 1.0, datax);
-    }
-
-    /* compute power spectrum */
-    cpxpspec(datax, 0, fftxc);
-
-    int ind = void;
     final switch(dtype){
-        case DType.I:
+        case DType.I:       // real
+            rdataI[0 .. n] = data[0 .. n];
+            
+            mulvcs(rdataI, rcode, rcodeI);
+            cpxcpx(rcodeI, null, 1.0, datax);       // to frequency domain
+            cpxpspec(datax, 0, fftxc);              // compute power spectrum
+
+            int ind = void;
             maxvd(fftxc[0 .. m/2], -1, -1, ind);
+
             return (cast(double)ind) / (m * ti);
 
-        case DType.IQ:
+        case DType.IQ:      // complex
+            foreach(i; 0 .. n){
+                rdataI[i] = data[i*2];
+                rdataQ[i] = data[i*2 + 1];
+            }
+
+            mulvcs(rdataI, rcode, rcodeI);
+            mulvcs(rdataQ, rcode, rcodeQ);
+            cpxcpx(rcodeI, rcodeQ, 1.0, datax);     // to frequency domain
+            cpxpspec(datax, 0, fftxc);              // compute power spectrum
+
+            int ind = void;
             maxvd(fftxc[m/2 .. $], -1, -1, ind);
+
             return (m / 2.0 - ind) / (m * ti);
     }
 }
