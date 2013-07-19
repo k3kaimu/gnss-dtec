@@ -40,7 +40,7 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
                sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code,sdr.clen);
     
     /* navigation data */
-    sdrnavigation(sdr, buffloc, cnt);
+    version(all) sdrnavigation(sdr, buffloc, cnt);
     sdr.flagtrk = ON;
     
     return buffloc + sdr.currnsamp;

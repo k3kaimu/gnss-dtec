@@ -5,6 +5,7 @@
 *
 * Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
 *------------------------------------------------------------------------------*/
+
 import sdr;
 
 import std.exception : enforce;
@@ -23,16 +24,17 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
     int sfn,biti;
     
     /* navigation data */
-    biti = cast(int)(cnt%sdr.nav.rate); /* bit location */
+    biti = cast(int)(cnt % sdr.nav.rate); /* bit location */
 
     /* navigation bit synclonaization */
-    if (!sdr.flagnavsync&&cnt>500) 
-        sdr.flagnavsync=nav_checksync(biti,sdr.trk.I[0],sdr.trk.oldI[0],&sdr.nav);
+    if (!sdr.flagnavsync && cnt > 500) 
+        sdr.flagnavsync = nav_checksync(biti, sdr.trk.I[0], sdr.trk.oldI[0], &sdr.nav);
 
+  version(none){
     /* preamble synclonaization */
     if (sdr.flagnavsync) {
         if (nav_checkbit(biti,sdr.trk.I[0],&sdr.nav)==OFF) { /* nav bit determination */
-            //SDRPRINTF("%s nav sync error!!\n",sdr.satstr);
+            SDRPRINTF("%s nav sync error!!\n",sdr.satstr);
         }
                     
         if (sdr.nav.swnavsync) {
@@ -63,6 +65,7 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
             }
         }
     }
+  }
 }
 /* convert binary navigation bits to byte data ----------------------------------
 * 

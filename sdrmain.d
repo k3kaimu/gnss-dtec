@@ -153,7 +153,8 @@ void sdrthread(size_t index)
                     loopcnt++;
                 }
 
-                debug(LPrint) writefln("carrier phase:%s, bufflocnow:%s, buffloc:%s", sdr.trk.L[0], bufflocnow, buffloc);
+                debug(LPrint) if(!sdr.flagnavsync || swsync)
+                    writefln("carrier phase:%s, bufflocnow:%s, buffloc:%s", sdr.trk.L[0], bufflocnow, buffloc);
 
                 if (sdr.no==1&&cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
                 cnt++;
