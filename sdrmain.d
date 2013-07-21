@@ -23,12 +23,32 @@ sdrch_t sdrch[MAXSAT];
 sdrspec_t sdrspec;
 
 
-/* main function ----------------------------------------------------------------
-* main entry point in CLI application  
-* args   : none
-* return : none
-* note : This function is only used in CLI application 
-*------------------------------------------------------------------------------*/
+/**
+フロントエンドが吐く生データを解析して, コンソールやファイルにデータを出力する.
+
+コマンドライン引数:
+    ./sdr <ini_file_path>
+        <ini_file_path>
+            .iniファイルのパス
+            コマンドライン引数に与えられていなければ, 同じディレクトリの`gnss-sdrcli.ini`になる
+
+入力:
+    ・iniファイル
+        コマンドライン引数で指定する.指定されなければ`gnss-sdrcli.ini`が読み込まれる
+
+    ・フロントエンドからの生データ
+        iniファイルに記述されたパスのファイルを読み込む.
+        Stereoが吐くバイナリは圧縮形式なので, Stereo付属のユーティリティで展開すること.
+
+出力:
+    ・SerializedData\(acq, or trk + 解析時刻の文字列表現).dat
+        信号捕捉や信号追尾の結果のデータ.
+        msgpackによってutil.serialized.PlotObjectがバイナリ化されている.
+        本ライブラリ群付属のplotobj_to_csv.exeによってText, CSV, Gnuplotのコマンド列に変換可能である.
+
+    ・Result\(L1 + 解析開始時刻の文字列表現).csv
+        解析が完了した生データのサンプル数と, その時点での搬送波位相[cycle]
+*/
 version(MAIN_IS_SDRMAIN_MAIN){
     void main(string[] args)
     {
@@ -81,12 +101,11 @@ void startsdr()
 *------------------------------------------------------------------------------*/
 void sdrthread(size_t index)
 {
-    immutable resultLFileName = `Result\L_` ~ Clock.currTime.toISOString() ~ ".csv";
+    immutable resultLFileName = `Result\L1_` ~ Clock.currTime.toISOString() ~ ".csv";
     File resultLFile = File(resultLFileName, "w");
     resultLFile.writeln("buffloc, carrierPhase[cycle],");
 
     sdrch_t* sdr = &(sdrch[index]);
-    Thread.getThis.name = "sdrchannel_" ~ index.to!string();
     sdrplt_t pltacq,plttrk;
     ulong buffloc = 0, cnt = 0,loopcnt = 0;
     int cntsw = 0, swsync, swreset;

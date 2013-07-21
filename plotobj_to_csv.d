@@ -1,5 +1,29 @@
 //##$ dmd -m64 -unittest -version=MAIN_IS_PLOTOBJ_TO_CSV_MAIN plotobj_to_csv sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
 
+/**
+sdr.exeが吐くSerializedData内のdatファイルを解析して、様々な形式に変換するプログラム
+
+datの中身は、util.serialized.PlotObjectをmsgpackでpackしたバイナリ。
+このプログラムでは、そのバイナリデータをmsgpackでunpackし、CSVやText, Gnuplotのコマンドに変換するプログラム
+
+コマンドライン引数
+    ./plotobj_to_csv <datfile> <OutputTypes...>
+        <datfile> :     対象のdatファイル
+        <OutputTypes>:  出力したい形式のリスト
+                        すべての形式で出力したい場合には何も書かない。
+
+    ex.
+        ./plotobj_to_csv SerializedData\acq_G03__20130721T161530.0874797.dat
+        ./plotobj_to_csv SerializedData\acq_G03__20130721T161530.0874797.dat Text
+        ./plotobj_to_csv SerializedData\acq_G03__20130721T161530.0874797.dat Text CSV
+        ./plotobj_to_csv SerializedData\acq_G03__20130721T161530.0874797.dat GnuplotCmd
+
+
+出力一覧
+    .txt:   datファイルに格納されているPlotObjectの文字列表現.
+    .csv:   csvファイル. Excelで処理したい場合に有用.
+    .plt:   Gnuplotのloadコマンドでこのファイルを指定すればグラフが表示される
+*/
 module plotdata;
 
 import sdr;
