@@ -33,7 +33,7 @@ pragma(lib, "libfftw3f-3.lib");
 
 /* RTKLIB */
 public import rtklib;
-pragma(lib, "rtklib.lib");
+//pragma(lib, "rtklib.lib");
 
 /* constants -----------------------------------------------------------------*/
 immutable DPI = 2 * PI;
@@ -523,3 +523,105 @@ public import sdracq,
               util.range,
               util.trace,
               util.serialize;
+
+import std.c.string;
+
+// rtklibからの輸入
+int satno(int sys, int prn)
+{
+    enforce(prn !<= 0);
+
+    switch (sys) {
+        case SYS_GPS:
+            //if (prn<MINPRNGPS||MAXPRNGPS<prn) return 0;
+            enforce(!(prn<MINPRNGPS||MAXPRNGPS<prn));
+            return prn-MINPRNGPS+1;
+
+        case SYS_GLO:
+            //if (prn<MINPRNGLO||MAXPRNGLO<prn) return 0;
+            enforce(!(prn<MINPRNGLO||MAXPRNGLO<prn));
+            return NSATGPS+prn-MINPRNGLO+1;
+
+        case SYS_GAL:
+            //if (prn<MINPRNGAL||MAXPRNGAL<prn) return 0;
+            enforce(!(prn<MINPRNGAL||MAXPRNGAL<prn));
+            return NSATGPS+NSATGLO+prn-MINPRNGAL+1;
+
+        case SYS_QZS:
+            //if (prn<MINPRNQZS||MAXPRNQZS<prn) return 0;
+            enforce(!(prn<MINPRNQZS||MAXPRNQZS<prn));
+            return NSATGPS+NSATGLO+NSATGAL+prn-MINPRNQZS+1;
+
+        case SYS_CMP:
+            //if (prn<MINPRNCMP||MAXPRNCMP<prn) return 0;
+            enforce(!(prn<MINPRNCMP||MAXPRNCMP<prn));
+            return NSATGPS+NSATGLO+NSATGAL+NSATQZS+prn-MINPRNCMP+1;
+
+        case SYS_SBS:
+            //if (prn<MINPRNSBS||MAXPRNSBS<prn) return 0;
+            enforce(!(prn<MINPRNSBS||MAXPRNSBS<prn));
+            return NSATGPS+NSATGLO+NSATGAL+NSATQZS+NSATCMP+prn-MINPRNSBS+1;
+
+        default:
+            enforce(0);
+    }
+
+    return 0;
+}
+
+// rtklibからの輸入
+int satsys(int sat, int *prn)
+{
+    int sys = SYS_NONE;
+    if (sat<=0||MAXSAT<sat) sat=0;
+    else if (sat<=NSATGPS) {
+        sys = SYS_GPS; sat += MINPRNGPS-1;
+    }
+    else if ((sat -= NSATGPS) <= NSATGLO) {
+        sys = SYS_GLO; sat += MINPRNGLO-1;
+    }
+    else if ((sat -= NSATGLO) <= NSATGAL) {
+        sys = SYS_GAL; sat += MINPRNGAL-1;
+    }
+    else if ((sat -= NSATGAL) <= NSATQZS) {
+        sys = SYS_QZS; sat += MINPRNQZS-1; 
+    }
+    else if ((sat -= NSATQZS) <= NSATCMP) {
+        sys = SYS_CMP; sat += MINPRNCMP-1; 
+    }
+    else if ((sat -= NSATCMP) <= NSATSBS) {
+        sys = SYS_SBS; sat += MINPRNSBS-1; 
+    }
+    else sat=0;
+    if (prn) *prn=sat;
+    return sys;
+}
+
+// rtklibからの輸入
+string satno2Id(int sat)
+{
+    int prn;
+    switch (satsys(sat, &prn)) {
+        case SYS_GPS: //sprintf(id,"G%02d",prn-MINPRNGPS+1); return;
+            return "G%02d".formattedString(prn-MINPRNGPS+1);
+
+        case SYS_GLO: //sprintf(id,"R%02d",prn-MINPRNGLO+1); return;
+            return "R%02d".formattedString(prn-MINPRNGLO+1);
+
+        case SYS_GAL: //sprintf(id,"E%02d",prn-MINPRNGAL+1); return;
+            return "E%02d".formattedString(prn-MINPRNGAL+1);
+
+        case SYS_QZS: //sprintf(id,"J%02d",prn-MINPRNQZS+1); return;
+            return "J%02d".formattedString(prn-MINPRNQZS+1);
+
+        case SYS_CMP: //sprintf(id,"C%02d",prn-MINPRNCMP+1); return;
+            return "C%02d".formattedString(prn-MINPRNCMP+1);
+
+        case SYS_SBS: //sprintf(id,"%03d" ,prn); return;
+            return "%03d".formattedString(prn);
+
+        default:
+            enforce(0);
+    }
+    assert(0);
+}

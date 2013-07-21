@@ -2381,6 +2381,7 @@ struct _N167
 }
 alias _N167 rtksvr_t;
 
+/+
 /* global variables ----------------------------------------------------------*/
 //C     extern const double chisqr[];           /* chi-sqr(n) table (alpha=0.001) */
 extern const double []chisqr;
@@ -3169,3 +3170,4 @@ int  lexioncorr(gtime_t time, nav_t *nav, double *pos, double *azel, double *del
 //C     }
 //C     #endif
 //C     #endif /* RTKLIB_H */
++/

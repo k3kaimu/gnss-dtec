@@ -462,7 +462,7 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys
     sdr.no=chno;
     sdr.sys=sys;
     sdr.prn=prn;
-    sdr.sat=satno(sys,prn);
+    sdr.sat = satno(sys,prn);
     sdr.ctype=ctype;
     sdr.dtype=dtype;
     sdr.ftype=ftype;
@@ -478,9 +478,10 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys
     sdr.ctime=sdr.clen/sdr.crate;
     sdr.nsamp=cast(int)(f_sf*sdr.ctime);
     sdr.nsampchip=cast(int)(sdr.nsamp/sdr.clen);
-    char[] tmpStr = new char[5];
-    satno2id(sdr.sat, tmpStr.ptr);
-    sdr.satstr = tmpStr.ptr.to!string();
+    //char[] tmpStr = new char[5];
+    ////satno2id(sdr.sat, tmpStr.ptr);
+    sdr.satstr = satno2Id(sdr.sat);
+    //sdr.satstr = tmpStr.ptr.to!string();
     
 
     /* acqisition struct */
