@@ -230,8 +230,8 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
         setsdrplotprm(acq, PlotType.SurfZ, sdr.acq.nfreq, sdr.acq.nfft, 3, OFF, 1, PLT_H, PLT_W, PLT_MH, PLT_MW, sdr.no);
         //if (initsdrplot(acq)<0) return -1;
         initsdrplot(acq);
-        //settitle(acq,sdr.satstr);
-        //setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
+        settitle(acq,sdr.satstr);
+        setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
     }
 
     /* tracking */
@@ -239,9 +239,9 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
         setsdrplotprm(trk, PlotType.XY, 1 + 2 * sdr.trk.ncorrp, 0, 0, ON, 0.001, PLT_H, PLT_W, PLT_MH, PLT_MW, sdr.no);
         //if(initsdrplot(trk)<0) return -1;
         initsdrplot(trk);
-        //settitle(trk, sdr.satstr);
-        //setlabel(trk, "Code Offset (sample)","Correlation Output");
-        //setyrange(trk, 0, 8 * sdr.trk.loopms);
+        settitle(trk, sdr.satstr);
+        setlabel(trk, "Code Offset (sample)","Correlation Output");
+        setyrange(trk, 0, 8 * sdr.trk.loopms);
     }
 
     if (sdrini.fend == Fend.FILE||sdrini.fend == Fend.FILESTEREO)

@@ -8,72 +8,212 @@ import msgpack;
 import util.serialize;
 import std.file;
 import std.process;
-//import core.thread;
 import std.range;
 import std.algorithm;
 import std.math;
+import std.json;
+import std.conv;
+import std.array;
+
+
+enum OutputType
+{
+    Text,
+    CSV,
+    GnuplotCmd,
+    GnuplotPNG,
+    GnuplotEPS,
+}
+
 
 version(MAIN_IS_PLOTOBJ_TO_CSV_MAIN){
     void main(string[] args)
     {
-        immutable srcfilename = args[1];
+        immutable srcFile = args[1],
+                  srcFileNameBody = args[1].retro().find('.').retro()[0 .. $-1];
+
+        // msgpackのunpack
         PlotObject obj = (){
             enforce(args.length > 1);
-            auto data = cast(ubyte[])(srcfilename.read());
+            auto data = cast(ubyte[])(read(srcFile));
 
             PlotObject dst;
             unpack(data, dst);
             return dst;
         }();
 
-        immutable dstfilename = srcfilename.retro().find('.').retro() ~ ".csv";
 
-        File csvFile = File(dstfilename, "w");
+        OutputType[] outputTypes = (){
+            if(args.length > 2)
+                return args[2 .. $].map!(a => a.to!OutputType())().array();
+            else
+                return [__traits(allMembers, OutputType)].map!(a => a.to!OutputType())().array();
+        }();
+
+
+        foreach(e; outputTypes) final switch(e) {
+          case OutputType.Text:
+            obj.outputAs!(OutputType.Text)(srcFileNameBody);
+            break;
+
+          case OutputType.CSV:
+            obj.outputAs!(OutputType.CSV)(srcFileNameBody);
+            break;
+
+          case OutputType.GnuplotCmd:
+            obj.outputAs!(OutputType.GnuplotCmd)(srcFileNameBody);
+            break;
+
+          case OutputType.GnuplotPNG:
+            obj.outputAs!(OutputType.GnuplotPNG)(srcFileNameBody);
+            break;
+
+          case OutputType.GnuplotEPS:
+            obj.outputAs!(OutputType.GnuplotEPS)(srcFileNameBody);
+            break;
+        }
+    }
+
+
+    auto abs(T)(T v, bool flag)
+    {
+        return flag ? std.math.abs(v) : v;
+    }
+
+
+    void outputAs(OutputType type : OutputType.Text)(in PlotObject obj, string filename)
+    {
+        auto file = File(filename ~ ".txt", "w");
+        file.write(obj);
+    }
+
+
+    void outputAs(OutputType type : OutputType.CSV)(in PlotObject obj, string filename)
+    {
+        auto file = File(filename ~ ".csv", "w");
 
         switch(obj.type){
-            case PlotType.Y:
-                csvFile.writeln("PlotType, Y,");
-                foreach(i; iota(obj.ny).stride(obj.skip + 1))
-                    csvFile.writefln("%s,,", obj.flagabs ? std.math.abs(cast(real)obj.y[i]) : obj.y[i]);
-                break;
+          case PlotType.Y:
+            file.writeln("PlotType, Y,");
+            foreach(i; iota(0, obj.nx, obj.skip + 1))
+                file.writefln("%s,", abs(obj.y[i], obj.flagabs) * obj.scale);
+            break;
 
-            case PlotType.XY:
-                csvFile.writeln("PlotType, XY,");
-                foreach(i; iota(obj.nx).stride(obj.skip + 1))
-                    csvFile.writefln("%s, %s,", obj.x[i], obj.flagabs ? std.math.abs(cast(real)obj.y[i]) : obj.y[i]);
-                break;
+          case PlotType.XY:
+            file.writeln("PlotType, XY,");
+            file.writefln("%s,%s,", obj.xlabel, obj.ylabel);
+            foreach(i; iota(0, obj.nx, obj.skip + 1)){
+                file.writefln("%s,%s,", obj.x[i], abs(obj.y[i], obj.flagabs) * obj.scale);
+            }
+            break;
 
-            default:
-                enforce(0);
+          case PlotType.SurfZ:
+            file.writeln("PlotType, SurfZ,");
+            foreach(i; iota(0, obj.ny, obj.skip+1)){
+                foreach(j; iota(0, obj.nx, obj.skip+1))
+                    file.writef("%s,", abs(obj.z[j * obj.ny + i], obj.flagabs) * obj.scale);
+                file.writeln();
+            }
+            break;
+
+          case PlotType.Box:
+            file.writeln("PlotType, Box,");
+            foreach(i; iota(0, obj.nx, obj.skip + 1))
+                file.writefln("%s,%s,", obj.x[i], obj.y[i] * obj.scale);
+            break;
+
+          default:
+            assert(0);
         }
-        //writeln(obj);
+    }
 
-/*
-        sdrplt_t* plt = new sdrplt_t;
-        plt.pipe = pipe();
-        plt.processId = spawnProcess(`gnuplot\gnuplot.exe`, pipe.readEnd);
-        plt.fp = plt.pipe.writeEnd;
-        plt.nx = obj.nx;
-        plt.ny = obj.ny;
-        plt.x = obj.x.ptr;
-        plt.y = obj.y.ptr;
-        plt.z = obj.z.ptr;
-        plt.type = obj.type;
-        plt.skip = obj.skip;
-        plt.flagabs = obj.flagabs;
-        plt.scale = obj.scale;
-        plt.pltno = obj.pltno;
-        plt.pltms = obj.pltms;
-        writeln(*plt);
+    void outputAs(OutputType type : OutputType.GnuplotCmd)(in PlotObject obj, string filename)
+    {
+        auto file = File(filename ~ ".plt", "w");
 
-        Thread.sleep(dur!"msecs"(10000));
+        final switch(obj.type){
+          case PlotType.Y:
+            file.writeln("set grid");
+            file.writeln("unset key");
+            file.writeln("set xlabel '%s'", obj.xlabel);
+            file.writeln("set ylabel '%s'", obj.ylabel);
+            file.writeln("set xrange [%s:%s]")
+            file.writeln("plot '-' with lp lw 1 pt 6 ps 2");
 
-        //plotgnuplot(plt);
-        plt.fp.writeln("plot x");
-        plt.fp.flush();
+            foreach(i; iota(0, obj.ny, obj.skip+1))
+                file.writefln("%s", abs(obj.y[i], obj.flagabs) * obj.scale);
+            
+            file.writeln("e");
+            break;
 
-        {
-            auto unused = readln();
-        }*/
+          case PlotType.XY:
+            file.writeln("set grid");
+            file.writeln("unset key");
+            file.writeln("plot '-' with p pt 6 ps 2");
+
+            foreach(i; iota(0, obj.nx, obj.skip+1))
+                file.writefln("%s\t%s", obj.x[i], abs(obj.y[i], obj.flagabs) * obj.scale);
+            
+            file.writeln("e");
+            break;
+
+          case PlotType.SurfZ:
+            file.writeln("unset key");
+            file.writeln("splot '-' with pm3d");
+            
+            foreach(i; iota(0, obj.ny, obj.skip+1)){
+                foreach(j; iota(0, obj.nx, obj.skip+1))
+                    file.writefln("%s", abs(obj.z[j * obj.ny + i], obj.flagabs) * obj.scale);
+                file.writeln();
+            }
+            file.writeln("e");
+            break;
+
+          case PlotType.Box:
+            file.writeln("set grid");
+            file.writeln("unset key");
+            file.writeln("set boxwidth 0.95");
+            file.writeln(`set style fill solid border lc rgb "black"`);
+            file.writeln("plot '-' with boxes");
+
+            foreach(i; iota(0, obj.nx, obj.skip+1))
+                file.writefln("%s\t%s", obj.x[i], obj.y[i] * obj.scale);
+            file.writeln("e");
+            break;
+        }
+    }
+
+
+    void outputAs(OutputType type : OutputType.GnuplotPNG)(in PlotObject obj, string filename)
+    {
+        if(!exists(filename ~ ".plt"))
+            obj.outputAs!(OutputType.GnuplotCmd)(filename ~ ".plt");
+
+        auto file = File(filename ~ "_png.plt", "w");
+        auto buff = std.file.read(filename ~ ".plt");
+
+        file.writeln("set terminal png");
+        file.writefln("set output '%s'", filename ~ ".png");
+        file.flush();
+        file.close();
+
+        std.file.append(filename ~ "_png.plt", buff);
+    }
+
+
+    void outputAs(OutputType type : OutputType.GnuplotEPS)(in PlotObject obj, string filename)
+    {
+        if(!exists(filename ~ ".plt"))
+            obj.outputAs!(OutputType.GnuplotCmd)(filename ~ ".plt");
+
+        auto file = File(filename ~ "_eps.plt", "w");
+        auto buff = std.file.read(filename ~ ".plt");
+
+        file.writeln("set terminal postscript eps");
+        file.writefln("set output '%s'", filename ~ ".eps");
+        file.flush();
+        file.close();
+
+        std.file.append(filename ~ "_eps.plt", buff);
     }
 }

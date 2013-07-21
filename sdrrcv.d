@@ -269,7 +269,7 @@ int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *i
 *          char   *expbuff  O   extracted data buffer
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgetbuff(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
+int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
 {
     traceln("called");
 

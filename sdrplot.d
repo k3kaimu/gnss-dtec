@@ -70,6 +70,7 @@ int updatepltini(string file = __FILE__, size_t line = __LINE__)(int nx, int ny,
 void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, PlotType type, int nx, int ny, int skip, bool abs, double s, int h, int w, int mh, int mw, int no)
 {
     traceln("called");
+
     plt.type = type;
     plt.nx = nx;
     plt.ny = ny;
@@ -79,7 +80,7 @@ void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt
     plt.plth = h;
     plt.pltw = w;
     plt.pltmh = mh;
-    plt.pltmw = mw;  
+    plt.pltmw = mw;
     plt.pltno = no;
 }
 
@@ -149,12 +150,13 @@ void quitsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 *------------------------------------------------------------------------------*/
 void setxrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, double xmin, double xmax)
 {
-    static assert(0);
+    //static assert(0);
     version(none){
         traceln("called");
         plt.fp.writefln("set xr[%.1f:%.1f]",xmin,xmax);
         plt.fp.flush();
-    }
+    }else
+        plt.xrange = [xmin, xmax];
 }
 
 
@@ -167,12 +169,13 @@ void setxrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, do
 *------------------------------------------------------------------------------*/
 void setyrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, double ymin, double ymax)
 {
-    static assert(0);
+    //static assert(0);
     version(none){
         traceln("called");
         plt.fp.writefln("set yr[%.1f:%.1f]",ymin,ymax);
         plt.fp.flush();
-    }
+    }else
+        plt.yrange = [ymin, ymax];
 }
 
 
@@ -185,7 +188,7 @@ void setyrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, do
 *------------------------------------------------------------------------------*/
 void setlabel(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string xlabel, string ylabel)
 {
-    static assert(0);
+    //static assert(0);
     version(none){
         traceln("called");
         with(*plt){
@@ -193,6 +196,9 @@ void setlabel(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, str
             fp.writefln("set yl '%s'", ylabel);
             fp.flush();
         }
+    }else{
+        plt.xlabel = xlabel;
+        plt.ylabel = ylabel;
     }
 }
 
@@ -205,12 +211,13 @@ void setlabel(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, str
 *------------------------------------------------------------------------------*/
 void settitle(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string title)
 {
-    static assert(0);
+    //static assert(0);
     version(none){
         traceln("called");
         plt.fp.writefln("set title '%s'", title);
         plt.fp.flush();
-    }
+    }else
+        plt.title = title;
 }
 
 
@@ -410,6 +417,11 @@ void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, s
     obj.flagabs = plt.flagabs;
     obj.scale = plt.scale;
     obj.pltno = plt.pltno;
+    obj.xrange = plt.xrange;
+    obj.yrange = plt.yrange;
+    obj.xlabel = plt.xlabel;
+    obj.ylabel = plt.ylabel;
+    obj.title = plt.title;
 
     immutable fileName = `SerializedData\` ~ initial ~ "_" ~ Clock.currTime.toISOString() ~ ".dat";
     fileName.serializedWrite(obj);

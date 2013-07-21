@@ -11,6 +11,7 @@ import core.sync.mutex;
 import std.concurrency;
 import core.thread;
 import std.algorithm;
+import std.datetime;
 
 /* global variables -----------------------------------------------------------*/
 /* thread handle and mutex */
@@ -80,6 +81,10 @@ void startsdr()
 *------------------------------------------------------------------------------*/
 void sdrthread(size_t index)
 {
+    immutable resultLFileName = `Result\L_` ~ Clock.currTime.toISOString() ~ ".csv";
+    File resultLFile = File(resultLFileName, "w");
+    resultLFile.writeln("buffloc, carrierPhase[cycle],");
+
     sdrch_t* sdr = &(sdrch[index]);
     Thread.getThis.name = "sdrchannel_" ~ index.to!string();
     sdrplt_t pltacq,plttrk;
@@ -153,8 +158,8 @@ void sdrthread(size_t index)
                     loopcnt++;
                 }
 
-                debug(LPrint) if(!sdr.flagnavsync || swsync)
-                    writefln("carrier phase:%s, bufflocnow:%s, buffloc:%s", sdr.trk.L[0], bufflocnow, buffloc);
+                if(!sdr.flagnavsync || swsync)
+                    resultLFile.writefln("%s,%9.9f,", buffloc, sdr.trk.L[0]);
 
                 if (sdr.no==1&&cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
                 cnt++;
