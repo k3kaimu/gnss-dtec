@@ -20,8 +20,8 @@ enum OutputType
     Text,
     CSV,
     GnuplotCmd,
-    GnuplotPNG,
-    GnuplotEPS,
+//    GnuplotPNG,
+//    GnuplotEPS,
 }
 
 
@@ -63,13 +63,13 @@ version(MAIN_IS_PLOTOBJ_TO_CSV_MAIN){
             obj.outputAs!(OutputType.GnuplotCmd)(srcFileNameBody);
             break;
 
-          case OutputType.GnuplotPNG:
-            obj.outputAs!(OutputType.GnuplotPNG)(srcFileNameBody);
-            break;
+          //case OutputType.GnuplotPNG:
+          //  obj.outputAs!(OutputType.GnuplotPNG)(srcFileNameBody);
+          //  break;
 
-          case OutputType.GnuplotEPS:
-            obj.outputAs!(OutputType.GnuplotEPS)(srcFileNameBody);
-            break;
+          //case OutputType.GnuplotEPS:
+          //  obj.outputAs!(OutputType.GnuplotEPS)(srcFileNameBody);
+          //  break;
         }
     }
 
@@ -186,7 +186,8 @@ version(MAIN_IS_PLOTOBJ_TO_CSV_MAIN){
         }
     }
 
-
+  version(none)
+  {
     void outputAs(OutputType type : OutputType.GnuplotPNG)(in PlotObject obj, string filename)
     {
         if(!exists(filename ~ ".plt"))
@@ -219,4 +220,5 @@ version(MAIN_IS_PLOTOBJ_TO_CSV_MAIN){
 
         std.file.append(filename ~ "_eps.plt", buff);
     }
+  }
 }
