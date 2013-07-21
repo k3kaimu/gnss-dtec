@@ -11,7 +11,6 @@ import std.process;
 import std.range;
 import std.algorithm;
 import std.math;
-import std.json;
 import std.conv;
 import std.array;
 
@@ -131,13 +130,17 @@ version(MAIN_IS_PLOTOBJ_TO_CSV_MAIN){
     {
         auto file = File(filename ~ ".plt", "w");
 
+        (!obj.xlabel.empty)      && file.writefln("set xlabel '%s'", obj.xlabel);
+        (!obj.ylabel.empty)      && file.writefln("set ylabel '%s'", obj.ylabel);
+        (obj.xrange.length >= 2) && file.writefln("set xrange [%s:%s]", obj.xrange[0], obj.xrange[1]);
+        (obj.yrange.length >= 2) && file.writefln("set yrange [%s:%s]", obj.yrange[0], obj.yrange[1]);
+        (!obj.title.empty)       && file.writefln("set title '%s'", obj.title);
+
+
         final switch(obj.type){
           case PlotType.Y:
             file.writeln("set grid");
             file.writeln("unset key");
-            file.writeln("set xlabel '%s'", obj.xlabel);
-            file.writeln("set ylabel '%s'", obj.ylabel);
-            file.writeln("set xrange [%s:%s]")
             file.writeln("plot '-' with lp lw 1 pt 6 ps 2");
 
             foreach(i; iota(0, obj.ny, obj.skip+1))
