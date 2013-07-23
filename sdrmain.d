@@ -22,6 +22,9 @@ sdrstat_t sdrstat;
 sdrch_t sdrch[MAXSAT];
 sdrspec_t sdrspec;
 
+/// L2CMで信号捕捉する際に使用するL1CAの周波数
+double l1ca_freqf_dopper_for_l2cm;
+
 
 /**
 フロントエンドが吐く生データを解析して, コンソールやファイルにデータを出力する.
@@ -84,7 +87,7 @@ void startsdr()
 
     enforce(sdrini.nch == 1);
     enforce(initsdrch(1, sdrini.sys[0], sdrini.sat[0], sdrini.ctype[0], sdrini.dtype[sdrini.ftype[0]-1], sdrini.ftype[0], sdrini.f_sf[sdrini.ftype[0]-1], sdrini.f_if[sdrini.ftype[0]-1],&sdrch[0]) >= 0);
-    enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[0].ctype == CType.L1CA);
+    enforce((sdrch[0].sys == SYS_GPS || sdrch[0].sys == SYS_QZS) && sdrch[0].ctype == CType.L1CA);
     
     sdrthread(0);   // start SDR
 
