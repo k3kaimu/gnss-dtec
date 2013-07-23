@@ -84,7 +84,7 @@ void startsdr()
 
     enforce(sdrini.nch == 1);
     enforce(initsdrch(1, sdrini.sys[0], sdrini.sat[0], sdrini.ctype[0], sdrini.dtype[sdrini.ftype[0]-1], sdrini.ftype[0], sdrini.f_sf[sdrini.ftype[0]-1], sdrini.f_if[sdrini.ftype[0]-1],&sdrch[0]) >= 0);
-    enforce(sdrch[0].sys == SYS_GPS && sdrch[0].ctype == CType.L1CA);
+    enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[0].ctype == CType.L1CA);
     
     sdrthread(0);   // start SDR
 
@@ -101,15 +101,15 @@ void startsdr()
 *------------------------------------------------------------------------------*/
 void sdrthread(size_t index)
 {
-    immutable resultLFileName = `Result\L1_` ~ Clock.currTime.toISOString() ~ ".csv";
-    File resultLFile = File(resultLFileName, "w");
-    resultLFile.writeln("buffloc, carrierPhase[cycle],");
-
     sdrch_t* sdr = &(sdrch[index]);
     sdrplt_t pltacq,plttrk;
     ulong buffloc = 0, cnt = 0,loopcnt = 0;
     int cntsw = 0, swsync, swreset;
     double *acqpower = null;
+
+    immutable resultLFileName = `Result\L1_` ~ sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
+    File resultLFile = File(resultLFileName, "w");
+    resultLFile.writeln("buffloc, carrierPhase[cycle],");
 
     /* plot setting */
     initpltstruct(&pltacq,&plttrk,sdr);
@@ -178,7 +178,7 @@ void sdrthread(size_t index)
                 }
 
                 if(!sdr.flagnavsync || swsync)
-                    resultLFile.writefln("%s,%9.9f,", buffloc, sdr.trk.L[0]);
+                    resultLFile.writefln("%s,%.9f,", buffloc, sdr.trk.L[0]);
 
                 if (sdr.no==1&&cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
                 cnt++;
@@ -193,6 +193,7 @@ void sdrthread(size_t index)
 
     SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
 }
+
 
 version(none):
 
@@ -288,7 +289,7 @@ void syncthread()
         diffsamp = trk[refi].cntout[ind[refi]]-sdrch[isat[refi]].nav.firstsfcnt;
         sampref = sdrch[isat[refi]].nav.firstsf+cast(ulong)(sdrch[isat[refi]].nsamp*(-cast(int)(PTIMING)+diffsamp)); /* reference sample */
         sampbase = trk[refi].codei[OBSINTERPN-1]-10*sdrch[isat[refi]].nsamp;
-        samprefd = cast(double)(sampref-sampbase);            
+        samprefd = cast(double)(sampref-sampbase);
         
         /* computation observation data */
         foreach(i; 0 .. nsat){

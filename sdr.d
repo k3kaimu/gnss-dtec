@@ -33,7 +33,6 @@ pragma(lib, "libfftw3f-3.lib");
 
 /* RTKLIB */
 public import rtklib;
-//pragma(lib, "rtklib.lib");
 
 /* constants -----------------------------------------------------------------*/
 immutable DPI = 2 * PI;
@@ -477,6 +476,7 @@ void SDRPRINTF(T...)(T args)
     writef(args);
 }
 
+
 import core.memory;
 
 auto malloc(size_t size)
@@ -484,20 +484,24 @@ auto malloc(size_t size)
     return GC.malloc(size);
 }
 
+
 void free(void* p)
 {
     GC.free(p);
 }
+
 
 void* calloc(size_t n, size_t size)
 {
     return GC.calloc(n * size);
 }
 
+
 ushort MAKEWORD(ubyte bLow, ubyte bHigh)
 {
     return bLow | (bHigh << 8);
 }
+
 
 string formattedString(S, T...)(S format, T args)
 if(isSomeString!S)
@@ -524,7 +528,6 @@ public import sdracq,
               util.trace,
               util.serialize;
 
-import std.c.string;
 
 // rtklibからの輸入
 int satno(int sys, int prn)
@@ -532,45 +535,40 @@ int satno(int sys, int prn)
     enforce(prn !<= 0);
 
     switch (sys) {
-        case SYS_GPS:
-            //if (prn<MINPRNGPS||MAXPRNGPS<prn) return 0;
-            enforce(!(prn<MINPRNGPS||MAXPRNGPS<prn));
-            return prn-MINPRNGPS+1;
+      case SYS_GPS:
+        enforce(!(prn<MINPRNGPS||MAXPRNGPS<prn));
+        return prn-MINPRNGPS+1;
 
-        case SYS_GLO:
-            //if (prn<MINPRNGLO||MAXPRNGLO<prn) return 0;
-            enforce(!(prn<MINPRNGLO||MAXPRNGLO<prn));
-            return NSATGPS+prn-MINPRNGLO+1;
+      case SYS_GLO:
+        enforce(!(prn<MINPRNGLO||MAXPRNGLO<prn));
+        return NSATGPS+prn-MINPRNGLO+1;
 
-        case SYS_GAL:
-            //if (prn<MINPRNGAL||MAXPRNGAL<prn) return 0;
-            enforce(!(prn<MINPRNGAL||MAXPRNGAL<prn));
-            return NSATGPS+NSATGLO+prn-MINPRNGAL+1;
+      case SYS_GAL:
+        enforce(!(prn<MINPRNGAL||MAXPRNGAL<prn));
+        return NSATGPS+NSATGLO+prn-MINPRNGAL+1;
 
-        case SYS_QZS:
-            //if (prn<MINPRNQZS||MAXPRNQZS<prn) return 0;
-            enforce(!(prn<MINPRNQZS||MAXPRNQZS<prn));
-            return NSATGPS+NSATGLO+NSATGAL+prn-MINPRNQZS+1;
+      case SYS_QZS:
+        enforce(!(prn<MINPRNQZS||MAXPRNQZS<prn));
+        return NSATGPS+NSATGLO+NSATGAL+prn-MINPRNQZS+1;
 
-        case SYS_CMP:
-            //if (prn<MINPRNCMP||MAXPRNCMP<prn) return 0;
-            enforce(!(prn<MINPRNCMP||MAXPRNCMP<prn));
-            return NSATGPS+NSATGLO+NSATGAL+NSATQZS+prn-MINPRNCMP+1;
+      case SYS_CMP:
+        enforce(!(prn<MINPRNCMP||MAXPRNCMP<prn));
+        return NSATGPS+NSATGLO+NSATGAL+NSATQZS+prn-MINPRNCMP+1;
 
-        case SYS_SBS:
-            //if (prn<MINPRNSBS||MAXPRNSBS<prn) return 0;
-            enforce(!(prn<MINPRNSBS||MAXPRNSBS<prn));
-            return NSATGPS+NSATGLO+NSATGAL+NSATQZS+NSATCMP+prn-MINPRNSBS+1;
+      case SYS_SBS:
+        enforce(!(prn<MINPRNSBS||MAXPRNSBS<prn));
+        return NSATGPS+NSATGLO+NSATGAL+NSATQZS+NSATCMP+prn-MINPRNSBS+1;
 
-        default:
-            enforce(0);
+      default:
+        enforce(0);
     }
 
     return 0;
 }
 
+
 // rtklibからの輸入
-int satsys(int sat, int *prn)
+int satsys(int sat, out int prn)
 {
     int sys = SYS_NONE;
     if (sat<=0||MAXSAT<sat) sat=0;
@@ -593,31 +591,33 @@ int satsys(int sat, int *prn)
         sys = SYS_SBS; sat += MINPRNSBS-1; 
     }
     else sat=0;
-    if (prn) *prn=sat;
+
+    prn = sat;
     return sys;
 }
+
 
 // rtklibからの輸入
 string satno2Id(int sat)
 {
-    int prn;
-    switch (satsys(sat, &prn)) {
-        case SYS_GPS: //sprintf(id,"G%02d",prn-MINPRNGPS+1); return;
+    int prn = void;
+    switch (satsys(sat, prn)) {
+        case SYS_GPS:
             return "G%02d".formattedString(prn-MINPRNGPS+1);
 
-        case SYS_GLO: //sprintf(id,"R%02d",prn-MINPRNGLO+1); return;
+        case SYS_GLO:
             return "R%02d".formattedString(prn-MINPRNGLO+1);
 
-        case SYS_GAL: //sprintf(id,"E%02d",prn-MINPRNGAL+1); return;
+        case SYS_GAL:
             return "E%02d".formattedString(prn-MINPRNGAL+1);
 
-        case SYS_QZS: //sprintf(id,"J%02d",prn-MINPRNQZS+1); return;
+        case SYS_QZS:
             return "J%02d".formattedString(prn-MINPRNQZS+1);
 
-        case SYS_CMP: //sprintf(id,"C%02d",prn-MINPRNCMP+1); return;
+        case SYS_CMP:
             return "C%02d".formattedString(prn-MINPRNCMP+1);
 
-        case SYS_SBS: //sprintf(id,"%03d" ,prn); return;
+        case SYS_SBS:
             return "%03d".formattedString(prn);
 
         default:
