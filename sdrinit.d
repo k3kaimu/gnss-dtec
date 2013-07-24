@@ -179,42 +179,6 @@ void checkInitValue(string file = __FILE__, size_t line = __LINE__)(in ref sdrin
 }
 
 
-/* initialize mutex and event ---------------------------------------------------
-* create mutex and event handles
-* args   : none
-* return : none
-*------------------------------------------------------------------------------*/
-void openhandles()
-{
-    /* mutexes */
-    //hstopmtx = new Mutex();
-    //hbuffmtx = new Mutex();
-    //hreadmtx = new Mutex();
-    //hfftmtx = new Mutex();
-    //hpltmtx = new Mutex();
-    //hobsmtx = new Mutex();
-
-    ///* events */
-    //hlexeve=CreateEvent(null,true,false,null);
-}
-/* close mutex and event --------------------------------------------------------
-* close mutex and event handles
-* args   : none
-* return : none
-*------------------------------------------------------------------------------*/
-void closehandles()
-{
-    /* mutexes */
-    //CloseHandle(hstopmtx); hstopmtx=null;
-    //CloseHandle(hbuffmtx); hbuffmtx=null;
-    //CloseHandle(hreadmtx); hreadmtx=null;
-    //CloseHandle(hfftmtx);  hfftmtx=null;
-    //CloseHandle(hpltmtx);  hpltmtx=null;
-    //CloseHandle(hobsmtx);  hobsmtx=null;
-
-    /* events */
-    //CloseHandle(hlexeve);  hlexeve=null;
-}
 /* initialization plot struct ---------------------------------------------------
 * set value to plot struct
 * args   : sdrplt_t *acq    I/0 plot struct for acquisition
