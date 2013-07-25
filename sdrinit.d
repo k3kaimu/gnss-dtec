@@ -238,11 +238,38 @@ void quitpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
 int initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdracq_t *acq)
 {
     traceln("called");
-    acq.intg = ACQINTG;
-    acq.hband = ACQHBAND;
-    acq.step = ACQSTEP;
-    acq.nfreq = 2 * (ACQHBAND / ACQSTEP) + 1;
-    acq.lenf = ACQLENF;
+
+    enum sourceCode = q{
+        acq.intg = INTG;
+        acq.hband = HBAND;
+        acq.step = STEP;
+        acq.nfreq = 2 * (HBAND / STEP) + 1;
+        //acq.lenf = LENF;
+    };
+
+    switch(ctype){
+      case CType.L1CA:
+        with(Constant.L1CA.Acquisition){
+            mixin(sourceCode);
+            acq.lenf = LENF;
+        }
+        break;
+
+      case CType.L1SAIF:
+        with(Constant.L1SAIF.Acquisition){
+            mixin(sourceCode);
+            acq.lenf = LENF;
+        }
+        break;
+
+      case CType.L2CM:
+        with(Constant.L2CM.Acquisition)
+            mixin(sourceCode);
+        break;
+
+      default:
+        enforce(0);
+    }
 
     return 0;
 }
@@ -254,55 +281,58 @@ int initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
 *------------------------------------------------------------------------------*/
 int inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(sdrtrkprm_t *prm, int sw)
 {
-    traceln("called");
-    int i,trkcp,trkcdn;
-    
-    /* tracking parameter selection */
-    switch (sw) {
-        case 1:
-            prm.dllb=TRKDLLB1;
-            prm.pllb=TRKPLLB1;
-            prm.fllb=TRKFLLB1;
-            prm.dt=TRKDT1;
-            trkcp=TRKCP1;
-            trkcdn=TRKCDN1;
-            break;
-        case 2:
-            prm.dllb=TRKDLLB2;
-            prm.pllb=TRKPLLB2;
-            prm.fllb=TRKFLLB2;
-            prm.dt=TRKDT2;
-            trkcp=TRKCP2;
-            trkcdn=TRKCDN2;
-            break;
-        default:
-            SDRPRINTF("error: inittrkprmstruct sw=%d\n",sw);
-            return -1;
-    }
-    /* correlation point */
-    prm.corrp = cast(int*)malloc(int.sizeof * TRKCN).enforce();
-    for (i=0;i<TRKCN;i++) {
-        prm.corrp[i]=trkcdn*(i+1);
-        if (prm.corrp[i]==trkcp){
-            prm.ne=2*(i+1)-1; /* Early */
-            prm.nl=2*(i+1);   /* Late */
+    with(Constant.Tracking){
+        traceln("called");
+        int i,trkcp,trkcdn;
+        
+        /* tracking parameter selection */
+        switch (sw) {
+            case 1:
+                prm.dllb = Parameter1.DLLB;
+                prm.pllb = Parameter1.PLLB;
+                prm.fllb = Parameter1.FLLB;
+                prm.dt = Parameter1.DT;
+                trkcp = Parameter1.CP;
+                trkcdn = Parameter1.CDN;
+                break;
+            case 2:
+                prm.dllb = Parameter2.DLLB;
+                prm.pllb = Parameter2.PLLB;
+                prm.fllb = Parameter2.FLLB;
+                prm.dt = Parameter2.DT;
+                trkcp = Parameter2.CP;
+                trkcdn = Parameter2.CDN;
+                break;
+            default:
+                SDRPRINTF("error: inittrkprmstruct sw=%d\n",sw);
+                return -1;
         }
+        /* correlation point */
+
+        prm.corrp = cast(int*)malloc(int.sizeof * Constant.TRKCN).enforce();
+        for (i=0;i<Constant.TRKCN;i++) {
+            prm.corrp[i]=trkcdn*(i+1);
+            if (prm.corrp[i]==trkcp){
+                prm.ne=2*(i+1)-1; /* Early */
+                prm.nl=2*(i+1);   /* Late */
+            }
+        }
+        /* correlation point for plot */
+        prm.corrx = cast(double*)calloc(2*Constant.TRKCN+1, double.sizeof).enforce();
+        for (i=1;i<=Constant.TRKCN;i++) {
+            prm.corrx[2*i-1]=-trkcdn*i;
+            prm.corrx[2*i  ]= trkcdn*i;
+        }   
+
+        /* calculation loop filter parameters */
+        prm.dllw2=(prm.dllb/0.53)*(prm.dllb/0.53);
+        prm.dllaw=1.414*(prm.dllb/0.53);
+        prm.pllw2=(prm.pllb/0.53)*(prm.pllb/0.53);
+        prm.pllaw=1.414*(prm.pllb/0.53);
+        prm.fllw =prm.fllb/0.25;
+
+        return 0;
     }
-    /* correlation point for plot */
-    prm.corrx = cast(double*)calloc(2*TRKCN+1, double.sizeof).enforce();
-    for (i=1;i<=TRKCN;i++) {
-        prm.corrx[2*i-1]=-trkcdn*i;
-        prm.corrx[2*i  ]= trkcdn*i;
-    }   
-
-    /* calculation loop filter parameters */
-    prm.dllw2=(prm.dllb/0.53)*(prm.dllb/0.53);
-    prm.dllaw=1.414*(prm.dllb/0.53);
-    prm.pllw2=(prm.pllb/0.53)*(prm.pllb/0.53);
-    prm.pllaw=1.414*(prm.pllb/0.53);
-    prm.fllw =prm.fllb/0.25;
-
-    return 0;
 }
 /* initialize tracking struct --------------------------------------------------
 * set value to tracking struct
@@ -320,7 +350,7 @@ int inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
             SDRPRINTF("error: inittrkprmstruct\n");
             return -1;
     }
-    trk.ncorrp=TRKCN;
+    trk.ncorrp = Constant.TRKCN;
     trk.I      =cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
     scope(failure) free(trk.I);
     trk.Q      =cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
@@ -338,11 +368,11 @@ int inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
     trk.oldsumQ=cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
     scope(failure) free(trk.oldsumQ);
 
-    if (sys==SYS_GPS&&ctype==CType.L1CA)   trk.loopms=LOOP_MS_L1CA;
-    if (sys==SYS_SBS&&ctype==CType.L1SBAS) trk.loopms=LOOP_MS_SBAS;
-    if (sys==SYS_QZS&&ctype==CType.L1CA)   trk.loopms=LOOP_MS_L1CA;
-    if (sys==SYS_QZS&&ctype==CType.LEXS)   trk.loopms=LOOP_MS_LEX;
-    if (sys==SYS_QZS&&ctype==CType.L1SAIF) trk.loopms=LOOP_MS_SBAS;
+    if (sys == SYS_GPS && ctype == CType.L1CA)   trk.loopms=Constant.LOOP_MS_L1CA;
+    if (sys == SYS_SBS && ctype == CType.L1SBAS) trk.loopms=Constant.LOOP_MS_SBAS;
+    if (sys == SYS_QZS && ctype == CType.L1CA)   trk.loopms=Constant.LOOP_MS_L1CA;
+    if (sys == SYS_QZS && ctype == CType.LEXS)   trk.loopms=Constant.LOOP_MS_LEX;
+    if (sys == SYS_QZS && ctype == CType.L1SAIF) trk.loopms=Constant.LOOP_MS_SBAS;
 
     //if (!trk.I||!trk.Q||!trk.oldI||!trk.oldQ||!trk.sumI||!trk.sumQ||!trk.oldsumI||!trk.oldsumQ) {
     //    SDRPRINTF("error: inittrkstruct memory allocation\n");
@@ -366,33 +396,40 @@ int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
     int[2] poly = [V27POLYA,V27POLYB];
 
     nav.ctype=ctype;
-    nav.bitth=NAVBITTH;        
-    if (ctype==CType.L1CA) {
-        nav.rate=NAVRATE_L1CA;
-        nav.flen=NAVFLEN_L1CA;
-        nav.addflen=NAVADDFLEN_L1CA;
-        nav.addplen=NAVADDPLEN_L1CA;
-        nav.prelen=NAVPRELEN_L1CA;
-        memcpy(preamble.ptr,pre_l1ca.ptr,int.sizeof*nav.prelen);
-    }
-    if (ctype==CType.L1SAIF) {
-        nav.rate=NAVRATE_L1SAIF;
-        nav.flen=NAVFLEN_L1SAIF;
-        nav.addflen=NAVADDFLEN_L1SAIF;
-        nav.addplen=NAVADDPLEN_L1SAIF;
-        nav.prelen=NAVPRELEN_L1SAIF;
-        memcpy(preamble.ptr,pre_l1saif.ptr,int.sizeof*nav.prelen);
+    //nav.bitth=NAVBITTH;        
+    //if (ctype==CType.L1CA) {
+    //    nav.rate=NAVRATE_L1CA;
+    //    nav.flen=NAVFLEN_L1CA;
+    //    nav.addflen=NAVADDFLEN_L1CA;
+    //    nav.addplen=NAVADDPLEN_L1CA;
+    //    nav.prelen=NAVPRELEN_L1CA;
+    //    memcpy(preamble.ptr,pre_l1ca.ptr,int.sizeof*nav.prelen);
+    //}
+    //if (ctype==CType.L1SAIF) {
+    //    nav.rate=NAVRATE_L1SAIF;
+    //    nav.flen=NAVFLEN_L1SAIF;
+    //    nav.addflen=NAVADDFLEN_L1SAIF;
+    //    nav.addplen=NAVADDPLEN_L1SAIF;
+    //    nav.prelen=NAVPRELEN_L1SAIF;
+    //    memcpy(preamble.ptr,pre_l1saif.ptr,int.sizeof*nav.prelen);
 
-        /* create fec */
-        if((nav.fec=create_viterbi27_port(NAVFLEN_L1SAIF/2))==null) {
-            SDRPRINTF("error: create_viterbi27 failed\n");
-            return -1;
-        }
-        /* set polynomial */
-        set_viterbi27_polynomial_port(poly.ptr);
-    }
+    //    /* create fec */
+    //    if((nav.fec=create_viterbi27_port(NAVFLEN_L1SAIF/2))==null) {
+    //        SDRPRINTF("error: create_viterbi27 failed\n");
+    //        return -1;
+    //    }
+    //    /* set polynomial */
+    //    set_viterbi27_polynomial_port(poly.ptr);
+    //}
+    nav.bitth = Constant.get!"Navigation.BITTH"(ctype);        
+    nav.rate = Constant.get!"Navigation.RATE"(ctype);
+    nav.flen = Constant.get!"Navigation.FLEN"(ctype);
+    nav.addflen = Constant.get!"Navigation.ADDFLEN"(ctype);
+    nav.addplen = Constant.get!"Navigation.ADDPLEN"(ctype);
+    nav.prelen = Constant.get!"Navigation.PRELEN"(ctype);
+    memcpy(preamble.ptr,pre_l1ca.ptr,int.sizeof*nav.prelen);
 
-    nav.prebits= cast(int*)malloc(int.sizeof*nav.prelen).enforce();
+    nav.prebits =  cast(int*)malloc(int.sizeof*nav.prelen).enforce();
     scope(failure) free(nav.prebits);
     nav.bitsync= cast(int*)calloc(nav.rate,int.sizeof).enforce();
     scope(failure) free(nav.bitsync);
@@ -451,7 +488,7 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys
     /* acqisition struct */
     if (initacqstruct(sys,ctype,&sdr.acq)<0) return -1;
     sdr.acq.nfft=sdr.nsamp;//calcfftnum(2*sdr.nsamp,0);
-    sdr.acq.nfftf = calcfftnumreso(ACQFFTFRESO,sdr.ti).to!int();
+    sdr.acq.nfftf = calcfftnumreso(Constant.get!"Acquisition.FFTFRESO"(ctype), sdr.ti).to!int();
 
 
     /* memory allocation */

@@ -71,57 +71,191 @@ enum DType{
 
 immutable FILE_BUFFSIZE = 8192;
 immutable NFFTTHREAD = 2;
+
+struct Constant{
+    struct L1CA{
+        struct Acquisition{
+            enum INTG = 4;
+            enum HBAND = 5000;
+            enum STEP = 250;
+            enum TH = 2.0;
+            enum LENF = 10;
+            enum FFTFRESO = 10;
+            enum SLEEP = 2000;
+        }
+
+
+        struct Navigation{
+            enum BITTH = 5;
+            enum RATE = 20;
+            enum FLEN = 300;
+            enum ADDFLEN = 2;
+            enum ADDPLEN = 2;
+            enum PRELEN = 8;
+        }
+    }
+
+
+    struct L1SAIF{
+        struct Acquisition{
+            enum INTG = 4;
+            enum HBAND = 5000;
+            enum STEP = 250;
+            enum TH = 2.0;
+            enum LENF = 10;
+            enum FFTFRESO = 10;
+            enum SLEEP = 2000;
+        }
+
+
+        struct Navigation{
+            enum BITTH = 5;
+            enum RATE = 2;
+            enum FLEN = 500;
+            enum ADDFLEN = 12;
+            enum ADDPLEN = 0;
+            enum PRELEN = 8;
+        }
+    }
+
+
+    struct L2CM{
+        struct Acquisition{
+            enum INTG = 4;
+            enum HBAND = 100;
+            enum STEP = 5;
+            enum TH = 2.0;
+            //enum LENF = 10;
+            //enum FFTFRESO = 10;
+            enum SLEEP = 2000;
+        }
+    }
+
+    struct Tracking{
+        struct Parameter1{
+            enum CDN = 3;
+            enum CP = 12;
+            enum DLLB = 1.0;
+            enum PLLB = 20.0;
+            enum FLLB = 250.0;
+            enum DT = 0.001;
+        }
+
+
+        struct Parameter2{
+            enum CDN = 3;
+            enum CP = 12;
+            enum DLLB = 0.5;
+            enum PLLB = 20.0;
+            enum FLLB = 50.0;
+            enum DT = 0.001;
+        }
+    }
+
+    struct Observation{
+        enum PTIMING = 68.802;
+        enum OBSINTERPN = 8;
+        enum SNSMOOTHMS = 100;
+    }
+
+
+    struct CodeGeneration{
+        enum MAXGPSSATNO = 210;
+        enum MAXGALSATNO = 50;
+        enum MAXCMPSATNO = 37;
+    }
+
+
+    static
+    auto get(string name)(CType ctype)
+    {
+        switch(ctype)
+        {
+          case CType.L1CA:
+            return mixin("L1CA." ~ name);
+          case CType.L1SAIF:
+            return mixin("L1SAIF." ~ name);
+          case CType.L2CM:{
+            static if(name == "Acquisition.LENF" || name == "Acquisition.FFTFRESO" || name[0 .. 10] == "Navigation")
+                goto default;
+            else
+                return mixin("L2CM." ~ name);
+          }
+
+          default:
+            enforce(0);
+        }
+
+        assert(0);
+    }
+
+
+    immutable TRKCN = 8;
+    immutable LOOP_MS_L1CA = 10;
+    immutable LOOP_MS_SBAS = 2;
+    immutable LOOP_MS_LEX = 4;
+}
+
+/+
 immutable ACQINTG = 4;
 immutable ACQHBAND = 5000;
 immutable ACQSTEP = 250;
 immutable ACQTH = 2.0;
 immutable ACQLENF = 10;
 immutable ACQFFTFRESO = 10;
-
++/
+/+
 immutable ACQSLEEP = 2000;
 immutable TRKCN = 8;
 immutable LOOP_MS_L1CA = 10;
 immutable LOOP_MS_SBAS = 2;
 immutable LOOP_MS_LEX = 4;
++/
 
 
 /* tracking parameter 1 */
 /* (before nav frame synchronization) */
+/+
 immutable TRKCDN1 = 3;
 immutable TRKCP1 = 12;
 immutable TRKDLLB1 = 1.0;
 immutable TRKPLLB1 = 20.0;
 immutable TRKFLLB1 = 250.0;
 immutable TRKDT1 = 0.001;
++/
 
 
 /* tracking parameter 2 */
 /* (after nav frame synchronization) */
+/+
 immutable TRKCDN2 = 3;
 immutable TRKCP2 = 12;
 immutable TRKDLLB2 = 0.5;
 immutable TRKPLLB2 = 20.0;
 immutable TRKFLLB2 = 50.0;
 immutable TRKDT2 = 0.001;
++/
 
-
+/+
 /* navigation parameter */
-/* GPS/QZSS L1CA */
 immutable NAVBITTH = 5;
+/* GPS/QZSS L1CA */
 immutable NAVRATE_L1CA = 20;
 immutable NAVFLEN_L1CA = 300;
 immutable NAVADDFLEN_L1CA = 2;
 immutable NAVADDPLEN_L1CA = 2;
-
+immutable NAVPRELEN_L1CA = 8;
 
 /* QZSS L1SAIF */
-immutable NAVPRELEN_L1CA = 8;
 immutable NAVRATE_L1SAIF = 2;
 immutable NAVFLEN_L1SAIF = 500;
 immutable NAVADDFLEN_L1SAIF = 12;
 immutable NAVADDPLEN_L1SAIF = 0;
 immutable NAVPRELEN_L1SAIF = 8;
++/
 
+
+/+
 /* observation data generation */
 immutable PTIMING = 68.802;
 immutable OBSINTERPN = 8;
@@ -132,7 +266,7 @@ immutable SNSMOOTHMS = 100;
 immutable MAXGPSSATNO = 210;
 immutable MAXGALSATNO = 50;
 immutable MAXCMPSATNO = 37;
-
++/
 
 enum CType
 {

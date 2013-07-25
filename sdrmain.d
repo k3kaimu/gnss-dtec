@@ -163,7 +163,7 @@ void sdrthread(size_t index)
                     dll(sdr,&sdr.trk.prm2); /* DLL */
 
                     /* calculate observation data */
-                    if (loopcnt%(SNSMOOTHMS/sdr.trk.loopms)==0)
+                    if (loopcnt%(Constant.Observation.SNSMOOTHMS/sdr.trk.loopms)==0)
                         setobsdata(sdr, buffloc, cnt, &sdr.trk, 1); /* SN smoothing */
                     else
                         setobsdata(sdr, buffloc, cnt, &sdr.trk, 0);

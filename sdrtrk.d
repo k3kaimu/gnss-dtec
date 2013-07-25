@@ -188,12 +188,12 @@ void dll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
 *------------------------------------------------------------------------------*/
 void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrflag)
 {   
-    shiftright(&trk.tow[1],&trk.tow[0],double.sizeof,OBSINTERPN);
-    shiftright(&trk.L[1],&trk.L[0],double.sizeof,OBSINTERPN);
-    shiftright(&trk.D[1],&trk.D[0],double.sizeof,OBSINTERPN);
-    shiftright(&trk.codei[1],&trk.codei[0],ulong.sizeof,OBSINTERPN);
-    shiftright(&trk.cntout[1],&trk.cntout[0],ulong.sizeof,OBSINTERPN);
-    shiftright(&trk.remcodeout[1],&trk.remcodeout[0],double.sizeof,OBSINTERPN);
+    shiftright(&trk.tow[1],&trk.tow[0],double.sizeof,Constant.Observation.OBSINTERPN);
+    shiftright(&trk.L[1],&trk.L[0],double.sizeof,Constant.Observation.OBSINTERPN);
+    shiftright(&trk.D[1],&trk.D[0],double.sizeof,Constant.Observation.OBSINTERPN);
+    shiftright(&trk.codei[1],&trk.codei[0],ulong.sizeof,Constant.Observation.OBSINTERPN);
+    shiftright(&trk.cntout[1],&trk.cntout[0],ulong.sizeof,Constant.Observation.OBSINTERPN);
+    shiftright(&trk.remcodeout[1],&trk.remcodeout[0],double.sizeof,Constant.Observation.OBSINTERPN);
 
     trk.tow[0]=sdr.nav.firstsftow+(cast(double)(cnt-sdr.nav.firstsfcnt))/1000;
     trk.codei[0]=buffloc;
@@ -218,8 +218,8 @@ void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrfl
     
     trk.Isum+=fabs(trk.sumI[0]);
     if (snrflag) {
-        shiftright(&trk.S[1],&trk.S[0],double.sizeof,OBSINTERPN);
-        shiftright(&trk.codeisum[1],&trk.codeisum[0],ulong.sizeof,OBSINTERPN);
+        shiftright(&trk.S[1],&trk.S[0],double.sizeof,Constant.Observation.OBSINTERPN);
+        shiftright(&trk.codeisum[1],&trk.codeisum[0],ulong.sizeof,Constant.Observation.OBSINTERPN);
         
         /* signal to noise ratio */
         trk.S[0]=10*log(trk.Isum/100.0/100.0)+log(500.0);

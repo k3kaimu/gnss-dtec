@@ -91,7 +91,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
     sdr.acq.acqcodei = codei;
     sdr.acq.acqfreq = sdr.acq.freq[freqi];
 
-    return sdr.acq.peakr > ACQTH;
+    return sdr.acq.peakr > Constant.get!"Acquisition.TH"(sdr.ctype);
 }
 
 
