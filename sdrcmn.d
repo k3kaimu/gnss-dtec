@@ -476,7 +476,17 @@ void dot_23(in short[] a1, in short[] a2, in short[] b1, in short[] b2, in short
 
 
 /**
-unittestをみれば使い方わかる
+内積(dot-product)を計算します。
+引数は次のように2段階に分けて受け取ります。
+
+Example:
+----
+auto result = dot(v1, v2, v3)(w1, w2, w3);
+----
+
+引数v1, v2, ...とw1, w2, ...はすべてベクトル(配列)であり、
+返り値は、[dot(v, w) <- directProduct(V, W)]になります。
+ここでいう、VとWは、v1, v2, ...や、w1, w2, ...からなる集合で、directProductはそれらの直積集合(V × W)を表します。
 */
 auto dot(T, size_t N)(const(T)[][N] a...)
 if(N > 1)
