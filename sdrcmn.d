@@ -35,11 +35,19 @@ in{
     assert(num >= 1);
 }
 body{
-    return 1 << (bsr(num.to!size_t()) + next);
+    static size_t castToSize_t(X)(X value)
+    {
+      static if(is(X : size_t))
+        return value;
+      else
+        return value.to!size_t();
+    }
+
+    return (cast(size_t)1) << (bsr(castToSize_t(num)) + next);
 }
 
 ///
-unittest{
+pure nothrow @safe unittest{
     assert(nextPow2(10) == 16);           // デフォルトではnext = 1なので、次の2の累乗数を返す
     assert(nextPow2(10, 0) == 8);         // next = 0だと、前の2の累乗数を返す
     assert(nextPow2(10, 2) == 32);        // next = 2なので、next2Pow(10) << 1を返す。
@@ -59,7 +67,7 @@ body{
 }
 
 ///
-unittest{
+pure nothrow @safe unittest{
     assert(nextPow2(10.0) == 16.0);
     assert(nextPow2(10.0, 0) == 8.0);
     assert(nextPow2(10.0, 2) == 32.0);
@@ -102,7 +110,7 @@ body{
         return 1 << exp;
     }
 }
-unittest{
+pure nothrow @safe unittest{
     assert(calcfftnum(10) == 8);
     assert(calcfftnum(10, 1) == 16);
     assert(calcfftnum(10, 2) == 32);
@@ -115,10 +123,9 @@ unittest{
 *          double ti        I   sampling interval (s)
 * return : int                  FFT number of points (2^bits samples)
 *------------------------------------------------------------------------------*/
-size_t calcfftnumreso(A, B)(A reso, B ti)
-if(is(A : real) && is(B : real))
+size_t calcfftnumreso(real reso, real ti) pure nothrow @safe
 {
-    return calcfftnum(1/(cast(real)reso*ti), 0);
+    return calcfftnum(1/(reso * ti), 0);
 }
 
 
@@ -127,7 +134,7 @@ if(is(A : real) && is(B : real))
 * args   : int    size      I   sizee of allocation
 * return : void*                allocated pointer
 *------------------------------------------------------------------------------*/
-void* sdrmalloc(size_t size)
+void* sdrmalloc(size_t size) pure nothrow @trusted
 {
     return GC.malloc(size);
 }
@@ -138,7 +145,7 @@ void* sdrmalloc(size_t size)
 * args   : void   *p        I/O input/output complex data
 * return : none
 *------------------------------------------------------------------------------*/
-void sdrfree(void *p)
+void sdrfree(void *p) pure nothrow @trusted
 {
     GC.free(p);
 }
@@ -150,7 +157,7 @@ void sdrfree(void *p)
 * return : cpx_t*               allocated pointer
 *------------------------------------------------------------------------------*/
 /**/
-cpx_t *cpxmalloc(size_t n)
+cpx_t *cpxmalloc(size_t n) pure nothrow @trusted
 {
     return cast(cpx_t*)GC.malloc(cpx_t.sizeof * n + 32);
 }
@@ -161,7 +168,7 @@ cpx_t *cpxmalloc(size_t n)
 * args   : cpx_t  *cpx      I/O input/output complex data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxfree(cpx_t *cpx)
+void cpxfree(cpx_t *cpx) pure nothrow @trusted
 {
     GC.free(cpx);
 }
@@ -174,7 +181,7 @@ void cpxfree(cpx_t *cpx)
 * return : none
 *------------------------------------------------------------------------------*/
 /**/
-void cpxfft(cpx_t *cpx, int n)
+void cpxfft(cpx_t *cpx, int n) nothrow
 {
     traceln("called");
     fftwf_plan p;
@@ -204,7 +211,7 @@ void cpxfft(cpx_t[] cpx)
 *          int    n         I   number of input/output data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxifft(cpx_t *cpx, int n)
+void cpxifft(cpx_t *cpx, int n) nothrow
 {
     traceln("called");
     fftwf_plan p;
@@ -237,7 +244,7 @@ void cpxifft(cpx_t[] cpx)
 *          cpx_t *cpx       O   output complex array
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxcpx(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx)
+void cpxcpx(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx) nothrow
 {
     traceln("called");
     float *p=cast(float *)cpx;
@@ -250,7 +257,7 @@ void cpxcpx(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx)
 }
 
 
-void cpxcpx(in short[] I, in short[] Q, double scale, cpx_t[] cpx)
+void cpxcpx(in short[] I, in short[] Q, double scale, cpx_t[] cpx) nothrow
 {
     cpxcpx(I.ptr, Q.ptr, scale, I.length, cpx.ptr);
 }
@@ -265,7 +272,7 @@ void cpxcpx(in short[] I, in short[] Q, double scale, cpx_t[] cpx)
 *          cpx_t *cpx       O   output complex array
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx)
+void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx) pure nothrow @trusted
 {
     traceln("called");
     float *p=cast(float *)cpx;
@@ -277,7 +284,7 @@ void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx)
     }
 }
 
-void cpxcpxf(in float[] I, in float[] Q, double scale, cpx_t[] cpx)
+void cpxcpxf(in float[] I, in float[] Q, double scale, cpx_t[] cpx) pure nothrow @safe
 {
     cpxcpxf(I.ptr, Q.ptr, scale, I.length, cpx.ptr);
 }
@@ -360,7 +367,7 @@ void cpxpspec(cpx_t[] cpx, bool flagsum, double[] pspec)
 * return : none
 *------------------------------------------------------------------------------*/
 void dot_21(const short *a1, const short *a2, const short *b, size_t n,
-                   double *d1, double *d2)
+                   double *d1, double *d2) nothrow
 {
     version(Dnative){
         immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b[0 .. n]);
@@ -380,7 +387,7 @@ void dot_21(const short *a1, const short *a2, const short *b, size_t n,
 }
 
 
-void dot_21(in short[] a1, in short[] a2, in short[] b, double[] d1, double[] d2)
+void dot_21(in short[] a1, in short[] a2, in short[] b, double[] d1, double[] d2) nothrow
 {
     dot_21(a1.ptr, a2.ptr, b.ptr, a1.length, d1.ptr, d2.ptr);
 }
@@ -397,7 +404,7 @@ void dot_21(in short[] a1, in short[] a2, in short[] b, double[] d1, double[] d2
 * return : none
 *------------------------------------------------------------------------------*/
 void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, size_t n,
-            double *d1, double *d2)
+            double *d1, double *d2) nothrow
 {
     version(Dnative){
         immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b1[0 .. n], b2[0 .. n]);
@@ -422,7 +429,7 @@ void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, size_t n,
     }
 }
 
-void dot_22(in short[] a1, in short[] a2, in short[] b1, in short[] b2, double[] d1, double[] d2)
+void dot_22(in short[] a1, in short[] a2, in short[] b1, in short[] b2, double[] d1, double[] d2) nothrow
 {
     dot_22(a1.ptr, a2.ptr, b1.ptr, b2.ptr, a1.length, d1.ptr, d2.ptr);
 }
@@ -441,7 +448,7 @@ void dot_22(in short[] a1, in short[] a2, in short[] b1, in short[] b2, double[]
 *------------------------------------------------------------------------------*/
 void dot_23(const short *a1, const short *a2, const short *b1,
                    const short *b2, const short *b3, size_t n, double *d1,
-                   double *d2)
+                   double *d2) nothrow
 {
     version(Dnative){
         immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b1[0 .. n], b2[0 .. n], b3[0 .. n]);
@@ -469,7 +476,7 @@ void dot_23(const short *a1, const short *a2, const short *b1,
 }
 
 
-void dot_23(in short[] a1, in short[] a2, in short[] b1, in short[] b2, in short[] b3, double[] d1, double[] d2)
+void dot_23(in short[] a1, in short[] a2, in short[] b1, in short[] b2, in short[] b3, double[] d1, double[] d2) nothrow
 {
     dot_23(a1.ptr, a2.ptr, b1.ptr, b2.ptr, b3.ptr, a1.length, d1.ptr, d2.ptr);
 }
@@ -507,7 +514,7 @@ auto dot(R, T, size_t N)(const(T)[][N] a...)
 }
 
 
-auto dot(R, T)(const(T)[] a)
+auto dot(R, T)(const(T)[] a) nothrow
 {
     return dotImpl!(R, T, 1)([a]);
 }
@@ -594,7 +601,7 @@ private auto dotImpl(R, T, size_t N)(const(T)[][N] a)
 }
 
 ///
-unittest{
+pure nothrow @safe unittest{
     // 返り値はint[2][2]
     auto result22 = dot([0, 1, 2], [3, 4, 5])([6, 7, 8], [9, 10, 11]);
     assert(result22[0][0] == dot([0, 1, 2])([6, 7, 8])[0][0]);
@@ -616,14 +623,14 @@ unittest{
 * return : none
 *------------------------------------------------------------------------------*/
 
-void mulvcs(const(byte)* data1, const short *data2, size_t n, short *out_)
+void mulvcs(const(byte)* data1, const short *data2, size_t n, short *out_) pure nothrow
 {   
     int i;
     for (i=0;i<n;i++) out_[i]=cast(short)(data1[i]*data2[i]);
 }
 
 
-void mulvcs(in byte[] data1, in short[] data2, short[] out_)
+void mulvcs(in byte[] data1, in short[] data2, short[] out_) pure nothrow
 {
     mulvcs(data1.ptr, data2.ptr, data1.length, out_.ptr);
 }
@@ -638,14 +645,14 @@ void mulvcs(in byte[] data1, in short[] data2, short[] out_)
 * return : none
 * note   : AVX command is used if "AVX" is defined
 *------------------------------------------------------------------------------*/
-void sumvf(const float *data1, const float *data2, int n, float *out_)
+void sumvf(const float *data1, const float *data2, int n, float *out_) pure nothrow
 {
     int i;
     for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
 }
 
 
-void sumvf(in float[] data1, in float[] data2, float[] out_)
+void sumvf(in float[] data1, in float[] data2, float[] out_) @safe
 {
     out_[] = data1[] + data2[];
 }
@@ -660,14 +667,14 @@ void sumvf(in float[] data1, in float[] data2, float[] out_)
 * return : none
 * note   : AVX command is used if "AVX" is defined
 *------------------------------------------------------------------------------*/
-void sumvd(const double *data1, const double *data2, size_t n, double *out_)
+void sumvd(const double *data1, const double *data2, size_t n, double *out_) pure nothrow
 {
     int i;
     for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
 }
 
 
-void sumvd(in double[] data1, in double[] data2, double[] out_)
+void sumvd(in double[] data1, in double[] data2, double[] out_) @safe
 {
     out_[] = data1[] + data2[];
 }
@@ -683,7 +690,7 @@ void sumvd(in double[] data1, in double[] data2, double[] out_)
 * note   : maximum value and index are calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-int maxvi(const int *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind)
+int maxvi(const int *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind) pure nothrow
 {
     int i;
     int max=data[0];
@@ -700,7 +707,7 @@ int maxvi(const int *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *in
 }
 
 
-int maxvi(in int[] data, ptrdiff_t exinds, ptrdiff_t exinde, out int ind)
+int maxvi(in int[] data, ptrdiff_t exinds, ptrdiff_t exinde, out int ind) pure nothrow
 {
     return maxvi(data.ptr, data.length, exinds, exinde, &ind);
 }
@@ -717,7 +724,7 @@ int maxvi(in int[] data, ptrdiff_t exinds, ptrdiff_t exinde, out int ind)
 * note   : maximum value and index are calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-float maxvf(const float *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind)
+float maxvf(const float *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind) pure nothrow
 {
     int i;
     float max=data[0];
@@ -734,7 +741,7 @@ float maxvf(const float *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int
 }
 
 
-float maxvf(in float[] data, int exinds, int exinde, out int ind)
+float maxvf(in float[] data, int exinds, int exinde, out int ind) pure nothrow
 {
     return maxvf(data.ptr, data.length, exinds, exinde, &ind);
 }
@@ -751,7 +758,7 @@ float maxvf(in float[] data, int exinds, int exinde, out int ind)
 * note   : maximum value and index are calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-double maxvd(const double *data, size_t n, int exinds, int exinde, int *ind)
+double maxvd(const double *data, size_t n, int exinds, int exinde, int *ind) pure nothrow
 {
     int i;
     double max=data[0];
@@ -768,7 +775,7 @@ double maxvd(const double *data, size_t n, int exinds, int exinde, int *ind)
 }
 
 
-double maxvd(in double[] data, int exinds, int exinde, out int ind)
+double maxvd(in double[] data, int exinds, int exinde, out int ind) pure nothrow
 {
     return maxvd(data.ptr, data.length, exinds, exinde, &ind);
 }
@@ -784,7 +791,7 @@ double maxvd(in double[] data, int exinds, int exinde, out int ind)
 * note   : mean value is calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-double meanvd(const double *data, int n, int exinds, int exinde)
+double meanvd(const double *data, int n, int exinds, int exinde) pure nothrow
 {
     int i,ne=0;
     double mean=0.0;
@@ -804,7 +811,7 @@ double meanvd(const double *data, int n, int exinds, int exinde)
 *          double t         I   interpolation point on x data
 * return : double               interpolated y data at t
 *------------------------------------------------------------------------------*/
-double interp1()(double* x, double* y, int n, double t)
+double interp1()(double* x, double* y, int n, double t) pure nothrow
 {
     return interp1(x[0 .. n], y[0 .. n], t);
 }
@@ -886,7 +893,7 @@ body{
     }
 }
 ///
-unittest{
+pure nothrow @safe unittest{
     assert(approxEqual(interp1([0.0], [1.3], 5), 1.3));                             // 1点の場合は、y[0]を返すしかない
     assert(approxEqual(interp1([1.0, 2.0], [0.0, 4.0], 3), 8));                     // 2点の場合は線形補間
     assert(approxEqual(interp1([0.0, 1.0, 2.0], [0.0, 1.0, 4.0], 0.1), 0.01));      // 3点以上では、近傍3点のラグランジュ補完
@@ -912,14 +919,14 @@ unittest{
 *          double *out      O   output double array
 * return : none
 *------------------------------------------------------------------------------*/
-void uint64todouble(ulong *data, ulong base, int n, double *out_)
+void uint64todouble(ulong *data, ulong base, int n, double *out_) pure nothrow
 {
     int i;
     for (i=0;i<n;i++) out_[i]=cast(double)(data[i]-base);
 }
 
 
-void uint64todouble(in ulong[] data, ulong base, double[] out_)
+void uint64todouble(in ulong[] data, ulong base, double[] out_) pure nothrow @safe
 in{
     assert(data.length <= out_.length);
 }
@@ -938,7 +945,7 @@ body{
 *          int    *suby     O   subscript index of y
 * return : none
 *------------------------------------------------------------------------------*/
-void ind2sub(int ind, int nx, int ny, int *subx, int *suby)
+void ind2sub(int ind, int nx, int ny, int *subx, int *suby) pure nothrow @safe
 {
     *subx = ind%nx;
     *suby = ny*ind/(nx*ny);
@@ -953,7 +960,7 @@ void ind2sub(int ind, int nx, int ny, int *subx, int *suby)
 *          int    n         I   number of input data
 * return : none
 *------------------------------------------------------------------------------*/
-void shiftright(void *dst, void *src, size_t size, int n)
+void shiftright(void *dst, void *src, size_t size, int n) pure nothrow
 {
     /*
     void *tmp;
@@ -978,7 +985,7 @@ void shiftright(void *dst, void *src, size_t size, int n)
 *          char   *rdata    O   resampled data
 * return : none
 *------------------------------------------------------------------------------*/
-void resdata(const char *data, int dtype, int n, int m, char *rdata)
+void resdata(const char *data, int dtype, int n, int m, char *rdata) pure nothrow
 {
     char *p;
 
@@ -1071,7 +1078,7 @@ if(isInputRange!R && hasLength!R && isOutputRange!(W, ElementType!R))
 *          short  *I,*Q     O   carrier mixed data I, Q component
 * return : double               phase remainder
 *------------------------------------------------------------------------------*/
-double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, short *I, short *Q)
+double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, short *I, short *Q) nothrow
 {
     traceln("called");
 
