@@ -20,28 +20,41 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* sd
 {
     traceln("called");
 
-    /* memory allocation */
-    scope data = new byte[sdr.nsamp * sdr.dtype],
-          datal = new byte[sdr.nsamp * sdr.dtype * sdr.acq.lenf];
+    // FFTを使った、正確なコード位相と、曖昧な搬送波周波数(ドップラー周波数)の探索
+    {
+        /* memory allocation */
+        scope data = new byte[sdr.acq.nfft * sdr.dtype];
 
-    /* acquisition integration */
-    foreach(i; 0 .. sdr.acq.intg){
+        /* acquisition integration */
+        debug(AcqDebug){
+            writefln("%s", sdr.acq.freq[0 .. sdr.acq.nfreq]);
+            writefln("sdr.ftype: %s", sdr.ftype);
+            writefln("sdr.dtype: %s", sdr.dtype);
+            writefln("sdr.acq.nfft: %s", sdr.acq.nfft);
+        }
 
-        /* get new 1ms data */
-        rcvgetbuff(&sdrini, buffloc, sdr.nsamp, sdr.ftype, sdr.dtype, data);
-        buffloc += sdr.nsamp;
+        foreach(i; 0 .. sdr.acq.intg){
 
-        /* fft correlation */
-        pcorrelator(data, sdr.dtype, sdr.ti, sdr.nsamp, sdr.acq.freq, sdr.acq.nfreq, sdr.crate, sdr.acq.nfft, sdr.xcode, power);
+            /* get new 1ms data */
+            rcvgetbuff(&sdrini, buffloc, sdr.acq.nfft, sdr.ftype, sdr.dtype, data);
+            buffloc += sdr.acq.nfft;
+            buffloc += (sdr.nsamp - sdr.acq.nfft % sdr.nsamp) % sdr.acq.nfft;
 
-        /* check acquisition result */
-        if (checkacquisition(power, sdr)) {
-            sdr.flagacq = ON;
-            break;
+            /* fft correlation */
+            pcorrelator(data, sdr.dtype, sdr.ti, sdr.acq.nfft, sdr.acq.freq, sdr.acq.nfreq, sdr.crate, sdr.acq.nfft, sdr.xcode, power);
+
+            /* check acquisition result */
+            if (checkacquisition(power, sdr)) {
+                sdr.flagacq = ON;
+                break;
+            }
         }
     }
-    /* fine doppler search */
-    if (sdr.flagacq){
+
+    /* FFTを使った、それなりに正確な搬送波周波数(ドップラー周波数)の探索, L2CMの場合は前段の周波数探索で十分に正確に探索しているため不要 */
+    if (sdr.flagacq && !(sdr.ctype == CType.L2CM)){
+        scope datal = new byte[sdr.acq.nfft * sdr.dtype * sdr.acq.lenf];
+
         buffloc += sdr.acq.acqcodei; /* set buffer location at top of code */
         rcvgetbuff(&sdrini,buffloc, sdr.nsamp * sdr.acq.lenf, sdr.ftype, sdr.dtype, datal);
 
@@ -55,6 +68,9 @@ ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* sd
         /* check fine acquisition result */
         if (std.math.abs(sdr.acq.acqfreqf - sdr.acq.acqfreq) > sdr.acq.step)
             sdr.flagacq = OFF; /* reset */
+    }else if(sdr.flagacq && sdr.ctype == CType.L2CM){
+        buffloc += sdr.acq.acqcodei;    // バッファの先頭にコードの先頭が来るようにする
+        SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
     }else
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
 
@@ -78,10 +94,12 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
     immutable maxP = maxvd(P, sdr.acq.nfft * sdr.acq.nfreq, -1, -1, &maxi);
     ind2sub(maxi, sdr.acq.nfft, sdr.acq.nfreq, &codei, &freqi);
 
-    immutable exinds = (a => (a < 0) ? (a + sdr.nsamp) : a)(codei-2*sdr.nsampchip),
+    immutable exinds = (a => (a < 0) ? (a + sdr.nsamp) : a)(codei - 2 * sdr.nsampchip),
               exinde = (a => (a >= sdr.nsamp) ? (a - sdr.nsamp) : a)(codei + 2 * sdr.nsampchip),
               meanP = meanvd(&P[freqi*sdr.acq.nfft], sdr.nsamp, exinds, exinde),
               maxP2 = maxvd(&P[freqi*sdr.acq.nfft], sdr.nsamp, exinds, exinde, &maxi);
+
+    debug(AcqDebug) writefln("exind: [%s, %s]", exinds, exinde);
 
     /* C/N0 calculation */
     sdr.acq.cn0 = 10 * log10(maxP / meanP / sdr.ctime);
@@ -128,8 +146,8 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] d
         // このtracingの2行をなくすと、最適化コンパイル(-O)時に正常に動作しなくなる。
         // 外部のFFTWを使っているのが原因だと思われる。
         // コンパイラのバグなので、FFTWを使っている限りは自分では修正不可
-        tracing = false;
-        scope(exit) tracing = true;
+        immutable tmp = tracing;
+        scope(exit) tracing = tmp;
 
         /* mix local carrier */
         mixcarr(dataR, dtype, ti, m, freq[i], 0.0, dataI.ptr, dataQ.ptr);

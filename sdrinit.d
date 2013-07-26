@@ -96,19 +96,19 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
                 ini.useif2 = ON;
         }
     }
-
+    
     {
         ini.f_sf[0] = iniLines.readIniValue!double("RCV", "SF1");
         ini.f_if[0] = iniLines.readIniValue!double("RCV", "IF1");
         ini.dtype[0] = iniLines.readIniValue!DType("RCV", "DTYPE1");
-        ini.f_sf[1] = iniLines.readIniValue!double("RCV", "SF1");
-        ini.f_if[1] = iniLines.readIniValue!double("RCV", "IF1");
+        ini.f_sf[1] = iniLines.readIniValue!double("RCV", "SF2");
+        ini.f_if[1] = iniLines.readIniValue!double("RCV", "IF2");
         ini.dtype[1] = iniLines.readIniValue!DType("RCV", "DTYPE2");
         ini.confini = iniLines.readIniValue!int("RCV", "CONFINI");
     }
-
+    
     ini.nch = iniLines.readIniValue!int("CHANNEL", "NCH").enforce("error: wrong inifile value NCH=%d".formattedString(ini.nch));
-
+    
     {
         T[] getChannelSpec(T)(string key)
         {
@@ -123,7 +123,7 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
         ini.ctype = getChannelSpec!CType("CTYPE");
         ini.ftype = getChannelSpec!FType("FTYPE");
     }
-
+    
     {
         ini.pltacq = iniLines.readIniValue!bool("PLOT", "ACQ");
         ini.plttrk = iniLines.readIniValue!bool("PLOT", "TRK");
@@ -138,14 +138,16 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
         /* spectrum setting */
         ini.pltspec = iniLines.readIniValue!bool("SPECTRUM", "SPEC");
     }
-
+    
     foreach(i; 0 .. sdrini.nch){
         if (sdrini.ctype[i] == CType.L1CA) {
             sdrini.nchL1++;
         }else if (sdrini.ctype[i] == CType.LEXS) {
             sdrini.nchL6++;
-        }else
-            enforce(0, "ctype: %n is not supported.".formattedString(sdrini.ctype[i]));
+        }else if(sdrini.ctype[i] == CType.L2CM)
+            sdrini.nchL2++;
+        else
+            enforce(0, "ctype: %s is not supported.".formattedString(sdrini.ctype[i]));
     }
 }
 /* check initial value ----------------------------------------------------------
@@ -235,7 +237,7 @@ void quitpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
 *          sdracq_t *acq    I/0 acquisition struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdracq_t *acq)
+void initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdracq_t *acq)
 {
     traceln("called");
 
@@ -270,8 +272,6 @@ int initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
       default:
         enforce(0);
     }
-
-    return 0;
 }
 /* initialize tracking parameter struct -----------------------------------------
 * set value to tracking parameter struct
@@ -279,59 +279,73 @@ int initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
 *          int    sw        I   tracking mode selector switch (1 or 2)
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(sdrtrkprm_t *prm, int sw)
+void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(sdrtrkprm_t *prm, int sw)
 {
     with(Constant.Tracking){
         traceln("called");
-        int i,trkcp,trkcdn;
+        int trkcp, trkcdn;
         
         /* tracking parameter selection */
         switch (sw) {
-            case 1:
-                prm.dllb = Parameter1.DLLB;
-                prm.pllb = Parameter1.PLLB;
-                prm.fllb = Parameter1.FLLB;
-                prm.dt = Parameter1.DT;
-                trkcp = Parameter1.CP;
-                trkcdn = Parameter1.CDN;
-                break;
-            case 2:
-                prm.dllb = Parameter2.DLLB;
-                prm.pllb = Parameter2.PLLB;
-                prm.fllb = Parameter2.FLLB;
-                prm.dt = Parameter2.DT;
-                trkcp = Parameter2.CP;
-                trkcdn = Parameter2.CDN;
-                break;
-            default:
-                SDRPRINTF("error: inittrkprmstruct sw=%d\n",sw);
-                return -1;
-        }
-        /* correlation point */
+          case 1:
+            with(Parameter1){
+                prm.dllb = DLLB;
+                prm.pllb = PLLB;
+                prm.fllb = FLLB;
+                prm.dt   = DT;
+                trkcp    = CP;
+                trkcdn   = CDN;
+            }
+            break;
 
+          case 2:
+            with(Parameter2){
+                prm.dllb = DLLB;
+                prm.pllb = PLLB;
+                prm.fllb = FLLB;
+                prm.dt   = DT;
+                trkcp    = CP;
+                trkcdn   = CDN;
+            }
+            break;
+
+          default:
+            SDRPRINTF("error: inittrkprmstruct sw=%d\n",sw);
+        }
+
+
+        /* correlation point */
         prm.corrp = cast(int*)malloc(int.sizeof * Constant.TRKCN).enforce();
-        for (i=0;i<Constant.TRKCN;i++) {
-            prm.corrp[i]=trkcdn*(i+1);
-            if (prm.corrp[i]==trkcp){
-                prm.ne=2*(i+1)-1; /* Early */
-                prm.nl=2*(i+1);   /* Late */
+        foreach(i; 0 .. Constant.TRKCN){
+
+            prm.corrp[i] = trkcdn * (i + 1);
+
+            if (prm.corrp[i] == trkcp){
+                prm.ne = (i + 1) * 2 - 1; /* Early */
+                prm.nl = (i + 1) * 2;   /* Late */
             }
         }
+
+
         /* correlation point for plot */
-        prm.corrx = cast(double*)calloc(2*Constant.TRKCN+1, double.sizeof).enforce();
-        for (i=1;i<=Constant.TRKCN;i++) {
-            prm.corrx[2*i-1]=-trkcdn*i;
-            prm.corrx[2*i  ]= trkcdn*i;
+        prm.corrx = cast(double*)calloc(Constant.TRKCN *2 + 1, double.sizeof).enforce();
+        foreach(i; 1 .. Constant.TRKCN){
+            prm.corrx[i*2 - 1] = -trkcdn * i;
+            prm.corrx[i*2    ] = +trkcdn * i;
         }   
 
-        /* calculation loop filter parameters */
-        prm.dllw2=(prm.dllb/0.53)*(prm.dllb/0.53);
-        prm.dllaw=1.414*(prm.dllb/0.53);
-        prm.pllw2=(prm.pllb/0.53)*(prm.pllb/0.53);
-        prm.pllaw=1.414*(prm.pllb/0.53);
-        prm.fllw =prm.fllb/0.25;
 
-        return 0;
+        /* calculation loop filter parameters */
+        {
+            immutable dll_k = prm.dllb / 0.53,
+                      pll_k = prm.pllb / 0.53;
+
+            prm.dllw2 = dll_k ^^ 2;
+            prm.dllaw = 1.414 * dll_k;
+            prm.pllw2 = pll_k ^^ 2;
+            prm.pllaw = 1.414 * pll_k;
+            prm.fllw  = prm.fllb / 0.25;
+        }
     }
 }
 /* initialize tracking struct --------------------------------------------------
@@ -341,44 +355,37 @@ int inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(sdrtrkprm_t
 *          sdrtrk_t *trk    I/0 tracking struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdrtrk_t *trk)
+void inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdrtrk_t *trk)
 {
     traceln("called");
-    int ret;
-    if ((ret=inittrkprmstruct(&trk.prm1,1))<0 ||
-        (ret=inittrkprmstruct(&trk.prm2,2))<0 ) {
-            SDRPRINTF("error: inittrkprmstruct\n");
-            return -1;
-    }
+
+    inittrkprmstruct(&trk.prm1, 1);
+    inittrkprmstruct(&trk.prm2, 2);
+
     trk.ncorrp = Constant.TRKCN;
-    trk.I      =cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
+    trk.I      =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
     scope(failure) free(trk.I);
-    trk.Q      =cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
+    trk.Q      =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
     scope(failure) free(trk.Q);
-    trk.oldI   =cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
+    trk.oldI   =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
     scope(failure) free(trk.oldI);
-    trk.oldQ   =cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
+    trk.oldQ   =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
     scope(failure) free(trk.oldQ);
-    trk.sumI   =cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
+    trk.sumI   =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
     scope(failure) free(trk.sumI);
-    trk.sumQ   =cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
+    trk.sumQ   =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
     scope(failure) free(trk.sumQ);
-    trk.oldsumI=cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
+    trk.oldsumI=cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
     scope(failure) free(trk.oldsumI);
-    trk.oldsumQ=cast(double*)calloc(1+2*trk.ncorrp,double.sizeof).enforce();
+    trk.oldsumQ=cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
     scope(failure) free(trk.oldsumQ);
 
-    if (sys == SYS_GPS && ctype == CType.L1CA)   trk.loopms=Constant.LOOP_MS_L1CA;
-    if (sys == SYS_SBS && ctype == CType.L1SBAS) trk.loopms=Constant.LOOP_MS_SBAS;
-    if (sys == SYS_QZS && ctype == CType.L1CA)   trk.loopms=Constant.LOOP_MS_L1CA;
-    if (sys == SYS_QZS && ctype == CType.LEXS)   trk.loopms=Constant.LOOP_MS_LEX;
-    if (sys == SYS_QZS && ctype == CType.L1SAIF) trk.loopms=Constant.LOOP_MS_SBAS;
-
-    //if (!trk.I||!trk.Q||!trk.oldI||!trk.oldQ||!trk.sumI||!trk.sumQ||!trk.oldsumI||!trk.oldsumQ) {
-    //    SDRPRINTF("error: inittrkstruct memory allocation\n");
-    //    return -1;
-    //}
-    return 0;
+    //if (sys == SYS_GPS && ctype == CType.L1CA)   trk.loopms = Constant.LOOP_MS_L1CA;
+    //if (sys == SYS_SBS && ctype == CType.L1SBAS) trk.loopms = Constant.LOOP_MS_SBAS;
+    //if (sys == SYS_QZS && ctype == CType.L1CA)   trk.loopms = Constant.LOOP_MS_L1CA;
+    //if (sys == SYS_QZS && ctype == CType.LEXS)   trk.loopms = Constant.LOOP_MS_LEX;
+    //if (sys == SYS_QZS && ctype == CType.L1SAIF) trk.loopms = Constant.LOOP_MS_SBAS;
+    trk.loopms = Constant.get!"LOOP_MS"(ctype);
 }
 /* initialize navigation struct -------------------------------------------------
 * set value to navigation struct
@@ -387,7 +394,7 @@ int inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
 *          sdrnav_t *nav    I/0 navigation struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdrnav_t *nav)
+void initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType ctype, sdrnav_t *nav)
 {
     traceln("called");
     int[32] preamble = 0;
@@ -395,33 +402,9 @@ int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
     int[] pre_l1saif=[1,-1,1,-1,1,1,-1,-1]; /* QZSS L1SAIF preamble */
     int[2] poly = [V27POLYA,V27POLYB];
 
-    nav.ctype=ctype;
-    //nav.bitth=NAVBITTH;        
-    //if (ctype==CType.L1CA) {
-    //    nav.rate=NAVRATE_L1CA;
-    //    nav.flen=NAVFLEN_L1CA;
-    //    nav.addflen=NAVADDFLEN_L1CA;
-    //    nav.addplen=NAVADDPLEN_L1CA;
-    //    nav.prelen=NAVPRELEN_L1CA;
-    //    memcpy(preamble.ptr,pre_l1ca.ptr,int.sizeof*nav.prelen);
-    //}
-    //if (ctype==CType.L1SAIF) {
-    //    nav.rate=NAVRATE_L1SAIF;
-    //    nav.flen=NAVFLEN_L1SAIF;
-    //    nav.addflen=NAVADDFLEN_L1SAIF;
-    //    nav.addplen=NAVADDPLEN_L1SAIF;
-    //    nav.prelen=NAVPRELEN_L1SAIF;
-    //    memcpy(preamble.ptr,pre_l1saif.ptr,int.sizeof*nav.prelen);
+    nav.ctype = ctype;
 
-    //    /* create fec */
-    //    if((nav.fec=create_viterbi27_port(NAVFLEN_L1SAIF/2))==null) {
-    //        SDRPRINTF("error: create_viterbi27 failed\n");
-    //        return -1;
-    //    }
-    //    /* set polynomial */
-    //    set_viterbi27_polynomial_port(poly.ptr);
-    //}
-    nav.bitth = Constant.get!"Navigation.BITTH"(ctype);        
+    nav.bitth = Constant.get!"Navigation.BITTH"(ctype);
     nav.rate = Constant.get!"Navigation.RATE"(ctype);
     nav.flen = Constant.get!"Navigation.FLEN"(ctype);
     nav.addflen = Constant.get!"Navigation.ADDFLEN"(ctype);
@@ -439,7 +422,6 @@ int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
     scope(failure) free(nav.fbitsdec);
 
     memcpy(nav.prebits,preamble.ptr,int.sizeof*nav.prelen);
-    return 0;
 }
 /* initialize sdr channel struct ------------------------------------------------
 * set value to sdr channel struct
@@ -457,38 +439,55 @@ int initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CType
 int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if, sdrch_t *sdr)
 {
     traceln("called");
-    int i;
-    short *rcode;
     
-    sdr.no=chno;
-    sdr.sys=sys;
-    sdr.prn=prn;
-    sdr.sat = satno(sys,prn);
-    sdr.ctype=ctype;
-    sdr.dtype=dtype;
-    sdr.ftype=ftype;
-    sdr.f_sf=f_sf;
-    sdr.f_if=f_if;
-    sdr.ti=1/f_sf;
+    sdr.no      = chno;
+    sdr.sys     = sys;
+    sdr.prn     = prn;
+    sdr.sat     = satno(sys,prn);
+    sdr.ctype   = ctype;
+    sdr.dtype   = dtype;
+    sdr.ftype   = ftype;
+    sdr.f_sf    = f_sf;
+    sdr.f_if    = f_if;
+    sdr.ti      = f_sf ^^ -1;
+
+
     /* code generation */
-    sdr.code = gencode(prn,ctype,&sdr.clen,&sdr.crate).enforce();
+    sdr.code = gencode(prn,ctype, &sdr.clen, &sdr.crate).enforce();
     scope(failure) free(sdr.code);
     
 
-    sdr.ci=sdr.ti*sdr.crate;
-    sdr.ctime=sdr.clen/sdr.crate;
-    sdr.nsamp=cast(int)(f_sf*sdr.ctime);
-    sdr.nsampchip=cast(int)(sdr.nsamp/sdr.clen);
-    //char[] tmpStr = new char[5];
-    ////satno2id(sdr.sat, tmpStr.ptr);
-    sdr.satstr = satno2Id(sdr.sat);
-    //sdr.satstr = tmpStr.ptr.to!string();
+    sdr.ci        = sdr.ti*sdr.crate;
+    sdr.ctime     = sdr.clen/sdr.crate;
+    sdr.nsamp     = cast(int)(f_sf * sdr.ctime);
+    sdr.nsampchip = cast(int)(sdr.nsamp / sdr.clen);
+    sdr.satstr    = satno2Id(sdr.sat);
     
 
     /* acqisition struct */
-    if (initacqstruct(sys,ctype,&sdr.acq)<0) return -1;
-    sdr.acq.nfft=sdr.nsamp;//calcfftnum(2*sdr.nsamp,0);
-    sdr.acq.nfftf = calcfftnumreso(Constant.get!"Acquisition.FFTFRESO"(ctype), sdr.ti).to!int();
+    initacqstruct(sys, ctype, &sdr.acq);
+
+    sdr.acq.nfft  = (){
+        if(ctype == CType.L1CA)
+            return sdr.nsamp;           // PRNコード1周期分
+        else if(ctype == CType.L2CM)
+            return cast(int)nextPow2(sdr.nsamp * 2);
+        else
+            enforce(0);
+
+        assert(0);
+    }();
+
+    sdr.acq.nfftf = (){
+        if(ctype == CType.L1CA)
+            return calcfftnumreso(Constant.get!"Acquisition.FFTFRESO"(ctype), sdr.ti).to!int();
+        else if(ctype == CType.L2CM)
+            return -1;
+        else
+            enforce(0);
+
+        assert(0);
+    }();
 
 
     /* memory allocation */
@@ -497,38 +496,50 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys
 
 
     /* doppler search frequency */
-    for (i=0;i<sdr.acq.nfreq;i++)
-        sdr.acq.freq[i]=sdr.f_if+((i-(sdr.acq.nfreq-1)/2)*sdr.acq.step);
+    if(ctype != CType.L2CM)
+        foreach(i; 0 .. sdr.acq.nfreq)
+            sdr.acq.freq[i] = sdr.f_if + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
+    else{
+        immutable carrierRatio = 60 / 70;   // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
+        immutable inferenced = (sdrmain.l1ca_doppler - sdrini.f_if[0]) * (60.0/77.0) + sdrini.f_if[1];
+        writeln(inferenced);
+
+        foreach(i; 0 .. sdr.acq.nfreq)
+            sdr.acq.freq[i] = inferenced + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
+    }
 
 
     /* tracking struct */
-    if (inittrkstruct(sys,ctype,&sdr.trk)<0) return -1;
+    inittrkstruct(sys, ctype, &sdr.trk);
 
-    /* navigation struct */
-    if (initnavstruct(sys,ctype,&sdr.nav)<0) {
-        return -1;
+    if(ctype != CType.L2CM){
+        /* navigation struct */
+        initnavstruct(sys, ctype, &sdr.nav);
+
+        /* memory allocation */
+        sdr.lcode = cast(short*)malloc(short.sizeof * sdr.clen * sdr.acq.lenf).enforce();
+        scope(failure) free(sdr.lcode);
+
+        foreach(i; 0 .. sdr.clen * sdr.acq.lenf) /* long code for fine search */
+            sdr.lcode[i] = sdr.code[i % sdr.clen];
     }
-    /* memory allocation */
-    sdr.lcode = cast(short*)malloc(short.sizeof * sdr.clen * sdr.acq.lenf).enforce();
-    scope(failure) free(sdr.lcode);
 
-    rcode = cast(short*)sdrmalloc(short.sizeof * sdr.acq.nfft).enforce();
-    scope(exit) sdrfree(rcode);
+    /* memory allocation */
+    scope rcode = cast(short*)sdrmalloc(short.sizeof * sdr.acq.nfft).enforce();
 
     sdr.xcode = cpxmalloc(sdr.acq.nfft);
     scope(failure) cpxfree(sdr.xcode);
 
     /* other code generation */
-    for (i=0;i<sdr.acq.nfft;i++) rcode[i] = 0;
+    rcode[0 .. sdr.acq.nfft] = 0;       // zero padding
     rescode(sdr.code, sdr.clen, 0, 0, sdr.ci, sdr.nsamp, rcode); /* resampled code */
-    cpxcpx(rcode,null,1.0,sdr.acq.nfft,sdr.xcode); /* FFT code */
-    cpxfft(sdr.xcode,sdr.acq.nfft);
-
-    for (i=0;i<sdr.clen*sdr.acq.lenf;i++) /* long code for fine search */
-        sdr.lcode[i]=sdr.code[i%sdr.clen];
+    cpxcpx(rcode, null, 1.0, sdr.acq.nfft, sdr.xcode); /* FFT code */
+    cpxfft(sdr.xcode, sdr.acq.nfft);
     
     return 0;
 }
+
+
 /* free sdr channel struct ------------------------------------------------------
 * free memory in sdr channel struct
 * args   : sdrch_t *sdr     I/0 sdr channel struct

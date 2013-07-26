@@ -12,6 +12,7 @@ import std.concurrency;
 import core.thread;
 import std.algorithm;
 import std.datetime;
+import std.math;
 
 /* global variables -----------------------------------------------------------*/
 /* thread handle and mutex */
@@ -21,6 +22,8 @@ sdrini_t sdrini;
 sdrstat_t sdrstat;
 sdrch_t sdrch[MAXSAT];
 sdrspec_t sdrspec;
+
+double l1ca_doppler;
 
 
 /**
@@ -52,6 +55,8 @@ sdrspec_t sdrspec;
 version(MAIN_IS_SDRMAIN_MAIN){
     void main(string[] args)
     {
+        util.trace.tracing = false;
+
         import std.datetime : StopWatch;
         StopWatch sw;
         sw.start();
@@ -77,16 +82,41 @@ version(MAIN_IS_SDRMAIN_MAIN){
 void startsdr()
 {
     writeln("GNSS-SDRLIB start!");
-
     /* receiver initialization */
     enforce(rcvinit(&sdrini) >= 0);
     scope(exit) rcvquit(&sdrini);
 
-    enforce(sdrini.nch == 1);
+    enforce(sdrini.nch >= 1);
     enforce(initsdrch(1, sdrini.sys[0], sdrini.sat[0], sdrini.ctype[0], sdrini.dtype[sdrini.ftype[0]-1], sdrini.ftype[0], sdrini.f_sf[sdrini.ftype[0]-1], sdrini.f_if[sdrini.ftype[0]-1],&sdrch[0]) >= 0);
     enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[0].ctype == CType.L1CA);
-    
     sdrthread(0);   // start SDR
+
+    if(sdrini.nch >= 2){
+        if(sdrini.ctype[1] != sdrini.ctype[0])
+            l1ca_doppler = sdrini.f_if[0] + 1748;
+
+        sdrstat.buffloccnt = 0;
+        sdrstat.stopflag = 0;
+        rcvquit(&sdrini);
+        enforce(rcvinit(&sdrini) >= 0);
+        enforce(initsdrch(2, sdrini.sys[1], sdrini.sat[1], sdrini.ctype[1], sdrini.dtype[sdrini.ftype[1]-1], sdrini.ftype[1], sdrini.f_sf[sdrini.ftype[1]-1], sdrini.f_if[sdrini.ftype[1]-1],&sdrch[1]) >= 0);
+        enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[1].ctype == CType.L2CM);
+        sdrthread_l2cm(1);
+    }
+    /+
+
+    if(sdrini.nch >= 2){
+        //l1ca_doppler = sdrini.f_if[0] + 1748;
+        writefln("doppler: %s", l1ca_doppler);
+
+        sdrstat.buffloccnt = 0;
+        sdrstat.stopflag = 0;
+        rcvquit(&sdrini);
+        enforce(rcvinit(&sdrini) >= 0);
+        enforce(initsdrch(2, sdrini.sys[1], sdrini.sat[1], sdrini.ctype[1], sdrini.dtype[sdrini.ftype[1]-1], sdrini.ftype[1], sdrini.f_sf[sdrini.ftype[1]-1], sdrini.f_if[sdrini.ftype[1]-1],&sdrch[1]) >= 0);
+        enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[1].ctype == CType.L2CM);
+        sdrthread_l2cm(1);
+    }+/
 
     SDRPRINTF("GNSS-SDRLIB is finished!\n");
 }
@@ -175,6 +205,12 @@ void sdrthread(size_t index)
                         plotthread(&plttrk, "trk_" ~ sdr.satstr ~ "_");
                     }
                     loopcnt++;
+
+                    if(loopcnt > 100 && isNaN(l1ca_doppler)){
+                        l1ca_doppler = sdr.trk.carrfreq;
+                        //writeln("doppler find, so end");
+                        //return;
+                    }
                 }
 
                 if(!sdr.flagnavsync || swsync)
@@ -188,6 +224,58 @@ void sdrthread(size_t index)
         }
         sdr.trk.buffloc = buffloc;
     }
+    /* plot termination */
+    quitpltstruct(&pltacq,&plttrk);
+
+    SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
+}
+
+
+void sdrthread_l2cm(size_t index)
+{
+    sdrch_t* sdr = &(sdrch[index]);
+    sdrplt_t pltacq,plttrk;
+    ulong buffloc = 0, cnt = 0,loopcnt = 0;
+    int cntsw = 0, swsync, swreset;
+    double *acqpower = null;
+
+    immutable resultLFileName = `Result\L1_` ~ sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
+    File resultLFile = File(resultLFileName, "w");
+    resultLFile.writeln("buffloc, carrierPhase[cycle],");
+
+    /* plot setting */
+    initpltstruct(&pltacq,&plttrk,sdr);
+    //enforce(initpltstruct(&pltacq,&plttrk,sdr) !< 0);
+
+    SDRPRINTF("**** %s sdr thread start! ****\n",sdr.satstr);
+
+    /* check the exit flag */
+    bool isStopped()
+    {
+        return sdrstat.stopflag != 0;
+    }
+
+    
+    while (!isStopped() && !sdr.flagacq){
+        /* acquisition */
+        /* memory allocation */
+        if (acqpower != null) free(acqpower);
+        acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft * sdr.acq.nfreq);
+        
+        /* fft correlation */
+        buffloc = sdracquisition(sdr, acqpower, cnt, buffloc);
+        
+        /* plot aquisition result */
+        if (false && sdr.flagacq && sdrini.pltacq) {        // data is too big.
+            pltacq.z=acqpower;
+            plot(&pltacq, "acq_" ~ sdr.satstr ~ "_"); 
+        }
+    }
+
+
+    if(sdr.flagacq)
+        writeln("Done acquisition");
+
     /* plot termination */
     quitpltstruct(&pltacq,&plttrk);
 

@@ -144,7 +144,7 @@ void pll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
     /* 2nd order PLL with 1st order FLL */
     sdr.trk.carrNco+=prm.pllaw*(carrErr-sdr.trk.carrErr)+prm.pllw2*prm.dt*carrErr+prm.fllw*prm.dt*freqErr;
 
-    sdr.trk.carrfreq=sdr.acq.acqfreqf+sdr.trk.carrNco;
+    sdr.trk.carrfreq = sdr.acq.acqfreqf + sdr.trk.carrNco;
     sdr.trk.carrErr=carrErr;
 }
 /* delay lock loop --------------------------------------------------------------

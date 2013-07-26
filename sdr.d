@@ -70,7 +70,7 @@ enum DType{
 }
 
 immutable FILE_BUFFSIZE = 8192;
-immutable NFFTTHREAD = 2;
+immutable NFFTTHREAD = 4;
 
 struct Constant{
     struct L1CA{
@@ -93,6 +93,9 @@ struct Constant{
             enum ADDPLEN = 2;
             enum PRELEN = 8;
         }
+
+
+        enum LOOP_MS = 10;
     }
 
 
@@ -116,12 +119,14 @@ struct Constant{
             enum ADDPLEN = 0;
             enum PRELEN = 8;
         }
+
+        enum LOOP_MS = 10;
     }
 
 
     struct L2CM{
         struct Acquisition{
-            enum INTG = 4;
+            enum INTG = 1;
             enum HBAND = 100;
             enum STEP = 5;
             enum TH = 2.0;
@@ -129,6 +134,8 @@ struct Constant{
             //enum FFTFRESO = 10;
             enum SLEEP = 2000;
         }
+
+        enum LOOP_MS = 10;
     }
 
     struct Tracking{
@@ -176,7 +183,7 @@ struct Constant{
           case CType.L1SAIF:
             return mixin("L1SAIF." ~ name);
           case CType.L2CM:{
-            static if(name == "Acquisition.LENF" || name == "Acquisition.FFTFRESO" || name[0 .. 10] == "Navigation")
+            static if(name == "Acquisition.LENF" || name == "Acquisition.FFTFRESO" || (name.length >= 10 && name[0 .. 10] == "Navigation") )
                 goto default;
             else
                 return mixin("L2CM." ~ name);
