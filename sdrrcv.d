@@ -125,6 +125,8 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
     return 0;
 }
+
+
 /* stop front-end ---------------------------------------------------------------
 * stop grabber of front end
 * args   : sdrini_t *ini    I   sdr initialization struct
@@ -164,6 +166,8 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
     if (null!=sdrstat.buff2) free(sdrstat.buff2); sdrstat.buff2=null;
     return 0;
 }
+
+
 /* start grabber ----------------------------------------------------------------
 * start grabber of front end
 * args   : sdrini_t *ini    I   sdr initialization struct
@@ -195,6 +199,8 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     }
     return 0;
 }
+
+
 /* grab current data ------------------------------------------------------------
 * push data to memory buffer from front end
 * args   : sdrini_t *ini    I   sdr initialization struct
@@ -237,6 +243,8 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     }
     return 0;
 }
+
+
 /* grab current data from file --------------------------------------------------
 * push data to memory buffer from IF file
 * args   : sdrini_t *ini    I   sdr initialization struct
@@ -259,6 +267,8 @@ int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *i
     }
     return 0;
 }
+
+
 /* grab current buffer ----------------------------------------------------------
 * get current data buffer from memory buffer
 * args   : sdrini_t *ini    I   sdr initialization struct
@@ -317,6 +327,8 @@ int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype
 
     return 0;
 }
+
+
 /* push data to memory buffer ---------------------------------------------------
 * post-processing function: push data to memory buffer
 * args   : none
@@ -344,6 +356,8 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
         sdrstat.buffloccnt++;
     //ReleaseMutex(hreadmtx);
 }
+
+
 /* get current data buffer from IF file -----------------------------------------
 * post-processing function: get current data buffer from memory buffer
 * args   : ulong buffloc I   buffer location

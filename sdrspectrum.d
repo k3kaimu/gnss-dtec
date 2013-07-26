@@ -34,6 +34,8 @@ void initsdrspecgui(sdrspec_t* sdrspecgui)
     //hspecthread.start();
     hspecthread = spawn(&specthread);
 }
+
+
 /* spectrum analyzer thread -----------------------------------------------------
 * spectrum analyzer thread
 * args   : void * arg       I   sdr spectrum struct
@@ -149,6 +151,8 @@ void specthread()
     //delete data;
     SDRPRINTF("spectrum thred is finished!\n");
 }
+
+
 /* initialize spectrum plot struct ----------------------------------------------
 * initialize spectrum plot struct
 * args   : sdrspec_t *spec  I/O sdr spectrum struct
@@ -184,6 +188,8 @@ int initspecpltstruct(sdrspec_t *spec)
 
     return 0;
 }
+
+
 /* clean spectrum plot struct ---------------------------------------------------
 * free memory and close pipe
 * args   : sdrspec_t *spec  I/O spectrum struct
@@ -195,6 +201,8 @@ void quitspecpltstruct(sdrspec_t *spec)
     quitsdrplot(&spec.histQ);
     quitsdrplot(&spec.pspec);
 }
+
+
 /* histogram calculation --------------------------------------------------------
 * histogram calculation of input IF data
 * args   : char   *data     I   sampling data vector (n x 1 or 2n x 1)
@@ -230,6 +238,8 @@ void calchistgram(byte[] data, int dtype, int n, double *xI, double *yI, double 
         }
     }
 }
+
+
 /* hanning window ---------------------------------------------------------------
 * create hanning window
 * args   : int    n         I   number of samples
@@ -242,6 +252,8 @@ void hanning(int n, float *win)
     for (i=0;i<n;i++)
         win[i] = cast(float)(0.5*(1-cos(2*PI*(i+1)/(n+1))));
 }
+
+
 /* spectrum analyzer ------------------------------------------------------------
 * power spectrum analyzer function
 * args   : char   *data     I   sampling data vector (n x 1 or 2n x 1)

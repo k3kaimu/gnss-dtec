@@ -67,6 +67,8 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
     }
   }
 }
+
+
 /* convert binary navigation bits to byte data ----------------------------------
 * 
 * args   : int    *bits     I   binary navigation bits (1 or -1)
@@ -90,6 +92,8 @@ void bits2bin(string file = __FILE__, size_t line = __LINE__)(int *bits, int nbi
         bin[i]=b;
     }
 }
+
+
 /* decode navigation data subframe 1 --------------------------------------------
 *
 * args   : ubyte *buff I navigation data frame
@@ -132,6 +136,8 @@ static int decode_subfrm1(string file = __FILE__, size_t line = __LINE__)(ubyte 
     
     return 1;
 }
+
+
 /* decode navigation data subframe 2 --------------------------------------------
 *
 * args   : ubyte *buff I navigation data frame
@@ -176,6 +182,8 @@ int decode_subfrm2(string file = __FILE__, size_t line = __LINE__)(ubyte *buff, 
     
     return 2;
 }
+
+
 /* decode navigation data subframe 3 --------------------------------------------
 *
 * args   : ubyte *buff I navigation data frame
@@ -217,6 +225,8 @@ int decode_subfrm3(string file = __FILE__, size_t line = __LINE__)(ubyte *buff, 
     
     return 3;
 }
+
+
 /* decode navigation data subframe 4 --------------------------------------------
 *
 * args   : ubyte *buff I navigation data frame
@@ -230,6 +240,8 @@ int decode_subfrm4(string file = __FILE__, size_t line = __LINE__)(ubyte *buff, 
     
     return 4;
 }
+
+
 /* decode navigation data subframe 5 --------------------------------------------
 *
 * args   : ubyte *buff I navigation data frame
@@ -243,6 +255,8 @@ int decode_subfrm5(string file = __FILE__, size_t line = __LINE__)(ubyte *buff, 
     
     return 5;
 }
+
+
 /* decode navigation data frame -------------------------------------------------
 * decode navigation data frame and extract ephemeris
 * args   : ubyte *buff I navigation data frame
@@ -265,6 +279,8 @@ int nav_decode_frame(string file = __FILE__, size_t line = __LINE__)(ubyte *buff
     }
     return id;
 }
+
+
 /* navigation data bit synchronization ------------------------------------------
 * checking synchronization of navigation bit   
 * args   : int    biti      I   current bit index
@@ -288,6 +304,8 @@ int nav_checksync(string file = __FILE__, size_t line = __LINE__)(int biti, doub
     }
     return 0;
 }
+
+
 /* navigation data bit decision -------------------------------------------------
 * navigation data bit is determined using accumulated IP data
 * args   : int    biti      I   current bit index
@@ -322,6 +340,8 @@ int nav_checkbit(string file = __FILE__, size_t line = __LINE__)(int biti, doubl
     }
     return syncflag;
 }
+
+
 /* decode foward error correction -----------------------------------------------
 * args   : sdrnav_t *nav    I/O navigation struct
 * return : none

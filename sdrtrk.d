@@ -8,6 +8,7 @@ import sdr;
 import std.math;
 import std.stdio;
 
+
 /* sdr tracking function --------------------------------------------------------
 * sdr tracking function called from sdr channel thread
 * args   : sdrch_t *sdr      I/O sdr channel struct
@@ -45,6 +46,8 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     
     return buffloc + sdr.currnsamp;
 }
+
+
 /* correlator -------------------------------------------------------------------
 * multiply sampling data and carrier (I/Q), multiply code (E/P/L), and integrate
 * args   : char   *data     I   sampling data vector (n x 1 or 2n x 1)
@@ -97,6 +100,8 @@ void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] da
 
     //dataI=dataQ=code_e=null;
 }
+
+
 /* cumulative sum of correlation output -----------------------------------------
 * phase/frequency lock loop (2nd order PLL with 1st order FLL)
 * carrier frequency is computed
@@ -122,6 +127,8 @@ void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(double *I, doubl
         trk.sumQ[0 .. loopMax] += Q[0 .. loopMax];
     }
 }
+
+
 /* phase/frequency lock loop ----------------------------------------------------
 * phase/frequency lock loop (2nd order PLL with 1st order FLL)
 * carrier frequency is computed
@@ -147,6 +154,8 @@ void pll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
     sdr.trk.carrfreq = sdr.acq.acqfreqf + sdr.trk.carrNco;
     sdr.trk.carrErr=carrErr;
 }
+
+
 /* delay lock loop --------------------------------------------------------------
 * delay lock loop (2nd order DLL)
 * code frequency is computed
@@ -177,6 +186,8 @@ void dll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
     sdr.trk.codefreq = sdr.crate - sdr.trk.codeNco + (sdr.trk.carrfreq - sdr.f_if) / (FREQ1 / sdr.crate); /* carrier aiding */
     sdr.trk.codeErr = codeErr;
 }
+
+
 /* set observation data ---------------------------------------------------------
 * calculate doppler/carrier phase/SNR
 * args   : sdrch_t *sdr     I   sdr channel struct

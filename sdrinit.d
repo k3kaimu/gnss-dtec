@@ -150,6 +150,8 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
             enforce(0, "ctype: %s is not supported.".formattedString(sdrini.ctype[i]));
     }
 }
+
+
 /* check initial value ----------------------------------------------------------
 * checking value in sdrini struct
 * args   : sdrini_t *ini    I   sdrini struct
@@ -215,6 +217,8 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
     else
         trk.pltms = PLT_MS;
 }
+
+
 /* termination plot struct ------------------------------------------------------
 * termination plot struct
 * args   : sdrplt_t *acq    I/0 plot struct for acquisition
@@ -230,6 +234,8 @@ void quitpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
     if (sdrini.plttrk)
         quitsdrplot(trk);
 }
+
+
 /* initialize acquisition struct ------------------------------------------------
 * set value to acquisition struct
 * args   : int sys          I   system type (SYS_GPS...)
@@ -273,6 +279,8 @@ void initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
         enforce(0);
     }
 }
+
+
 /* initialize tracking parameter struct -----------------------------------------
 * set value to tracking parameter struct
 * args   : sdrtrkprm_t *prm I/0 tracking parameter struct
@@ -348,6 +356,8 @@ void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(sdrtrkprm_
         }
     }
 }
+
+
 /* initialize tracking struct --------------------------------------------------
 * set value to tracking struct
 * args   : int sys          I   system type (SYS_GPS...)
@@ -380,13 +390,10 @@ void inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
     trk.oldsumQ=cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
     scope(failure) free(trk.oldsumQ);
 
-    //if (sys == SYS_GPS && ctype == CType.L1CA)   trk.loopms = Constant.LOOP_MS_L1CA;
-    //if (sys == SYS_SBS && ctype == CType.L1SBAS) trk.loopms = Constant.LOOP_MS_SBAS;
-    //if (sys == SYS_QZS && ctype == CType.L1CA)   trk.loopms = Constant.LOOP_MS_L1CA;
-    //if (sys == SYS_QZS && ctype == CType.LEXS)   trk.loopms = Constant.LOOP_MS_LEX;
-    //if (sys == SYS_QZS && ctype == CType.L1SAIF) trk.loopms = Constant.LOOP_MS_SBAS;
     trk.loopms = Constant.get!"LOOP_MS"(ctype);
 }
+
+
 /* initialize navigation struct -------------------------------------------------
 * set value to navigation struct
 * args   : int sys          I   system type (SYS_GPS...)
@@ -423,6 +430,8 @@ void initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
 
     memcpy(nav.prebits,preamble.ptr,int.sizeof*nav.prelen);
 }
+
+
 /* initialize sdr channel struct ------------------------------------------------
 * set value to sdr channel struct
 * args   : int    chno      I   channel number (1,2,...)
@@ -469,7 +478,7 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys
 
     sdr.acq.nfft  = (){
         if(ctype == CType.L1CA)
-            return sdr.nsamp;           // PRNコード1周期分
+            return cast(int)nextPow2(sdr.nsamp); //sdr.nsamp;           // PRNコード1周期分
         else if(ctype == CType.L2CM)
             return cast(int)nextPow2(sdr.nsamp * 2);
         else

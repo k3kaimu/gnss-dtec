@@ -13,9 +13,6 @@ import std.c.string;
 import std.process;
 import std.datetime;
 
-/* global variables -----------------------------------------------------------*/
-//__gshared Thread hpltthread; /* plot thread handle */
-
 /* modify gnuplot ini file ------------------------------------------------------
 * modify gnuplot ini file to set window size and position
 * args   : int    nx        I   window width (pixel)
