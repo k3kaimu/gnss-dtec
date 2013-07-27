@@ -19,8 +19,22 @@ import std.algorithm;
 version(unittest) import std.stdio;
 
 /* global variables -----------------------------------------------------------*/
-__gshared short cost[CDIV];            /* carrier lookup table cos(t) */
-__gshared short sint[CDIV];            /* carrier lookup table sin(t) */
+private short cost[CDIV];            /* carrier lookup table cos(t) */
+private short sint[CDIV];            /* carrier lookup table sin(t) */
+
+version(Dnative){
+    private Fft fftObj;
+    private size_t fftObjSize;
+    private cpx_t[] buffer;
+}
+
+static this(){      // モジュールコンストラクタ(スレッド起動時に実行される)
+    // carrier loopup tableの初期化
+    foreach(i; 0 .. CDIV){
+        cost[i] = cast(short)floor((cos(DPI/CDIV*i)/CSCALE+0.5));
+        sint[i] = cast(short)floor((sin(DPI/CDIV*i)/CSCALE+0.5));
+    }
+}
 
 
 /**
@@ -181,8 +195,9 @@ void cpxfree(cpx_t *cpx) pure nothrow @trusted
 * return : none
 *------------------------------------------------------------------------------*/
 /**/
-void cpxfft(cpx_t *cpx, int n) nothrow
+void cpxfft(cpx_t *cpx, int n) @trusted
 {
+/+
     traceln("called");
     fftwf_plan p;
 
@@ -190,18 +205,41 @@ void cpxfft(cpx_t *cpx, int n) nothrow
     p = fftwf_plan_dft_1d(n, cpx, cpx, FFTW_FORWARD, FFTW_ESTIMATE);
     fftwf_execute(p); /* fft */
     fftwf_destroy_plan(p);
++/
+    cpxfft(cpx[0 .. n]);
 }
 
 
-void cpxfft(cpx_t *cpx, size_t n)
+void cpxfft(cpx_t *cpx, size_t n) @trusted
 {
-    cpxfft(cpx, n.to!int());
+    //cpxfft(cpx, n.to!int());
+    cpxfft(cpx[0 .. n]);
 }
 
 
-void cpxfft(cpx_t[] cpx)
+void cpxfft(cpx_t[] cpx) @trusted
 {
-    cpxfft(cpx.ptr, cpx.length.to!int());
+    traceln("called");
+
+  version(Dnative){
+    immutable size = cpx.length;
+
+    if(size != fftObjSize)
+        fftObj = new Fft(size);
+
+    if(sdrcmn.buffer.length < size)
+        sdrcmn.buffer.length = size;
+
+    sdrcmn.fftObj.fft(cpx, buffer[0 .. size]);
+    cpx[] =  buffer[];
+  }else{
+    immutable n = cast(int)cpx.length;
+
+    fftwf_plan_with_nthreads(NFFTTHREAD);  //fft execute in multi threads 
+    fftwf_plan p = fftwf_plan_dft_1d(n, cpx.ptr, cpx.ptr, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftwf_execute(p); /* fft */
+    fftwf_destroy_plan(p);
+  }
 }
 
 
@@ -211,8 +249,9 @@ void cpxfft(cpx_t[] cpx)
 *          int    n         I   number of input/output data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxifft(cpx_t *cpx, int n) nothrow
+void cpxifft(cpx_t *cpx, int n) @trusted
 {
+/+
     traceln("called");
     fftwf_plan p;
     
@@ -220,18 +259,42 @@ void cpxifft(cpx_t *cpx, int n) nothrow
     p=fftwf_plan_dft_1d(n,cpx,cpx,FFTW_BACKWARD,FFTW_ESTIMATE);
     fftwf_execute(p); /* ifft */
     fftwf_destroy_plan(p);
++/
+    cpxifft(cpx[0 .. n]);
 }
 
 
-void cpxifft(cpx_t *cpx, size_t n)
+void cpxifft(cpx_t *cpx, size_t n) @trusted
 {
-    cpxifft(cpx, n.to!int());
+    //cpxifft(cpx, n.to!int());
+    cpxifft(cpx[0 .. n]);
 }
 
 
-void cpxifft(cpx_t[] cpx)
+void cpxifft(cpx_t[] cpx) @trusted
 {
-    cpxifft(cpx.ptr, cpx.length.to!int());
+    //cpxifft(cpx.ptr, cpx.length.to!int());
+    traceln("called");
+
+  version(Dnative){
+    immutable size = cpx.length;
+
+    if(size != fftObjSize)
+        fftObj = new Fft(size);
+
+    if(sdrcmn.buffer.length < size)
+        sdrcmn.buffer.length = size;
+
+    sdrcmn.fftObj.inverseFft(cpx, buffer[0 .. size]);
+    cpx[] =  buffer[];
+  }else{
+    immutable n = cast(int)cpx.length;
+
+    fftwf_plan_with_nthreads(NFFTTHREAD); /* ifft execute in multi threads */
+    fftwf_plan p = fftwf_plan_dft_1d(n, cpx.ptr, cpx.ptr, FFTW_BACKWARD, FFTW_ESTIMATE);
+    fftwf_execute(p); /* ifft */
+    fftwf_destroy_plan(p);
+  }
 }
 
 
@@ -962,14 +1025,6 @@ void ind2sub(int ind, int nx, int ny, int *subx, int *suby) pure nothrow @safe
 *------------------------------------------------------------------------------*/
 void shiftright(void *dst, void *src, size_t size, int n) pure nothrow
 {
-    /*
-    void *tmp;
-    tmp = malloc(size*n);
-    if (tmp !is null) {
-        tmp[0 .. size*n] = src[0 .. size*n];
-        dst[0 .. size*(n-1)] = tmp[0 .. size*(n-1)];
-        free(tmp);
-    }*/
     scope tmp = new void[size * n];
     tmp[0 .. size*n] = src[0 .. size*n];
     dst[0 .. size*(n-1)] = tmp[0 .. size*(n-1)];
@@ -1052,13 +1107,11 @@ if(isInputRange!R && hasLength!R && isOutputRange!(W, ElementType!R))
     traceln("len: ", len);
     traceln("ci: ", ci);
     auto cyc = src.cycle();
-    //short *p;
     
-    coff-=smax*ci;
-    coff-=floor(coff/len)*len; /* 0<=coff<len */
+    coff -= smax*ci;
+    coff -= floor(coff/len)*len; /* 0<=coff<len */
     traceln("coff: ", coff);
-    foreach(e; 0 .. n + 2 * smax)
-    {
+    foreach(e; 0 .. n + 2 * smax){
         sink.put(cyc[coff.to!size_t()]);
         coff += ci;
     }
@@ -1085,16 +1138,7 @@ double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] dat
     const(byte)* p;
     double phi,ps,prem;
 
-//#if !defined(SSE2)
     int i,index;
-    
-    /* initialize local carrier table */
-    if (!cost[0]) {
-        for (i=0;i<CDIV;i++) {
-            cost[i]=cast(short)floor((cos(DPI/CDIV*i)/CSCALE+0.5));
-            sint[i]=cast(short)floor((sin(DPI/CDIV*i)/CSCALE+0.5));
-        }
-    }
 
     phi=phi0*CDIV/DPI;
     ps=freq*CDIV*ti; /* phase step */
