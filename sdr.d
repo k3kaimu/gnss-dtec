@@ -1,3 +1,4 @@
+//##& set waitTime 10000            // 10s
 //##$ dmd -m64 -unittest -O -release -inline -version=MAIN_IS_SDRMAIN_MAIN sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
 
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE  -O -release -inline
