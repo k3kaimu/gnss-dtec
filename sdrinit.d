@@ -407,7 +407,7 @@ void initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
     int[32] preamble = 0;
     int[] pre_l1ca = [1,-1,-1,-1,1,-1,1,1]; /* GPS L1CA preamble*/
     int[] pre_l1saif=[1,-1,1,-1,1,1,-1,-1]; /* QZSS L1SAIF preamble */
-    int[2] poly = [V27POLYA,V27POLYB];
+    version(none) int[2] poly = [V27POLYA,V27POLYB];
 
     nav.ctype = ctype;
 

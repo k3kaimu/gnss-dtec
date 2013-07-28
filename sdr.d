@@ -24,13 +24,20 @@ import std.array  : appender;
 import std.traits : isSomeString;
 pragma(lib, "msgpack_x64.lib");
 
+template isVersion(string vname)
+{
+    mixin(`version(` ~ vname ~ `){ enum isVersion = true; } else { enum isVersion = false; }`);
+}
+
 /* FEC */
-pragma(lib, "libfec.a");
-public import fec;
+//pragma(lib, "libfec.a");
+//public import fec;
 
 /* FFT */
-public import fftw;
-pragma(lib, "libfftw3f-3.lib");
+static if(!isVersion!"useFFTW"){
+    public import fftw;
+    pragma(lib, "libfftw3f-3.lib");
+}
 
 /* RTKLIB */
 public import rtklib;
@@ -198,10 +205,10 @@ struct Constant{
     }
 
 
-    immutable TRKCN = 8;
-    immutable LOOP_MS_L1CA = 10;
-    immutable LOOP_MS_SBAS = 2;
-    immutable LOOP_MS_LEX = 4;
+    enum TRKCN = 8;
+    enum LOOP_MS_L1CA = 10;
+    enum LOOP_MS_SBAS = 2;
+    enum LOOP_MS_LEX = 4;
 }
 
 
