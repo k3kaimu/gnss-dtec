@@ -101,7 +101,8 @@ void startsdr()
         enforce(rcvinit(&sdrini) >= 0);
         enforce(initsdrch(2, sdrini.sys[1], sdrini.sat[1], sdrini.ctype[1], sdrini.dtype[sdrini.ftype[1]-1], sdrini.ftype[1], sdrini.f_sf[sdrini.ftype[1]-1], sdrini.f_if[sdrini.ftype[1]-1],&sdrch[1]) >= 0);
         enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[1].ctype == CType.L2CM);
-        sdrthread_l2cm(1);
+        //sdrthread_l2cm(1);
+        sdrthread(1);
     }
 
     SDRPRINTF("GNSS-SDRLIB is finished!\n");
@@ -192,11 +193,11 @@ void sdrthread(size_t index)
                     }
                     loopcnt++;
 
-                    if(loopcnt > 100 && isNaN(l1ca_doppler)){
-                        l1ca_doppler = sdr.trk.carrfreq;
-                        //writeln("doppler find, so end");
-                        //return;
-                    }
+                    //if(loopcnt > 100 && isNaN(l1ca_doppler)){
+                    //    l1ca_doppler = sdr.trk.carrfreq;
+                    //    writeln("doppler find, so end");
+                    //    return;
+                    //}
                 }
 
                 if(!sdr.flagnavsync || swsync)
@@ -216,7 +217,7 @@ void sdrthread(size_t index)
     SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
 }
 
-
+/+
 void sdrthread_l2cm(size_t index)
 {
     sdrch_t* sdr = &(sdrch[index]);
@@ -267,6 +268,7 @@ void sdrthread_l2cm(size_t index)
 
     SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
 }
++/
 
 
 version(none):

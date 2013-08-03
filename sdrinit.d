@@ -119,7 +119,7 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
         }
 
         ini.sat   = getChannelSpec!int("SAT");
-        ini.sys   = getChannelSpec!int("SYS");
+        ini.sys   = getChannelSpec!NavSystem("SYS");
         ini.ctype = getChannelSpec!CType("CTYPE");
         ini.ftype = getChannelSpec!FType("FTYPE");
     }
@@ -445,14 +445,14 @@ void initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
 *          sdrch_t *sdr     I/0 sdr channel struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, int sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if, sdrch_t *sdr)
+int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSystem sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if, sdrch_t *sdr)
 {
     traceln("called");
     
     sdr.no      = chno;
     sdr.sys     = sys;
     sdr.prn     = prn;
-    sdr.sat     = satno(sys,prn);
+    sdr.sat     = satno(sys, prn);
     sdr.ctype   = ctype;
     sdr.dtype   = dtype;
     sdr.ftype   = ftype;

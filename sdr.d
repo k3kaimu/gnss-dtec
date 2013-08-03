@@ -134,9 +134,9 @@ struct Constant{
 
     struct L2CM{
         struct Acquisition{
-            enum INTG = 1;
-            enum HBAND = 100;
-            enum STEP = 5;
+            enum INTG = 4;
+            enum HBAND = 40;
+            enum STEP = 2;
             enum TH = 2.0;
             //enum LENF = 10;
             //enum FFTFRESO = 10;
@@ -309,7 +309,7 @@ struct sdrini_t
     uint nchL5;
     uint nchL6;
     int[] sat;
-    int[] sys;
+    NavSystem[] sys;
     CType[] ctype;
     FType[] ftype;
     bool pltacq;
@@ -608,37 +608,34 @@ public import sdracq,
 
 
 // rtklibからの輸入
-int satno(int sys, int prn)
+int satno(NavSystem sys, int prn)
 {
     enforce(prn !<= 0);
 
-    switch (sys) {
-      case SYS_GPS:
+    final switch (sys) {
+      case NavSystem.GPS:
         enforce(!(prn<MINPRNGPS||MAXPRNGPS<prn));
         return prn-MINPRNGPS+1;
 
-      case SYS_GLO:
+      case NavSystem.GLONASS:
         enforce(!(prn<MINPRNGLO||MAXPRNGLO<prn));
         return NSATGPS+prn-MINPRNGLO+1;
 
-      case SYS_GAL:
+      case NavSystem.Galileo:
         enforce(!(prn<MINPRNGAL||MAXPRNGAL<prn));
         return NSATGPS+NSATGLO+prn-MINPRNGAL+1;
 
-      case SYS_QZS:
+      case NavSystem.QZSS:
         enforce(!(prn<MINPRNQZS||MAXPRNQZS<prn));
         return NSATGPS+NSATGLO+NSATGAL+prn-MINPRNQZS+1;
 
-      case SYS_CMP:
+      case NavSystem.BeiDou:
         enforce(!(prn<MINPRNCMP||MAXPRNCMP<prn));
         return NSATGPS+NSATGLO+NSATGAL+NSATQZS+prn-MINPRNCMP+1;
 
-      case SYS_SBS:
+      case NavSystem.SBAS:
         enforce(!(prn<MINPRNSBS||MAXPRNSBS<prn));
         return NSATGPS+NSATGLO+NSATGAL+NSATQZS+NSATCMP+prn-MINPRNSBS+1;
-
-      default:
-        enforce(0);
     }
 
     return 0;
@@ -646,32 +643,46 @@ int satno(int sys, int prn)
 
 
 // rtklibからの輸入
-int satsys(int sat, out int prn)
-{
-    int sys = SYS_NONE;
-    if (sat<=0||MAXSAT<sat) sat=0;
-    else if (sat<=NSATGPS) {
-        sys = SYS_GPS; sat += MINPRNGPS-1;
+NavSystem satsys(int sat, out int prn)
+in{
+    assert(0 < sat && sat < MAXSAT);
+}
+body{
+    if(sat <= NSATGPS){
+        prn = sat + MINPRNGPS - 1;
+        return NavSystem.GPS;
     }
-    else if ((sat -= NSATGPS) <= NSATGLO) {
-        sys = SYS_GLO; sat += MINPRNGLO-1;
-    }
-    else if ((sat -= NSATGLO) <= NSATGAL) {
-        sys = SYS_GAL; sat += MINPRNGAL-1;
-    }
-    else if ((sat -= NSATGAL) <= NSATQZS) {
-        sys = SYS_QZS; sat += MINPRNQZS-1; 
-    }
-    else if ((sat -= NSATQZS) <= NSATCMP) {
-        sys = SYS_CMP; sat += MINPRNCMP-1; 
-    }
-    else if ((sat -= NSATCMP) <= NSATSBS) {
-        sys = SYS_SBS; sat += MINPRNSBS-1; 
-    }
-    else sat=0;
 
-    prn = sat;
-    return sys;
+    sat -= NSATGPS;
+    
+    if(sat <= NSATGLO){
+        prn = sat + MINPRNGLO - 1;
+        return NavSystem.GLONASS;
+    }
+
+    sat -= NSATGLO;
+
+    if(sat <= NSATGAL){
+        prn = sat + MINPRNGAL - 1;
+        return NavSystem.Galileo;
+    }
+
+    sat -= NSATGAL;
+
+    if(sat <= NSATQZS){
+        prn = sat + MINPRNQZS - 1;
+        return NavSystem.QZSS;
+    }
+
+    sat -= NSATCMP;
+
+    if(sat <= NSATCMP){
+        prn = sat + MINPRNCMP - 1;
+        return NavSystem.BeiDou;
+    }
+
+    enforce(0);
+    assert(0);
 }
 
 
@@ -679,27 +690,24 @@ int satsys(int sat, out int prn)
 string satno2Id(int sat)
 {
     int prn = void;
-    switch (satsys(sat, prn)) {
-        case SYS_GPS:
-            return "G%02d".formattedString(prn-MINPRNGPS+1);
+    final switch (satsys(sat, prn)) {
+        case NavSystem.GPS:
+            return "G%02d".formattedString(prn - MINPRNGPS + 1);
 
-        case SYS_GLO:
-            return "R%02d".formattedString(prn-MINPRNGLO+1);
+        case NavSystem.GLONASS:
+            return "R%02d".formattedString(prn - MINPRNGLO + 1);
 
-        case SYS_GAL:
-            return "E%02d".formattedString(prn-MINPRNGAL+1);
+        case NavSystem.Galileo:
+            return "E%02d".formattedString(prn - MINPRNGAL + 1);
 
-        case SYS_QZS:
-            return "J%02d".formattedString(prn-MINPRNQZS+1);
+        case NavSystem.QZSS:
+            return "J%02d".formattedString(prn - MINPRNQZS + 1);
 
-        case SYS_CMP:
-            return "C%02d".formattedString(prn-MINPRNCMP+1);
+        case NavSystem.BeiDou:
+            return "C%02d".formattedString(prn - MINPRNCMP + 1);
 
-        case SYS_SBS:
+        case NavSystem.SBAS:
             return "%03d".formattedString(prn);
-
-        default:
-            enforce(0);
     }
     assert(0);
 }
