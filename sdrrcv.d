@@ -367,13 +367,13 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void file_getbuff(string file = __FILE__, size_t line = __LINE__)(ulong buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
+void file_getbuff(string file = __FILE__, size_t line = __LINE__)(size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
 {
     traceln("called");
-    long membuffloc=buffloc%(MEMBUFLEN*dtype*FILE_BUFFSIZE);
+    size_t membuffloc = buffloc % (MEMBUFLEN * dtype * FILE_BUFFSIZE);
     
     n *= dtype;
-    immutable long nout = ((membuffloc+n)-(MEMBUFLEN*dtype*FILE_BUFFSIZE));
+    immutable ptrdiff_t nout = membuffloc + n - MEMBUFLEN * dtype * FILE_BUFFSIZE;
     
     if (ftype==FType.Type1) {
         if (nout>0) {

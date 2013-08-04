@@ -16,7 +16,7 @@ import std.stdio;
 *          double *power    O   normalized correlation power vector (2D array)
 * return : uint64_t             current buffer location
 *------------------------------------------------------------------------------*/
-ulong sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* sdr, double* power, ref ulong cnt, ulong buffloc)
+size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* sdr, double* power, ref size_t cnt, size_t buffloc)
 {
     traceln("called");
 

@@ -16,7 +16,7 @@ import std.stdio;
 *          ulong cnt      I   counter of sdr channel thread
 * return : ulong              current buffer location
 *------------------------------------------------------------------------------*/
-ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, ulong buffloc, ulong cnt)
+ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, size_t buffloc, size_t cnt)
 {
     traceln("called");
     

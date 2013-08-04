@@ -1,5 +1,3 @@
-//##$ rdmd -m64 sdrmain
-
 /*-------------------------------------------------------------------------------
 * sdrout.c : data output functions
 *
@@ -30,38 +28,40 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
     if (!sdr.flagnavsync && cnt > 500) 
         sdr.flagnavsync = nav_checksync(biti, sdr.trk.I[0], sdr.trk.oldI[0], &sdr.nav);
 
-  version(none){
-    /* preamble synclonaization */
-    if (sdr.flagnavsync) {
-        if (nav_checkbit(biti,sdr.trk.I[0],&sdr.nav)==OFF) { /* nav bit determination */
-            SDRPRINTF("%s nav sync error!!\n",sdr.satstr);
-        }
-                    
-        if (sdr.nav.swnavsync) {
-            /* decode FEC */
-            nav_decodefec(&sdr.nav);
-
-            /* finding preamble */      
-            sdr.flagnavpre=nav_findpreamble(&sdr.nav);
-            /* preamble is found */
-            if (sdr.flagnavpre&&!sdr.flagfirstsf) {
-                /* set reference sample data */
-                sdr.nav.firstsf=buffloc;
-                sdr.nav.firstsfcnt=cnt;
-                SDRPRINTF("*** find preamble! %s %d %d ***\n",sdr.satstr,cast(int)cnt,sdr.nav.polarity);
-                sdr.flagfirstsf=ON;
+  version(NavigationDecode){
+    if(sdr.ctype != CType.L2CM){
+        /* preamble synclonaization */
+        if (sdr.flagnavsync) {
+            if (nav_checkbit(biti,sdr.trk.I[0],&sdr.nav)==OFF) { /* nav bit determination */
+                SDRPRINTF("%s nav sync error!!\n",sdr.satstr);
             }
-        }
-        /* decoding navigation data */
-        if (sdr.flagnavpre&&sdr.nav.swnavsync) {
-            if (cast(int)(cnt-sdr.nav.firstsfcnt)%(sdr.nav.flen*sdr.nav.rate)==0) {
-                sfn=nav_decodenav(&sdr.nav);
-                sdr.nav.eph.sat=sdr.sat;
-                sdr.flagnavdec=ON;
-                SDRPRINTF("%s sfn=%d tow:%.1f week=%d\n",sdr.satstr,sfn,sdr.nav.eph.tow,sdr.nav.eph.week);
+                        
+            if (sdr.nav.swnavsync) {
+                /* decode FEC */
+                nav_decodefec(&sdr.nav);
 
-                /* set reference tow data */
-                if (cnt-sdr.nav.firstsfcnt==0) sdr.nav.firstsftow=sdr.nav.eph.tow;
+                /* finding preamble */      
+                sdr.flagnavpre=nav_findpreamble(&sdr.nav);
+                /* preamble is found */
+                if (sdr.flagnavpre&&!sdr.flagfirstsf) {
+                    /* set reference sample data */
+                    sdr.nav.firstsf=buffloc;
+                    sdr.nav.firstsfcnt=cnt;
+                    SDRPRINTF("*** find preamble! %s %d %d ***\n",sdr.satstr,cast(int)cnt,sdr.nav.polarity);
+                    sdr.flagfirstsf=ON;
+                }
+            }
+            /* decoding navigation data */
+            if (sdr.flagnavpre&&sdr.nav.swnavsync) {
+                if (cast(int)(cnt-sdr.nav.firstsfcnt)%(sdr.nav.flen*sdr.nav.rate)==0) {
+                    sfn=nav_decodenav(&sdr.nav);
+                    sdr.nav.eph.sat=sdr.sat;
+                    sdr.flagnavdec=ON;
+                    SDRPRINTF("%s sfn=%d tow:%.1f week=%d\n",sdr.satstr,sfn,sdr.nav.eph.tow,sdr.nav.eph.week);
+
+                    /* set reference tow data */
+                    if (cnt-sdr.nav.firstsfcnt==0) sdr.nav.firstsftow=sdr.nav.eph.tow;
+                }
             }
         }
     }
@@ -114,12 +114,12 @@ static int decode_subfrm1(string file = __FILE__, size_t line = __LINE__)(ubyte 
     eph.svh   =getbitu(buff,i, 6);       i+= 6;
     iodc0      =getbitu(buff,i, 2);       i+= 8;
     eph.flag  =getbitu(buff,i, 1);       i+=106;
-    eph.tgd[0]=getbits(buff,i, 8)*P2_31; i+=14;
+    eph.tgd[0]=getbits(buff,i, 8) * (2.0L ^^ -31); i+=14;
     iodc1      =getbitu(buff,i, 8);       i+= 8;
-    toc        =getbitu(buff,i,16)*16.0;  i+=22;
-    eph.f2    =getbits(buff,i, 8)*P2_55; i+= 8;
-    eph.f1    =getbits(buff,i,16)*P2_43; i+=22;
-    eph.f0    =getbits(buff,i,22)*P2_31;
+    toc        =getbitu(buff,i,16) * 16.0;  i+=22;
+    eph.f2    =getbits(buff,i, 8) * (2.0L ^^ -55); i+= 8;
+    eph.f1    =getbits(buff,i,16) * (2.0L ^^ -43); i+=22;
+    eph.f0    =getbits(buff,i,22) * (2.0L ^^ -31);
     
     eph.iodc=(iodc0<<8)+iodc1;
     eph.week=adjgpsweek(week);
@@ -154,22 +154,22 @@ int decode_subfrm2(string file = __FILE__, size_t line = __LINE__)(ubyte *buff, 
 
     eph.tow =getbitu(buff,30,17)*6.0; /* transmission time of subframe */
     eph.iode=getbitu(buff,i, 8);              i+= 8;
-    eph.crs =getbits(buff,i,16)*P2_5;         i+=22;
-    eph.deln=getbits(buff,i,16)*P2_43*SC2RAD; i+=16;
+    eph.crs =getbits(buff,i,16)*(2.0L^^-5);         i+=22;
+    eph.deln=getbits(buff,i,16)*(2.0L^^-43)*SC2RAD; i+=16;
     M00      =getbitu(buff,i,8);               i+=14;
     M01      =getbitu(buff,i,24);              i+=30;
-    eph.cuc =getbits(buff,i,16)*P2_29;        i+=16;
+    eph.cuc =getbits(buff,i,16)*(2.0L^^-29);        i+=16;
     e0       =getbitu(buff,i,8);               i+=14;
     e1       =getbitu(buff,i,24);              i+=30;
-    eph.cus =getbits(buff,i,16)*P2_29;        i+=16;
+    eph.cus =getbits(buff,i,16)*(2.0L^^-29);        i+=16;
     sqrtA0   =getbitu(buff,i,8);               i+=14;
     sqrtA1   =getbitu(buff,i,24);              i+=30;
     eph.toes=getbitu(buff,i,16)*16.0;         i+=16;
     eph.fit =getbitu(buff,i, 1);
     
-    eph.M0=(cast(int)(M00<<24)+M01)*P2_31*SC2RAD;
-    eph.e=((e0<<24)+e1)*P2_33;
-    sqrtA=(cast(uint)(sqrtA0<<24)+sqrtA1)*P2_19;
+    eph.M0=(cast(int)(M00<<24)+M01)*(2.0L^^-31)*SC2RAD;
+    eph.e=((e0<<24)+e1)*(2.0L^^-33);
+    sqrtA=(cast(uint)(sqrtA0<<24)+sqrtA1)*(2.0L^^-19);
     eph.A=sqrtA*sqrtA;
     
     /* ephemeris update flag */
@@ -198,22 +198,22 @@ int decode_subfrm3(string file = __FILE__, size_t line = __LINE__)(ubyte *buff, 
     int OMG00,OMG01,i00,i01,omg0,omg1;
 
     eph.tow =getbitu(buff,30,17)*6.0; /* transmission time of subframe */
-    eph.cic =getbits(buff,i,16)*P2_29;        i+=16;
+    eph.cic =getbits(buff,i,16)*(2.0L^^-29);        i+=16;
     OMG00    =getbitu(buff,i,8);               i+=14;
     OMG01    =getbitu(buff,i,24);              i+=30;
-    eph.cis =getbits(buff,i,16)*P2_29;        i+=16;
+    eph.cis =getbits(buff,i,16)*(2.0L^^-29);        i+=16;
     i00      =getbitu(buff,i,8);               i+=14;
     i01      =getbitu(buff,i,24);              i+=30;
-    eph.crc =getbits(buff,i,16)*P2_5;         i+=16;
+    eph.crc =getbits(buff,i,16)*(2.0L^^-5);         i+=16;
     omg0     =getbitu(buff,i,8);               i+=14;
     omg1     =getbitu(buff,i,24);              i+=30;
-    eph.OMGd=getbits(buff,i,24)*P2_43*SC2RAD; i+=30;
+    eph.OMGd=getbits(buff,i,24)*(2.0L^^-43)*SC2RAD; i+=30;
     iode     =getbitu(buff,i, 8);              i+= 8;
-    eph.idot=getbits(buff,i,14)*P2_43*SC2RAD;
+    eph.idot=getbits(buff,i,14)*(2.0L^^-43)*SC2RAD;
     
-    eph.OMG0=(cast(int)(OMG00<<24)+OMG01)*P2_31*SC2RAD;
-    eph.i0=(cast(int)(i00<<24)+i01)*P2_31*SC2RAD;
-    eph.omg =(cast(int)(omg0<<24)+omg1)*P2_31*SC2RAD;
+    eph.OMG0=(cast(int)(OMG00<<24)+OMG01)*(2.0L^^-31)*SC2RAD;
+    eph.i0=(cast(int)(i00<<24)+i01)*(2.0L^^-31)*SC2RAD;
+    eph.omg =(cast(int)(omg0<<24)+omg1)*(2.0L^^-31)*SC2RAD;
 
     /* ephemeris update flag */
     if (oldiode-iode!=0)
@@ -350,9 +350,9 @@ void nav_decodefec(string file = __FILE__, size_t line = __LINE__)(sdrnav_t *nav
 {
     traceln("called");
     int i,j;
-    ubyte enc[NAVFLEN_L1SAIF+NAVADDFLEN_L1SAIF];
+    ubyte enc[Constant.L1SAIF.Navigation.FLEN + Constant.L1SAIF.Navigation.ADDFLEN];
     ubyte dec[32];
-    int dec2[NAVFLEN_L1SAIF/2];
+    int dec2[Constant.L1SAIF.Navigation.FLEN/2];
 
     /* L1CA */
     if (nav.ctype==CType.L1CA) {
@@ -364,14 +364,14 @@ void nav_decodefec(string file = __FILE__, size_t line = __LINE__)(sdrnav_t *nav
     if (nav.ctype==CType.L1SAIF) {
         /* 1/2 convolutional code */
         init_viterbi27_port(nav.fec,0);
-        for (i=0;i<NAVFLEN_L1SAIF+NAVADDFLEN_L1SAIF;i++) enc[i]=(nav.fbits[i]==1)? 0:255;
+        for (i=0;i<enc.length;i++) enc[i]=(nav.fbits[i]==1)? 0:255;
         update_viterbi27_blk_port(nav.fec,enc.ptr,(nav.flen+nav.addflen)/2);
         chainback_viterbi27_port(nav.fec,dec.ptr,nav.flen/2,0);
         for (i=0;i<32;i++) {
             for (j=0;j<8;j++) {
                 dec2[8*i+j]=((dec[i]<<j)&0x80)>>7;
                 nav.fbitsdec[8*i+j]=(dec2[8*i+j]==0)?1:-1;
-                if (8*i+j==NAVFLEN_L1SAIF/2-1) {
+                if (8*i+j==Constant.L1SAIF.Navigation.FLEN/2-1) {
                     break;
                 }
             }

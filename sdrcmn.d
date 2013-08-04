@@ -249,7 +249,7 @@ void cpxfft(cpx_t[] cpx) @trusted
 *          int    n         I   number of input/output data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxifft(cpx_t *cpx, int n) @trusted
+void cpxifft(cpx_t *cpx, int n)
 {
 /+
     traceln("called");
@@ -264,14 +264,14 @@ void cpxifft(cpx_t *cpx, int n) @trusted
 }
 
 
-void cpxifft(cpx_t *cpx, size_t n) @trusted
+void cpxifft(cpx_t *cpx, size_t n)
 {
     //cpxifft(cpx, n.to!int());
     cpxifft(cpx[0 .. n]);
 }
 
 
-void cpxifft(cpx_t[] cpx) @trusted
+void cpxifft(cpx_t[] cpx)
 {
     //cpxifft(cpx.ptr, cpx.length.to!int());
     traceln("called");
@@ -307,7 +307,7 @@ void cpxifft(cpx_t[] cpx) @trusted
 *          cpx_t *cpx       O   output complex array
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxcpx(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx) nothrow
+void cpxcpx(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx)
 {
     traceln("called");
     float *p=cast(float *)cpx;
@@ -320,7 +320,7 @@ void cpxcpx(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx) nothro
 }
 
 
-void cpxcpx(in short[] I, in short[] Q, double scale, cpx_t[] cpx) nothrow
+void cpxcpx(in short[] I, in short[] Q, double scale, cpx_t[] cpx)
 {
     cpxcpx(I.ptr, Q.ptr, scale, I.length, cpx.ptr);
 }
@@ -335,7 +335,7 @@ void cpxcpx(in short[] I, in short[] Q, double scale, cpx_t[] cpx) nothrow
 *          cpx_t *cpx       O   output complex array
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx) pure nothrow @trusted
+void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx)
 {
     traceln("called");
     float *p=cast(float *)cpx;
@@ -347,7 +347,7 @@ void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx) pure 
     }
 }
 
-void cpxcpxf(in float[] I, in float[] Q, double scale, cpx_t[] cpx) pure nothrow @safe
+void cpxcpxf(in float[] I, in float[] Q, double scale, cpx_t[] cpx)
 {
     cpxcpxf(I.ptr, Q.ptr, scale, I.length, cpx.ptr);
 }
@@ -432,7 +432,7 @@ void cpxpspec(cpx_t[] cpx, bool flagsum, double[] pspec)
 void dot_21(const short *a1, const short *a2, const short *b, size_t n,
                    double *d1, double *d2) nothrow
 {
-    version(Dnative){
+    version(none){
         immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b[0 .. n]);
         d1[0] = result[0][0];
         d2[0] = result[1][0];
@@ -469,7 +469,7 @@ void dot_21(in short[] a1, in short[] a2, in short[] b, double[] d1, double[] d2
 void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, size_t n,
             double *d1, double *d2) nothrow
 {
-    version(Dnative){
+    version(none){
         immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b1[0 .. n], b2[0 .. n]);
         d1[0] = result[0][0];
         d1[1] = result[0][1];
@@ -513,7 +513,7 @@ void dot_23(const short *a1, const short *a2, const short *b1,
                    const short *b2, const short *b3, size_t n, double *d1,
                    double *d2) nothrow
 {
-    version(Dnative){
+    version(none){
         immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b1[0 .. n], b2[0 .. n], b3[0 .. n]);
 
         d1[0] = result[0][0];
@@ -1131,7 +1131,7 @@ if(isInputRange!R && hasLength!R && isOutputRange!(W, ElementType!R))
 *          short  *I,*Q     O   carrier mixed data I, Q component
 * return : double               phase remainder
 *------------------------------------------------------------------------------*/
-double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, short *I, short *Q) nothrow
+double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, short *I, short *Q)
 {
     traceln("called");
 

@@ -120,7 +120,7 @@ void sdrthread(size_t index)
 {
     sdrch_t* sdr = &(sdrch[index]);
     sdrplt_t pltacq,plttrk;
-    ulong buffloc = 0, cnt = 0,loopcnt = 0;
+    size_t buffloc = 0, cnt = 0,loopcnt = 0;
     int cntsw = 0, swsync, swreset;
     double *acqpower = null;
 
@@ -146,7 +146,7 @@ void sdrthread(size_t index)
         if (!sdr.flagacq) {
             /* memory allocation */
             if (acqpower != null) free(acqpower);
-            acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft*sdr.acq.nfreq);
+            acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft * sdr.acq.nfreq).enforce();
             
             /* fft correlation */
             buffloc = sdracquisition(sdr, acqpower, cnt, buffloc);
