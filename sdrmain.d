@@ -20,7 +20,7 @@ import std.math;
 /* sdr structs */
 sdrini_t sdrini;
 sdrstat_t sdrstat;
-sdrch_t sdrch[MAXSAT];
+sdrch_t sdrch[Constant.totalSatellites];
 sdrspec_t sdrspec;
 
 double l1ca_doppler;
@@ -193,11 +193,13 @@ void sdrthread(size_t index)
                     }
                     loopcnt++;
 
-                    //if(loopcnt > 100 && isNaN(l1ca_doppler)){
-                    //    l1ca_doppler = sdr.trk.carrfreq;
-                    //    writeln("doppler find, so end");
-                    //    return;
-                    //}
+
+                    version(L2Develop)
+                        if(loopcnt > 100 && isNaN(l1ca_doppler)){
+                            l1ca_doppler = sdr.trk.carrfreq;
+                            writeln("doppler find, so end");
+                            return;
+                        }
                 }
 
                 if(!sdr.flagnavsync || swsync)

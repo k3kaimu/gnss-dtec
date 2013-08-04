@@ -1,11 +1,22 @@
 //##& set waitTime 10000            // 10s
 //##$ dmd -m64 -unittest -O -release -inline -version=MAIN_IS_SDRMAIN_MAIN sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
 
-//　-version=Dnative -debug=PrintBuffloc -version=TRACE  -O -release -inline
+//　-version=Dnative -debug=PrintBuffloc -version=TRACE  -O -release -inline  -version=NavigationDecode -version=L2Develop -version=useFFTW
 /*
 Change Log:
 2013/07/18          単一スレッド化
 2013/07/16 v2.0beta バッファ読み込みを、sdrスレッドが操るように修正
+
+version指定一覧
++ Dnative               なるべくD言語ネイティブなプログラムにします。(外部のdllをなるべく触らないということ)
++ TRACE                 trace, traceln, traceflnが有効になります。
++ MAIN_IS_SDRMAIN_MAIN  プログラムのmain関数は、sdrmain.dのmain関数になります。
++ NavigationDecode      航法メッセージを解読しようとします(L1CAのみ)
++ L2Develop             L2CM用のSDR開発のためのバージョン
++ useFFTW               FFTの計算にFFTWを使用します(デフォルトだと、std.numeric.Fftを使用します)
+
+debug指定一覧
++ PrintBuffloc          すでにどれだけデータを読み込んだかを表示します。
 */
 
 module sdr;
@@ -22,25 +33,51 @@ import std.math;
 import std.format : formattedWrite;
 import std.array  : appender;
 import std.traits : isSomeString;
+import core.memory;
+
+
+public import sdracq,
+              sdrcmn,
+              sdrcode,
+              sdrinit,
+              sdrmain,
+              sdrnav,
+              sdrout,
+              sdrplot,
+              sdrrcv,
+              stereo,
+              sdrspectrum,
+              sdrtrk,
+              util.range,
+              util.trace,
+              util.serialize;
+
+
+// msgpack-d
 pragma(lib, "msgpack_x64.lib");
 
-template isVersion(string vname)
-{
-    mixin(`version(` ~ vname ~ `){ enum isVersion = true; } else { enum isVersion = false; }`);
-}
 
 /* FEC */
 //pragma(lib, "libfec.a");
 //public import fec;
 
 /* FFT */
-static if(!isVersion!"useFFTW"){
+static if(!isVersion!"Dnative"){
     public import fftw;
     pragma(lib, "libfftw3f-3.lib");
 }
 
-/* RTKLIB */
-public import rtklib;
+
+enum NavSystem
+{
+    GPS = 0x01,
+    SBAS = 0x02,
+    GLONASS = 0x04,
+    Galileo = 0x08,
+    QZSS = 0x10,
+    BeiDou = 0x20,
+}
+
 
 /* constants -----------------------------------------------------------------*/
 immutable DPI = 2 * PI;
@@ -81,8 +118,18 @@ immutable FILE_BUFFSIZE = 8192;
 immutable NFFTTHREAD = 4;
 
 struct Constant{
+    // this struct is used as name space
+    @disable this();
+    @disable this(this);
+
     struct L1CA{
+        // this struct is used as name space
+        @disable this();
+
         struct Acquisition{
+            // this struct is used as name space
+            @disable this();
+
             enum INTG = 4;
             enum HBAND = 5000;
             enum STEP = 250;
@@ -94,6 +141,9 @@ struct Constant{
 
 
         struct Navigation{
+            // this struct is used as name space
+            @disable this();
+
             enum BITTH = 5;
             enum RATE = 20;
             enum FLEN = 300;
@@ -104,11 +154,18 @@ struct Constant{
 
 
         enum LOOP_MS = 10;
+        enum freq = 10.23e6 * 2 * 77;
     }
 
 
     struct L1SAIF{
+        // this struct is used as name space
+        @disable this();
+
         struct Acquisition{
+            // this struct is used as name space
+            @disable this();
+
             enum INTG = 4;
             enum HBAND = 5000;
             enum STEP = 250;
@@ -120,6 +177,9 @@ struct Constant{
 
 
         struct Navigation{
+            // this struct is used as name space
+            @disable this();
+
             enum BITTH = 5;
             enum RATE = 2;
             enum FLEN = 500;
@@ -129,11 +189,15 @@ struct Constant{
         }
 
         enum LOOP_MS = 10;
+        enum freq = 10.23e6 * 2 * 77;
     }
 
 
     struct L2CM{
         struct Acquisition{
+            // this struct is used as name space
+            @disable this();
+
             enum INTG = 4;
             enum HBAND = 40;
             enum STEP = 2;
@@ -144,10 +208,17 @@ struct Constant{
         }
 
         enum LOOP_MS = 10;
+        enum freq = 10.23e6 * 2 * 60;
     }
 
     struct Tracking{
+        // this struct is used as name space
+        @disable this();
+
         struct Parameter1{
+            // this struct is used as name space
+            @disable this();
+
             enum CDN = 3;
             enum CP = 12;
             enum DLLB = 1.0;
@@ -158,6 +229,9 @@ struct Constant{
 
 
         struct Parameter2{
+            // this struct is used as name space
+            @disable this();
+
             enum CDN = 3;
             enum CP = 12;
             enum DLLB = 0.5;
@@ -168,6 +242,9 @@ struct Constant{
     }
 
     struct Observation{
+        // this struct is used as name space
+        @disable this();
+
         enum PTIMING = 68.802;
         enum OBSINTERPN = 8;
         enum SNSMOOTHMS = 100;
@@ -175,6 +252,9 @@ struct Constant{
 
 
     struct CodeGeneration{
+        // this struct is used as name space
+        @disable this();
+
         enum MAXGPSSATNO = 210;
         enum MAXGALSATNO = 50;
         enum MAXCMPSATNO = 37;
@@ -209,7 +289,111 @@ struct Constant{
     enum LOOP_MS_L1CA = 10;
     enum LOOP_MS_SBAS = 2;
     enum LOOP_MS_LEX = 4;
+
+
+    /* RTKLIB */
+    private import rtklib;
+
+    enum totalSatellites = MAXSAT;
+
+
+    struct GPS{
+        // this struct is used as name space
+        @disable this();
+
+        struct PRN{
+            // this struct is used as name space
+            @disable this();
+
+            enum min = MINPRNGPS;
+            enum max = MAXPRNGPS;
+        }
+
+        enum totalSatellites = NSATGPS;
+    }
+
+
+    struct GLONASS{
+        // this struct is used as name space
+        @disable this();
+
+        struct PRN{
+            // this struct is used as name space
+            @disable this();
+
+            enum min = MINPRNGLO;
+            enum max = MAXPRNGLO;
+        }
+
+        enum totalSatellites = NSATGLO;
+    }
+
+
+    struct Galileo{
+        // this struct is used as name space
+        @disable this();
+
+        struct PRN{
+            // this struct is used as name space
+            @disable this();
+
+            enum min = MINPRNGAL;
+            enum max = MAXPRNGAL;
+        }
+
+        enum totalSatellites = NSATGAL;
+    }
+
+
+    struct QZSS{
+        // this struct is used as name space
+        @disable this();
+
+        struct PRN{
+            // this struct is used as name space
+            @disable this();
+
+            enum min = MINPRNQZS;
+            enum max = MAXPRNQZS;
+        }
+
+        enum totalSatellites = NSATQZS;
+    }
+
+
+    struct BeiDou{
+        // this struct is used as name space
+        @disable this();
+
+        struct PRN{
+            // this struct is used as name space
+            @disable this();
+
+            enum min = MINPRNCMP;
+            enum max = MAXPRNCMP;
+        }
+
+        enum totalSatellites = NSATCMP;
+    }
+
+
+    struct SBAS{
+        // this struct is used as name space
+        @disable this();
+
+        struct PRN{
+            // this struct is used as name space
+            @disable this();
+
+            enum min = MINPRNSBS;
+            enum max = MAXPRNSBS;
+        }
+
+        enum totalSatellites = NSATSBS;
+    }
 }
+
+public import rtklib : eph_t, obsd_t, rnxopt_t;
 
 
 enum CType
@@ -549,33 +733,134 @@ struct sdrspec_t
 }
 
 
-void SDRPRINTF(T...)(T args)
+/**
+次の2つのコードは等しくなります。
+
+Example:
+-------
+version(Test)
+    someCodeA();
+else
+    someCodeB();
+-------
+
+Example:
+-------
+static if(isVersion!"Test")
+    someCodeA();
+else
+    someCodeB();
+-------
+
+次のような場合に有用になります。
+
+Example:
+-------
+version(Test){}else
+    someCodeC();
+-------
+
+Example:
+-------
+static if(!isVersion!Test)
+    someCodeC();
+-------
+*/
+template isVersion(string vname)
 {
-    writef(args);
+    mixin(`version(` ~ vname ~ `){ enum isVersion = true; } else { enum isVersion = false; }`);
 }
 
 
-import core.memory;
+/**
+指定されたデバッグモードでコンパイルされているかどうか判定します。
+modeが空の場合、コンパイラオプションでは-debugに相当します。
+*/
+template isDebugMode(string mode)
+{
+    enum bool isDebugMode = (){
+        bool b;
 
-auto malloc(size_t size)
+        static if(mode.length == 0)
+        {
+            debug
+                b = true;
+        }else
+        {
+            mixin(q{
+                debug(%s)
+                    b = true;
+            }.formattedString(mode));
+        }
+
+        return b;
+    }();
+}
+
+
+/**
+第一引数が、指定された区間に属するかどうか判定します。
+*/
+bool isInInterval(string prd, T, U...)(T value, U borders)
+if(prd.length == U.length && prd.length > 0)
+{
+    bool b = true;
+
+    static string genPredicate(char exp) pure nothrow @safe
+    {
+        switch(exp){
+            case '[': return "borders[i] <= value";
+            case '(': return "borders[i] < value";
+            case ')': return "value < borders[i]";
+            case ']': return "value <= borders[i]";
+            default:  assert(0);
+        }
+    }
+
+    foreach(i, Unused; U)
+        b = b && mixin(genPredicate(prd[i]));
+
+    return b;
+}
+
+///
+unittest
+{
+    assert(isInInterval!"["(5, 0));     // 5 は 0以上であるか -> true
+    assert(!isInInterval!"("(5, 5));    // 5 は 5より大きい   -> false
+    assert(!isInInterval!")"(5, 5));    // 5 は 5未満である  -> false
+    assert(isInInterval!"]"(5, 5));     // 5 は 5以下である  -> true
+
+    foreach(e; 0 .. 10)
+        assert(e.isInInterval!"[)"(0, 10));
+
+    assert(!10.isInInterval!"[)"(0, 10));
+    assert(!10.isInInterval!"[)]"(0, 11, 0));
+}
+
+
+alias SDRPRINTF = writef;
+
+
+auto malloc(size_t size) nothrow
 {
     return GC.malloc(size);
 }
 
 
-void free(void* p)
+void free(void* p) nothrow
 {
     GC.free(p);
 }
 
 
-void* calloc(size_t n, size_t size)
+void* calloc(size_t n, size_t size) nothrow
 {
     return GC.calloc(n * size);
 }
 
 
-ushort MAKEWORD(ubyte bLow, ubyte bHigh)
+ushort MAKEWORD(ubyte bLow, ubyte bHigh) pure nothrow @safe
 {
     return bLow | (bHigh << 8);
 }
@@ -590,99 +875,88 @@ if(isSomeString!S)
 }
 
 
-public import sdracq,
-              sdrcmn,
-              sdrcode,
-              sdrinit,
-              sdrmain,
-              sdrnav,
-              sdrout,
-              sdrplot,
-              sdrrcv,
-              stereo,
-              sdrspectrum,
-              sdrtrk,
-              util.range,
-              util.trace,
-              util.serialize;
+bool isValidPRN(int prn, NavSystem sys) pure nothrow @safe
+{
+    final switch(sys){
+      case NavSystem.GPS:       return prn.isInInterval!"[]"(Constant.GPS.PRN.min, Constant.GPS.PRN.max);
+      case NavSystem.GLONASS:   return prn.isInInterval!"[]"(Constant.GLONASS.PRN.min, Constant.GLONASS.PRN.max);
+      case NavSystem.Galileo:   return prn.isInInterval!"[]"(Constant.Galileo.PRN.min, Constant.Galileo.PRN.max);
+      case NavSystem.QZSS:      return prn.isInInterval!"[]"(Constant.QZSS.PRN.min, Constant.QZSS.PRN.max);
+      case NavSystem.BeiDou:    return prn.isInInterval!"[]"(Constant.BeiDou.PRN.min, Constant.BeiDou.PRN.max);
+      case NavSystem.SBAS:      return prn.isInInterval!"[]"(Constant.SBAS.PRN.min, Constant.SBAS.PRN.max);
+    }
+    assert(0);
+}
 
 
 // rtklibからの輸入
-int satno(NavSystem sys, int prn)
-{
-    enforce(prn !<= 0);
-
-    final switch (sys) {
-      case NavSystem.GPS:
-        enforce(!(prn<MINPRNGPS||MAXPRNGPS<prn));
-        return prn-MINPRNGPS+1;
-
-      case NavSystem.GLONASS:
-        enforce(!(prn<MINPRNGLO||MAXPRNGLO<prn));
-        return NSATGPS+prn-MINPRNGLO+1;
-
-      case NavSystem.Galileo:
-        enforce(!(prn<MINPRNGAL||MAXPRNGAL<prn));
-        return NSATGPS+NSATGLO+prn-MINPRNGAL+1;
-
-      case NavSystem.QZSS:
-        enforce(!(prn<MINPRNQZS||MAXPRNQZS<prn));
-        return NSATGPS+NSATGLO+NSATGAL+prn-MINPRNQZS+1;
-
-      case NavSystem.BeiDou:
-        enforce(!(prn<MINPRNCMP||MAXPRNCMP<prn));
-        return NSATGPS+NSATGLO+NSATGAL+NSATQZS+prn-MINPRNCMP+1;
-
-      case NavSystem.SBAS:
-        enforce(!(prn<MINPRNSBS||MAXPRNSBS<prn));
-        return NSATGPS+NSATGLO+NSATGAL+NSATQZS+NSATCMP+prn-MINPRNSBS+1;
+int satno(NavSystem sys, int prn) pure nothrow @safe
+in{
+    assert(prn.isValidPRN(sys));
+}
+body{
+    with(Constant) final switch (sys) {
+      case NavSystem.GPS:       return prn - GPS.PRN.min + 1;
+      case NavSystem.GLONASS:   return GPS.totalSatellites + prn - GLONASS.PRN.min + 1;
+      case NavSystem.Galileo:   return GPS.totalSatellites + GLONASS.totalSatellites + prn - Galileo.PRN.min + 1;
+      case NavSystem.QZSS:      return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + prn - BeiDou.PRN.min+ 1;
+      case NavSystem.BeiDou:    return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + QZSS.totalSatellites + prn - BeiDou.PRN.min + 1;
+      case NavSystem.SBAS:      return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + QZSS.totalSatellites + BeiDou.totalSatellites + prn - SBAS.PRN.min + 1;
     }
-
-    return 0;
+    assert(0);
 }
 
 
 // rtklibからの輸入
 NavSystem satsys(int sat, out int prn)
 in{
-    assert(0 < sat && sat < MAXSAT);
+    assert(0 < sat && sat < Constant.totalSatellites);
 }
 body{
-    if(sat <= NSATGPS){
-        prn = sat + MINPRNGPS - 1;
-        return NavSystem.GPS;
+    with(Constant){
+        if(sat <= GPS.totalSatellites){
+            prn = sat + GPS.PRN.min - 1;
+            return NavSystem.GPS;
+        }
+
+        sat -= GPS.totalSatellites;
+        
+        if(sat <= GLONASS.totalSatellites){
+            prn = sat + GLONASS.PRN.min - 1;
+            return NavSystem.GLONASS;
+        }
+
+        sat -= GLONASS.totalSatellites;
+
+        if(sat <= Galileo.totalSatellites){
+            prn = sat + Galileo.PRN.min - 1;
+            return NavSystem.Galileo;
+        }
+
+        sat -= Galileo.totalSatellites;
+
+        if(sat <= QZSS.totalSatellites){
+            prn = sat + QZSS.PRN.min - 1;
+            return NavSystem.QZSS;
+        }
+
+        sat -= QZSS.totalSatellites;
+
+        if(sat <=  BeiDou.totalSatellites){
+            prn = sat + BeiDou.PRN.min - 1;
+            return NavSystem.BeiDou;
+        }
+
+        sat -= BeiDou.totalSatellites;
+
+        if(sat <= SBAS.totalSatellites){
+            prn = sat + SBAS.PRN.min - 1;
+            return NavSystem.SBAS;
+        }
+
+        enforce(0);
+        assert(0);
     }
-
-    sat -= NSATGPS;
-    
-    if(sat <= NSATGLO){
-        prn = sat + MINPRNGLO - 1;
-        return NavSystem.GLONASS;
-    }
-
-    sat -= NSATGLO;
-
-    if(sat <= NSATGAL){
-        prn = sat + MINPRNGAL - 1;
-        return NavSystem.Galileo;
-    }
-
-    sat -= NSATGAL;
-
-    if(sat <= NSATQZS){
-        prn = sat + MINPRNQZS - 1;
-        return NavSystem.QZSS;
-    }
-
-    sat -= NSATCMP;
-
-    if(sat <= NSATCMP){
-        prn = sat + MINPRNCMP - 1;
-        return NavSystem.BeiDou;
-    }
-
-    enforce(0);
-    assert(0);
 }
 
 
@@ -691,23 +965,13 @@ string satno2Id(int sat)
 {
     int prn = void;
     final switch (satsys(sat, prn)) {
-        case NavSystem.GPS:
-            return "G%02d".formattedString(prn - MINPRNGPS + 1);
-
-        case NavSystem.GLONASS:
-            return "R%02d".formattedString(prn - MINPRNGLO + 1);
-
-        case NavSystem.Galileo:
-            return "E%02d".formattedString(prn - MINPRNGAL + 1);
-
-        case NavSystem.QZSS:
-            return "J%02d".formattedString(prn - MINPRNQZS + 1);
-
-        case NavSystem.BeiDou:
-            return "C%02d".formattedString(prn - MINPRNCMP + 1);
-
-        case NavSystem.SBAS:
-            return "%03d".formattedString(prn);
+        case NavSystem.GPS:     return "G%02d".formattedString(prn - Constant.GPS.PRN.min + 1);
+        case NavSystem.GLONASS: return "R%02d".formattedString(prn - Constant.GLONASS.PRN.min + 1);
+        case NavSystem.Galileo: return "E%02d".formattedString(prn - Constant.Galileo.PRN.min + 1);
+        case NavSystem.QZSS:    return "J%02d".formattedString(prn - Constant.QZSS.PRN.min + 1);
+        case NavSystem.BeiDou:  return "C%02d".formattedString(prn - Constant.BeiDou.PRN.min + 1);
+        case NavSystem.SBAS:    return "%03d".formattedString(prn);
     }
+
     assert(0);
 }

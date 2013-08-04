@@ -183,7 +183,7 @@ void dll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
     sdr.trk.codeNco += prm.dllaw * (codeErr - sdr.trk.codeErr)
                      + prm.dllw2 * prm.dt * codeErr;
     
-    sdr.trk.codefreq = sdr.crate - sdr.trk.codeNco + (sdr.trk.carrfreq - sdr.f_if) / (FREQ1 / sdr.crate); /* carrier aiding */
+    sdr.trk.codefreq = sdr.crate - sdr.trk.codeNco + (sdr.trk.carrfreq - sdr.f_if) / (Constant.L1CA.freq / sdr.crate); /* carrier aiding */
     sdr.trk.codeErr = codeErr;
 }
 

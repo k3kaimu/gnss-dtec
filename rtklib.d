@@ -119,31 +119,22 @@ const EFACT_CMP = 1.0;
 const EFACT_SBS = 3.0;
 //C     #define SYS_NONE    0x00                /* navigation system: none */
 //C     #define SYS_GPS     0x01                /* navigation system: GPS */
-//const SYS_NONE = 0x00;
-////C     #define SYS_SBS     0x02                /* navigation system: SBAS */
-//const SYS_GPS = 0x01;
-////C     #define SYS_GLO     0x04                /* navigation system: GLONASS */
-//const SYS_SBS = 0x02;
-////C     #define SYS_GAL     0x08                /* navigation system: Galileo */
-//const SYS_GLO = 0x04;
-////C     #define SYS_QZS     0x10                /* navigation system: QZSS */
-//const SYS_GAL = 0x08;
-////C     #define SYS_CMP     0x20                /* navigation system: BeiDou */
-//const SYS_QZS = 0x10;
-////C     #define SYS_ALL     0xFF                /* navigation system: all */
-//const SYS_CMP = 0x20;
+const SYS_NONE = 0x00;
+//C     #define SYS_SBS     0x02                /* navigation system: SBAS */
+const SYS_GPS = 0x01;
+//C     #define SYS_GLO     0x04                /* navigation system: GLONASS */
+const SYS_SBS = 0x02;
+//C     #define SYS_GAL     0x08                /* navigation system: Galileo */
+const SYS_GLO = 0x04;
+//C     #define SYS_QZS     0x10                /* navigation system: QZSS */
+const SYS_GAL = 0x08;
+//C     #define SYS_CMP     0x20                /* navigation system: BeiDou */
+const SYS_QZS = 0x10;
+//C     #define SYS_ALL     0xFF                /* navigation system: all */
+const SYS_CMP = 0x20;
 
-//const SYS_ALL = 0xFF;
+const SYS_ALL = 0xFF;
 
-enum NavSystem
-{
-    GPS = 0x01,
-    SBAS = 0x02,
-    GLONASS = 0x04,
-    Galileo = 0x08,
-    QZSS = 0x10,
-    BeiDou = 0x20
-}
 
 //C     #define TSYS_GPS    0                   /* time system: GPS time */
 //C     #define TSYS_UTC    1                   /* time system: UTC */
