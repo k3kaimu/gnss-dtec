@@ -24,7 +24,8 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     immutable tmp = cast(size_t)((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf));
     sdr.currnsamp = cast(int)tmp;   // [sample/chip]
 
-    scope byte[] data = new byte[sdr.nsamp * sdr.dtype];
+    //scope byte[] data = new byte[sdr.nsamp * sdr.dtype];
+    scope byte[] data = new byte[sdr.currnsamp * sdr.dtype];
     rcvgetbuff(&sdrini, buffloc, sdr.currnsamp, sdr.ftype, sdr.dtype, data);
 
     {
