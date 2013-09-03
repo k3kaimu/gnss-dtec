@@ -912,7 +912,7 @@ body{
       case NavSystem.GPS:       return prn - GPS.PRN.min + 1;
       case NavSystem.GLONASS:   return GPS.totalSatellites + prn - GLONASS.PRN.min + 1;
       case NavSystem.Galileo:   return GPS.totalSatellites + GLONASS.totalSatellites + prn - Galileo.PRN.min + 1;
-      case NavSystem.QZSS:      return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + prn - BeiDou.PRN.min+ 1;
+      case NavSystem.QZSS:      return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + prn - QZSS.PRN.min + 1;
       case NavSystem.BeiDou:    return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + QZSS.totalSatellites + prn - BeiDou.PRN.min + 1;
       case NavSystem.SBAS:      return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + QZSS.totalSatellites + BeiDou.totalSatellites + prn - SBAS.PRN.min + 1;
     }
