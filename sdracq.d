@@ -103,8 +103,8 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
     immutable maxP = maxvd(P, sdr.acq.nfft * sdr.acq.nfreq, -1, -1, &maxi);
     ind2sub(maxi, sdr.acq.nfft, sdr.acq.nfreq, &codei, &freqi);         // codei: [0, sdr.acq.nfft), freqi: [0, sdr.acq.nfreq)
 
-    immutable exinds = (a => (a < 0) ? (a + sdr.acq.nfft) : a)(codei - 2 * sdr.nsampchip),
-              exinde = (a => (a >= sdr.acq.nfft) ? (a - sdr.acq.nfft) : a)(codei + 2 * sdr.nsampchip);
+    immutable exinds = (a => (a < 0) ? (a + sdr.nsamp) : a)(codei - 2 * sdr.nsampchip),
+              exinde = (a => (a >= sdr.nsamp) ? (a - sdr.nsamp) : a)(codei + 2 * sdr.nsampchip);
 
     immutable meanP = (&P[freqi*sdr.acq.nfft]).meanvd(sdr.acq.nfft, exinds, exinde).enforceValidNum,
               maxP2 = (&P[freqi*sdr.acq.nfft]).maxvd(sdr.acq.nfft, exinds, exinde, &maxi).enforceValidNum;
