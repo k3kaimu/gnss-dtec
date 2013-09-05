@@ -148,7 +148,7 @@ size_t calcfftnumreso(real reso, real ti) pure nothrow @safe
 * args   : int    size      I   sizee of allocation
 * return : void*                allocated pointer
 *------------------------------------------------------------------------------*/
-void* sdrmalloc(size_t size) pure nothrow @trusted
+void* sdrmalloc(size_t size) pure nothrow
 {
     return GC.malloc(size);
 }
@@ -159,7 +159,7 @@ void* sdrmalloc(size_t size) pure nothrow @trusted
 * args   : void   *p        I/O input/output complex data
 * return : none
 *------------------------------------------------------------------------------*/
-void sdrfree(void *p) pure nothrow @trusted
+void sdrfree(void *p) pure nothrow
 {
     GC.free(p);
 }
@@ -171,7 +171,7 @@ void sdrfree(void *p) pure nothrow @trusted
 * return : cpx_t*               allocated pointer
 *------------------------------------------------------------------------------*/
 /**/
-cpx_t *cpxmalloc(size_t n) pure nothrow @trusted
+cpx_t *cpxmalloc(size_t n) pure nothrow
 {
     return cast(cpx_t*)GC.malloc(cpx_t.sizeof * n + 32);
 }
@@ -182,7 +182,7 @@ cpx_t *cpxmalloc(size_t n) pure nothrow @trusted
 * args   : cpx_t  *cpx      I/O input/output complex data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxfree(cpx_t *cpx) pure nothrow @trusted
+void cpxfree(cpx_t *cpx) pure nothrow
 {
     GC.free(cpx);
 }
@@ -195,7 +195,7 @@ void cpxfree(cpx_t *cpx) pure nothrow @trusted
 * return : none
 *------------------------------------------------------------------------------*/
 /**/
-void cpxfft(cpx_t *cpx, int n) @trusted
+void cpxfft(cpx_t *cpx, int n)
 {
 /+
     traceln("called");
@@ -210,15 +210,39 @@ void cpxfft(cpx_t *cpx, int n) @trusted
 }
 
 
-void cpxfft(cpx_t *cpx, size_t n) @trusted
-{
+void cpxfft(cpx_t *cpx, size_t n)
+in{
+    foreach(e; cpx[0 .. n]){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+out{
+    foreach(e; cpx[0 .. n]){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+body{
     //cpxfft(cpx, n.to!int());
     cpxfft(cpx[0 .. n]);
 }
 
 
-void cpxfft(cpx_t[] cpx) @trusted
-{
+void cpxfft(cpx_t[] cpx)
+in{
+    foreach(e; cpx){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+out{
+    foreach(e; cpx){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+body{
     traceln("called");
 
   version(Dnative){
@@ -250,7 +274,19 @@ void cpxfft(cpx_t[] cpx) @trusted
 * return : none
 *------------------------------------------------------------------------------*/
 void cpxifft(cpx_t *cpx, int n)
-{
+in{
+    foreach(e; cpx[0 .. n]){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+out{
+    foreach(e; cpx[0 .. n]){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+body{
 /+
     traceln("called");
     fftwf_plan p;
@@ -265,14 +301,38 @@ void cpxifft(cpx_t *cpx, int n)
 
 
 void cpxifft(cpx_t *cpx, size_t n)
-{
+in{
+    foreach(e; cpx[0 .. n]){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+out{
+    foreach(e; cpx[0 .. n]){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+body{
     //cpxifft(cpx, n.to!int());
     cpxifft(cpx[0 .. n]);
 }
 
 
 void cpxifft(cpx_t[] cpx)
-{
+in{
+    foreach(e; cpx){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+out{
+    foreach(e; cpx){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+body{
     //cpxifft(cpx.ptr, cpx.length.to!int());
     traceln("called");
 
@@ -308,7 +368,13 @@ void cpxifft(cpx_t[] cpx)
 * return : none
 *------------------------------------------------------------------------------*/
 void cpxcpx(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx)
-{
+out{
+    foreach(e; cpx[0 .. n]){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+body{
     traceln("called");
     float *p=cast(float *)cpx;
     int i;
@@ -336,7 +402,13 @@ void cpxcpx(in short[] I, in short[] Q, double scale, cpx_t[] cpx)
 * return : none
 *------------------------------------------------------------------------------*/
 void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx)
-{
+out{
+    foreach(e; cpx[0 .. n]){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+body{
     traceln("called");
     float *p=cast(float *)cpx;
     int i;
@@ -348,7 +420,13 @@ void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx)
 }
 
 void cpxcpxf(in float[] I, in float[] Q, double scale, cpx_t[] cpx)
-{
+out{
+    foreach(e; cpx){
+        assert(!isNaN(e.re));
+        assert(!isNaN(e.im));
+    }
+}
+body{
     cpxcpxf(I.ptr, Q.ptr, scale, I.length, cpx.ptr);
 }
 
@@ -364,7 +442,12 @@ void cpxcpxf(in float[] I, in float[] Q, double scale, cpx_t[] cpx)
 * return : none
 *------------------------------------------------------------------------------*/
 void cpxconv(cpx_t *cpxa, cpx_t *cpxb, size_t m, size_t n, bool flagsum, double *conv)
-{
+out{
+    foreach(e; conv[0 .. n]){
+        assert(!isNaN(e));
+    }
+}
+body{
     traceln("called");
     float* p, q;
     float real_, m2 = cast(float)m*m;
@@ -822,15 +905,22 @@ float maxvf(in float[] data, int exinds, int exinde, out int ind) pure nothrow
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
 double maxvd(const double *data, size_t n, int exinds, int exinde, int *ind) pure nothrow
-{
-    int i;
+in{
+    assert(n <= int.max);
+    foreach(e; data[0 .. n])
+        assert(!isNaN(e));
+}
+out(result){
+    assert(!isNaN(result));
+}
+body{
     double max=data[0];
     *ind=0;
-    for(i=1;i<n;i++) {
+    foreach(i; 1 .. n) {
         if ((exinds<=exinde)&&(i<exinds||i>exinde)||((exinds>exinde)&&(i<exinds&&i>exinde))) {
             if (max<data[i]) {
                 max=data[i];
-                *ind=i;
+                *ind = cast(int)i;
             }
         }
     }
@@ -854,8 +944,16 @@ double maxvd(in double[] data, int exinds, int exinde, out int ind) pure nothrow
 * note   : mean value is calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-double meanvd(const double *data, int n, int exinds, int exinde) pure nothrow
-{
+double meanvd(const double *data, int n, int exinds, int exinde) /*pure nothrow*/
+in{
+    foreach(e; data[0 .. n])
+        assert(!isNaN(e));
+}
+out(result){
+    assert(!isNaN(result));
+}
+body{
+    debug(AcqDebug) writefln("exind: arr.length = %s, arr[%s .. %s];", n, exinds, exinde);
     int i,ne=0;
     double mean=0.0;
     for(i=0;i<n;i++) {
@@ -863,6 +961,7 @@ double meanvd(const double *data, int n, int exinds, int exinde) pure nothrow
         else if ((exinds>exinde)&&(i<exinds&&i>exinde)) mean+=data[i];
         else ne++;
     }
+
     return mean/(n-ne);
 }
 
@@ -1009,9 +1108,21 @@ body{
 * return : none
 *------------------------------------------------------------------------------*/
 void ind2sub(int ind, int nx, int ny, int *subx, int *suby) pure nothrow @safe
-{
-    *subx = ind%nx;
-    *suby = ny*ind/(nx*ny);
+in{
+    assert(ind >= 0);
+    assert(nx >= 0);
+    assert(ny >= 0);
+}
+out{
+    assert(*subx >= 0);
+    assert(*subx < nx);
+    assert(*suby >= 0);
+    assert(*suby < ny);
+}
+body{
+    *subx = ind % nx;
+    *suby = cast(int)(((cast(long)ny) * ind)/(nx*ny));      // 実際には、ny*ind/(nx*ny)
+                                                            // castはoverflow対策
 }
 
 

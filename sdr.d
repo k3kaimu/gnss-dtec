@@ -1,7 +1,7 @@
 //##& set waitTime 10000            // 10s
-//##$ dmd -m64 -unittest -O -release -inline -version=MAIN_IS_SDRMAIN_MAIN -version=Dnative sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
+//##$ dmd -m64 -unittest -O -inline -version=useFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
 
-//　-version=Dnative -debug=PrintBuffloc -version=TRACE  -O -release -inline  -version=NavigationDecode -version=L2Develop -version=useFFTW
+//　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline  -version=NavigationDecode -version=L2Develop -version=useFFTW
 /*
 Change Log:
 2013/07/18          単一スレッド化
@@ -311,11 +311,11 @@ struct Constant{
 
 
     struct GPS{
-        // this struct is used as name space
+        // this struct is used as a name space
         @disable this();
 
         struct PRN{
-            // this struct is used as name space
+            // this struct is used as a name space
             @disable this();
 
             enum min = MINPRNGPS;
@@ -327,11 +327,11 @@ struct Constant{
 
 
     struct GLONASS{
-        // this struct is used as name space
+        // this struct is used as a name space
         @disable this();
 
         struct PRN{
-            // this struct is used as name space
+            // this struct is used as a name space
             @disable this();
 
             enum min = MINPRNGLO;
@@ -343,11 +343,11 @@ struct Constant{
 
 
     struct Galileo{
-        // this struct is used as name space
+        // this struct is used as a name space
         @disable this();
 
         struct PRN{
-            // this struct is used as name space
+            // this struct is used as a name space
             @disable this();
 
             enum min = MINPRNGAL;
@@ -359,11 +359,11 @@ struct Constant{
 
 
     struct QZSS{
-        // this struct is used as name space
+        // this struct is used as a name space
         @disable this();
 
         struct PRN{
-            // this struct is used as name space
+            // this struct is used as a name space
             @disable this();
 
             enum min = MINPRNQZS;
@@ -375,11 +375,11 @@ struct Constant{
 
 
     struct BeiDou{
-        // this struct is used as name space
+        // this struct is used as a name space
         @disable this();
 
         struct PRN{
-            // this struct is used as name space
+            // this struct is used as a name space
             @disable this();
 
             enum min = MINPRNCMP;
@@ -391,11 +391,11 @@ struct Constant{
 
 
     struct SBAS{
-        // this struct is used as name space
+        // this struct is used as a name space
         @disable this();
 
         struct PRN{
-            // this struct is used as name space
+            // this struct is used as a name space
             @disable this();
 
             enum min = MINPRNSBS;
