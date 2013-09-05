@@ -941,7 +941,7 @@ body{
 void ind2sub(int ind, int nx, int ny, int *subx, int *suby)
 {
     *subx = ind%nx;
-    *suby = ny*ind/(nx*ny);
+    *suby = cast(int)((cast(long)ny)*ind/(nx*ny));
 }
 
 
