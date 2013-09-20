@@ -8,7 +8,11 @@ import sdrcmn;
 
 import std.math;
 import std.stdio;
-import util.numeric;
+
+import std.algorithm;
+import std.range;
+import std.conv;
+import std.datetime;
 
 
 /* sdr acquisition function -----------------------------------------------------
@@ -36,27 +40,19 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
 
         foreach(i; 0 .. sdr.acq.intg){
 
-            debug(AcqDebug) sdr.ctype == CType.L2CM && writefln("%s(%s): writefln called", __FILE__, __LINE__);
-
             /* get new 1ms data */
             rcvgetbuff(&sdrini, buffloc, sdr.acq.nfft, sdr.ftype, sdr.dtype, data);
             buffloc += sdr.acq.nfft;
             buffloc += (sdr.nsamp - sdr.acq.nfft % sdr.nsamp) % sdr.acq.nfft;
 
-            debug(AcqDebug) sdr.ctype == CType.L2CM && writefln("%s(%s): writefln called", __FILE__, __LINE__);
-
             /* fft correlation */
             pcorrelator(data, sdr.dtype, sdr.ti, sdr.acq.nfft, sdr.acq.freq, sdr.acq.nfreq, sdr.crate, sdr.acq.nfft, sdr.xcode, power);
-
-            debug(AcqDebug) sdr.ctype == CType.L2CM && writefln("%s(%s): writefln called", __FILE__, __LINE__);
 
             /* check acquisition result */
             if (checkacquisition(power, sdr)) {
                 sdr.flagacq = ON;
                 break;
             }
-
-            debug(AcqDebug) sdr.ctype == CType.L2CM && writefln("%s(%s): writefln called", __FILE__, __LINE__);
         }
     }
 
@@ -99,21 +95,54 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
 {
     traceln("called");
     int maxi, codei, freqi;
+    static size_t n = 0;
     
-    immutable maxP = maxvd(P, sdr.acq.nfft * sdr.acq.nfreq, -1, -1, &maxi);
-    ind2sub(maxi, sdr.acq.nfft, sdr.acq.nfreq, &codei, &freqi);         // codei: [0, sdr.acq.nfft), freqi: [0, sdr.acq.nfreq)
+    //immutable maxP = maxvd(P, sdr.acq.nfft * sdr.acq.nfreq, -1, -1, &maxi);
+    //ind2sub(maxi, sdr.acq.nfft, sdr.acq.nfreq, &codei, &freqi);
+    
+    double maxP = 0.0;
+    foreach(i; 0 .. sdr.acq.nfreq){
+        int tmpi = void;
+        auto tmpP = maxvd(&P[i * sdr.acq.nfft], sdr.nsamp, -1, -1, &tmpi);
 
-    immutable exinds = (a => (a < 0) ? (a + sdr.nsamp) : a)(codei - 2 * sdr.nsampchip),
-              exinde = (a => (a >= sdr.nsamp) ? (a - sdr.nsamp) : a)(codei + 2 * sdr.nsampchip);
+        if(tmpP > maxP){
+            maxP = tmpP;
+            freqi = i;
+            codei = tmpi;
+        }
+    }
 
-    immutable meanP = (&P[freqi*sdr.acq.nfft]).meanvd(sdr.acq.nfft, exinds, exinde).enforceValidNum,
-              maxP2 = (&P[freqi*sdr.acq.nfft]).maxvd(sdr.acq.nfft, exinds, exinde, &maxi).enforceValidNum;
+    int submaxi = void;
+    //ind2sub(maxi, sdr.acq.nfft, sdr.acq.nfreq, &codei, &freqi);
+    immutable exinds = (a => (a < 0) ? (a + sdr.nsamp) : a)(codei - 4 * sdr.nsampchip),
+              exinde = (a => (a >= sdr.nsamp) ? (a - sdr.nsamp) : a)(codei + 4 * sdr.nsampchip),
+              meanP = meanvd(&P[freqi*sdr.acq.nfft], sdr.nsamp, exinds, exinde),
+              maxP2 = maxvd(&P[freqi*sdr.acq.nfft], sdr.nsamp, exinds, exinde, &submaxi);
+
+    //if(sdr.ctype == CType.L2CM){
+    {
+        auto temp = P[freqi * sdr.acq.nfft .. (freqi + 1) * sdr.acq.nfft].zip(iota(size_t.max)).array().dup;
+        temp.sort!"a[0] > b[0]"();
+        ++n;
+        auto f = File("result_" ~ sdr.ctype.to!string ~ "_" ~ n.to!string() ~ "_" ~ Clock.currTime.toISOString() ~ ".csv", "w");
+
+        foreach(e; temp[0 .. 1024].sort!"a[1] < b[1]"())
+            f.writefln("%s, %s,", e[1], e[0]);
+
+        writefln("maxi = %s, submaxi = %s", maxi, submaxi);
+        //assert(0);
+    }
+    //}
+
+
+    sdr.ctype == CType.L2CM && writefln("codei = %s, %s[%s, %s]%s", codei, sdr.nsamp, exinds, exinde, sdr.acq.nfft);
+    debug(AcqDebug) writefln("exind: [%s, %s]", exinds, exinde);
 
     /* C/N0 calculation */
-    sdr.acq.cn0 = 10 * log10(maxP / meanP / sdr.ctime).enforceValidNum;
+    sdr.acq.cn0 = 10 * log10(maxP / meanP / sdr.ctime);
 
     /* peak ratio */
-    sdr.acq.peakr = (maxP / maxP2).enforceValidNum;
+    sdr.acq.peakr = maxP / maxP2;
     sdr.acq.acqcodei = codei;
     sdr.acq.acqfreq = sdr.acq.freq[freqi];
 
@@ -146,34 +175,25 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] d
           dataQ = new short[m],
           datax = new cpx_t[m];
 
-    debug(AcqDebug) dtype == DType.IQ && writefln("%s(%s): writefln called", __FILE__, __LINE__);
-
     /* zero padding */
     dataR[] = 0;
     dataR[0 .. n * dtype] = data[0 .. n * dtype];
 
     foreach(i; 0 .. nfreq){
         // このtracingの2行をなくすと、最適化コンパイル(-O)時に正常に動作しなくなる。
-        // コンパイラのバグなので、自分では修正不可
+        // 外部のFFTWを使っているのが原因だと思われる。
+        // コンパイラのバグなので、FFTWを使っている限りは自分では修正不可
         immutable tmp = tracing;
         scope(exit) tracing = tmp;
-
-        debug(AcqDebug) dtype == DType.IQ && writefln("%s(%s): writefln called", __FILE__, __LINE__);
 
         /* mix local carrier */
         mixcarr(dataR, dtype, ti, m, freq[i], 0.0, dataI.ptr, dataQ.ptr);
     
-        debug(AcqDebug) dtype == DType.IQ && writefln("%s(%s): writefln called", __FILE__, __LINE__);
-
         /* to complex */
         cpxcpx(dataI.ptr, dataQ.ptr, CSCALE / m, m, datax.ptr);
     
-        debug(AcqDebug) dtype == DType.IQ && writefln("%s(%s): writefln called", __FILE__, __LINE__);
-
         /* convolution */
         cpxconv(datax.ptr, codex, m, n, 1, &P[i*n]);
-
-        debug(AcqDebug) dtype == DType.IQ && writefln("%s(%s): writefln called", __FILE__, __LINE__);
     }
 }
 
