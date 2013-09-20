@@ -21,7 +21,7 @@ immutable Time = 1;
 
 version(SignalGenerate):
 
-import sdr : sdrini_t;
+import sdr : sdrini_t, CType;
 import sdrcode : gencode;
 import sdrinit : readIniFile, checkInitValue;
 import util.trace : tracing;
@@ -131,10 +131,12 @@ void main(string[] args)
     string iniPath = "gnss-sdrcli.ini";
     size_t iniIndex = 0;
     string output;
+    real totalTime = 1;
 
     getopt(args,
            "ini", &iniPath,
-           "idx", &iniIndex);
+           "idx", &iniIndex,
+           "time", &totalTime);
 
     tracing = false;
 
@@ -152,10 +154,12 @@ void main(string[] args)
         auto signal = .signal(ini, iniIndex);
 
         auto app = appender!(ubyte[])();
-        foreach(e; signal.infRange.take(signal.timeToIdx(Time).to!size_t()))
+        foreach(e; signal.infRange.take(signal.timeToIdx(totalTime).to!size_t()))
         {
             scope(failure) writeln("fail %s(%s)", __FILE__, __LINE__);
             app.put(cast(ubyte)(cast(byte)e));
+            if(ini.ctype[iniIndex] == CType.L2CM)
+                app.put(cast(ubyte)0);
 
             if(app.data.length > 1024 * 1024){
                 file.rawWrite(app.data);

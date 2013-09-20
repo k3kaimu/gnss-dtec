@@ -4,6 +4,7 @@ import sdr;
 import msgpack;
 import std.file;
 import std.stdio;
+import std.format;
 
 
 struct PlotObject
@@ -19,6 +20,34 @@ struct PlotObject
     double scale = 0;
     int pltno;
     double pltms = 0;
+    double[] xrange;
+    double[] yrange;
+    string xlabel;
+    string ylabel;
+    string title;
+
+
+    string toString() const
+    {
+        return formattedString(`PlotObject{
+    int nx              = %s;
+    int ny              = %s;
+    double[] x          = %s;
+    double[] y          = %s;
+    double[] z          = %s;
+    PlotType type       = PlotType.%s;
+    int skip            = %s;
+    bool flagabs        = %s;
+    double scale = 0    = %s;
+    int pltno           = %s;
+    double pltms = 0    = %s;
+    double[] xrange     = %s;
+    double[] yrange     = %s;
+    string xlabel       = "%s";
+    string ylabel       = "%s";
+    string title        = "%s";
+}`, nx, ny, x, y, z, type, skip, flagabs, scale, pltno, pltms, xrange, yrange, xlabel, ylabel, title);
+    }
 }
 
 

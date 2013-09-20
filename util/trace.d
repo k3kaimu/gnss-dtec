@@ -11,6 +11,7 @@ module util.trace;
 import std.conv : to;
 import std.stdio;
 import std.traits;
+import std.typecons;
 
 
 /**
@@ -106,4 +107,20 @@ ctTrace();          // コンパイル時にファイルと行数が出力され
 void ctTrace(string file = __FILE__, size_t line = __LINE__)()
 {
     pragma(msg, file ~ "(" ~ line.to!string() ~ "): ");
+}
+
+
+void csvOutput(T)(T[] data, string filename)
+{
+    auto file = File(filename, "w");
+    static if(is(T : XL!XT, alias XL, XT...) && is(XL == std.typecons.Tuple)){
+        foreach(e; data){
+            foreach(ee; e.tupleof)
+                file.writef("%s,", ee);
+            file.writeln();
+        }
+    }else{
+        foreach(e; data)
+            file.writefln("%s,", e);
+    }
 }

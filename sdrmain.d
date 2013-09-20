@@ -92,8 +92,9 @@ void startsdr()
     sdrthread(0);   // start SDR
 
     if(sdrini.nch >= 2){
-        if(sdrini.ctype[1] != sdrini.ctype[0])
-            l1ca_doppler = sdrini.f_if[0] + 1748;
+        //if(sdrini.ctype[1] != sdrini.ctype[0])
+        //    l1ca_doppler = sdrini.f_if[0] + 1748;
+        //l1ca_doppler = sdrini.f_if[0];
 
         sdrstat.buffloccnt = 0;
         sdrstat.stopflag = 0;
@@ -191,16 +192,17 @@ void sdrthread(size_t index)
                         memcpy(plttrk.y,sdr.trk.sumI,double.sizeof*(sdr.trk.ncorrp*2+1));
                         plotthread(&plttrk, "trk_" ~ sdr.satstr ~ "_");
                     }
-                    loopcnt++;
-
-
-                    version(L2Develop)
-                        if(loopcnt > 100 && isNaN(l1ca_doppler)){
-                            l1ca_doppler = sdr.trk.carrfreq;
-                            writeln("doppler find, so end");
-                            return;
-                        }
                 }
+
+                loopcnt++;
+
+
+                version(L2Develop)
+                    if(loopcnt > 100 && isNaN(l1ca_doppler)){
+                        l1ca_doppler = sdr.trk.carrfreq;
+                        writeln("doppler find, so end");
+                        return;
+                    }
 
                 if(!sdr.flagnavsync || swsync)
                     resultLFile.writefln("%s,%.9f,", buffloc, sdr.trk.L[0]);
