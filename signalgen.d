@@ -17,11 +17,10 @@ import std.getopt;
 
 
 immutable Nbits = 3;
-immutable Time = 1;
 
 version(SignalGenerate):
 
-import sdr : sdrini_t, CType;
+import sdr : sdrini_t, CType, DType;
 import sdrcode : gencode;
 import sdrinit : readIniFile, checkInitValue;
 import util.trace : tracing;
@@ -158,7 +157,7 @@ void main(string[] args)
         {
             scope(failure) writeln("fail %s(%s)", __FILE__, __LINE__);
             app.put(cast(ubyte)(cast(byte)e));
-            if(ini.ctype[iniIndex] == CType.L2CM)
+            if(ini.dtype[iniIndex] == DType.IQ)
                 app.put(cast(ubyte)0);
 
             if(app.data.length > 1024 * 1024){

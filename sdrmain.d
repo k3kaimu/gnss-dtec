@@ -101,7 +101,7 @@ void startsdr()
         rcvquit(&sdrini);
         enforce(rcvinit(&sdrini) >= 0);
         enforce(initsdrch(2, sdrini.sys[1], sdrini.sat[1], sdrini.ctype[1], sdrini.dtype[sdrini.ftype[1]-1], sdrini.ftype[1], sdrini.f_sf[sdrini.ftype[1]-1], sdrini.f_if[sdrini.ftype[1]-1],&sdrch[1]) >= 0);
-        enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[1].ctype == CType.L2CM);
+        //enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[1].ctype == CType.L2RCCM);
         //sdrthread_l2cm(1);
         sdrthread(1);
     }
@@ -198,7 +198,7 @@ void sdrthread(size_t index)
 
 
                 version(L2Develop)
-                    if(loopcnt > 100 && isNaN(l1ca_doppler)){
+                    if(loopcnt > 1000 && isNaN(l1ca_doppler)){
                         l1ca_doppler = sdr.trk.carrfreq;
                         writeln("doppler find, so end");
                         return;

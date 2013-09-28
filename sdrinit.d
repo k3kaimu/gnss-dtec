@@ -144,7 +144,7 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
             sdrini.nchL1++;
         }else if (sdrini.ctype[i] == CType.LEXS) {
             sdrini.nchL6++;
-        }else if(sdrini.ctype[i] == CType.L2CM)
+        }else if(sdrini.ctype[i] == CType.L2RCCM)
             sdrini.nchL2++;
         else
             enforce(0, "ctype: %s is not supported.".formattedString(sdrini.ctype[i]));
@@ -270,8 +270,8 @@ void initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
         }
         break;
 
-      case CType.L2CM:
-        with(Constant.L2CM.Acquisition)
+      case CType.L2RCCM:
+        with(Constant.L2C.Acquisition)
             mixin(sourceCode);
         break;
 
@@ -340,7 +340,7 @@ void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(sdrtrkprm_
         foreach(i; 1 .. Constant.TRKCN){
             prm.corrx[i*2 - 1] = -trkcdn * i;
             prm.corrx[i*2    ] = +trkcdn * i;
-        }   
+        }
 
 
         /* calculation loop filter parameters */
@@ -479,7 +479,7 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
     sdr.acq.nfft  = (){
         if(ctype == CType.L1CA)
             return cast(int)nextPow2(sdr.nsamp); //sdr.nsamp;           // PRNコード1周期分
-        else if(ctype == CType.L2CM)
+        else if(ctype == CType.L2RCCM)
             return cast(int)nextPow2(sdr.nsamp * 2);
         else
             enforce(0);
@@ -490,7 +490,7 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
     sdr.acq.nfftf = (){
         if(ctype == CType.L1CA)
             return calcfftnumreso(Constant.get!"Acquisition.FFTFRESO"(ctype), sdr.ti).to!int();
-        else if(ctype == CType.L2CM)
+        else if(ctype == CType.L2RCCM)
             return -1;
         else
             enforce(0);
@@ -505,13 +505,13 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
 
 
     /* doppler search frequency */
-    if(ctype != CType.L2CM)
+    if(ctype != CType.L2RCCM)
         foreach(i; 0 .. sdr.acq.nfreq)
             sdr.acq.freq[i] = sdr.f_if + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
     else{
-        immutable carrierRatio = 60 / 77;   // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
+        immutable carrierRatio = 60.0 / 77.0;   // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
         immutable inferenced = (sdrmain.l1ca_doppler - sdrini.f_if[0]) * carrierRatio + sdr.f_if;
-        writeln(inferenced);
+        writefln("l1ca_doppler=%s, inferenced=%s,",sdrmain.l1ca_doppler, inferenced);
 
         foreach(i; 0 .. sdr.acq.nfreq)
             sdr.acq.freq[i] = inferenced + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
@@ -521,7 +521,7 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
     /* tracking struct */
     inittrkstruct(sys, ctype, &sdr.trk);
 
-    if(ctype != CType.L2CM){
+    if(ctype != CType.L2RCCM){
         /* navigation struct */
         initnavstruct(sys, ctype, &sdr.nav);
 

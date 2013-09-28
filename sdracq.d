@@ -57,7 +57,7 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
     }
 
     /* FFTを使った、それなりに正確な搬送波周波数(ドップラー周波数)の探索, L2CMの場合は前段の周波数探索で十分に正確に探索しているため不要 */
-    if (sdr.flagacq && !(sdr.ctype == CType.L2CM)){
+    if (sdr.flagacq && !(sdr.ctype == CType.L2RCCM)){
         scope datal = new byte[sdr.acq.nfft * sdr.dtype * sdr.acq.lenf];
 
         buffloc += sdr.acq.acqcodei; /* set buffer location at top of code */
@@ -73,7 +73,7 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
         /* check fine acquisition result */
         if (std.math.abs(sdr.acq.acqfreqf - sdr.acq.acqfreq) > sdr.acq.step)
             sdr.flagacq = OFF; /* reset */
-    }else if(sdr.flagacq && sdr.ctype == CType.L2CM){
+    }else if(sdr.flagacq && sdr.ctype == CType.L2RCCM){
         buffloc += sdr.acq.acqcodei;    // バッファの先頭にコードの先頭が来るようにする
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
     }else
@@ -119,7 +119,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
               meanP = meanvd(&P[freqi*sdr.acq.nfft], sdr.nsamp, exinds, exinde),
               maxP2 = maxvd(&P[freqi*sdr.acq.nfft], sdr.nsamp, exinds, exinde, &submaxi);
 
-    //if(sdr.ctype == CType.L2CM){
+    //if(sdr.ctype == CType.L2RCCM){
     {
         auto temp = P[freqi * sdr.acq.nfft .. (freqi + 1) * sdr.acq.nfft].zip(iota(size_t.max)).array().dup;
         temp.sort!"a[0] > b[0]"();
@@ -135,7 +135,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
     //}
 
 
-    sdr.ctype == CType.L2CM && writefln("codei = %s, %s[%s, %s]%s", codei, sdr.nsamp, exinds, exinde, sdr.acq.nfft);
+    sdr.ctype == CType.L2RCCM && writefln("codei = %s, %s[%s, %s]%s", codei, sdr.nsamp, exinds, exinde, sdr.acq.nfft);
     debug(AcqDebug) writefln("exind: [%s, %s]", exinds, exinde);
 
     /* C/N0 calculation */
@@ -188,7 +188,9 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] d
 
         /* mix local carrier */
         mixcarr(dataR, dtype, ti, m, freq[i], 0.0, dataI.ptr, dataQ.ptr);
-    
+        dataI.zip(dataQ).csvOutput("mix_carr_" ~ freq[i].to!string() ~ ".csv");
+
+
         /* to complex */
         cpxcpx(dataI.ptr, dataQ.ptr, CSCALE / m, m, datax.ptr);
     

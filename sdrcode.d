@@ -16,6 +16,7 @@ immutable LEN_L1CD   =     10230       ;    /* GPS/QZSS L1C Data */
 immutable LEN_L1CO   =     1800        ;    /* GPS/QZSS L1C overlay */
 immutable LEN_L2CM   =     10230       ;    /* GPS/QZSS L2CM */
 immutable LEN_L2CL   =     767250      ;    /* GPS/QZSS L2CL */
+immutable LEN_L2RCCM =     10230 * 2   ;    /* CLコードを0にしたRCコード */
 immutable LEN_L5I    =     10230       ;    /* GPS/QZSS L5I */
 immutable LEN_L5Q    =     10230       ;    /* GPS/QZSS L5Q */
 immutable LEN_E1B    =     4092        ;    /* Galileo E1B (Data) */
@@ -40,6 +41,7 @@ immutable CRATE_L1CP =     1.023E6     ;    /* GPS/QZSS L1C Pilot */
 immutable CRATE_L1CD =     1.023E6     ;    /* GPS/QZSS L1C Data */
 immutable CRATE_L1CO =     100         ;    /* GPS/QZSS L1C overlay */
 immutable CRATE_L2CM =     0.5115E6    ;    /* GPS/QZSS L2CM */
+immutable CRATE_L2RCCM =   CRATE_L2CM * 2;  /* CLコードを0にしたRCコード */
 immutable CRATE_L2CL =     0.5115E6    ;    /* GPS/QZSS L2CL */
 immutable CRATE_L5I  =     10.23E6     ;    /* GPS/QZSS L5I */
 immutable CRATE_L5Q  =     10.23E6     ;    /* GPS/QZSS L5Q */
@@ -652,6 +654,32 @@ body{
 
     return code.ptr;
 }
+
+
+/// CLコードを0にしたRCコード
+short* gencode_L2RCCM(int prn, int* len, double *crate)
+in{
+    assert(prn !< 1 && (prn !> 63 || prn !< 159) && Constant.CodeGeneration.MAXGPSSATNO !< prn);
+}
+body{
+    scope l2cmCode = (){
+        auto ptr = gencode_L2CM(prn, len, crate);
+        return ptr[0 .. *len];
+    }();
+
+    *len *= 2;
+    *crate *= 2;
+
+    auto code = new short[*len];
+
+    foreach(i; iota(*len).stride(2)){
+        code[i] = l2cmCode[i/2];
+        code[i+1] = 0;
+    }
+    
+    return code.ptr;
+}
+
 /* L2CL code (IS-GPS-200) -----------------------------------------------------*/
 short *gencode_L2CL(int prn, int *len, double *crate)
 in{
@@ -1379,31 +1407,32 @@ body{
 short *gencode(int prn, CType ctype, int *len, double *crate)
 {
     final switch (ctype) {
-        case CType.L1CA  : return gencode_L1CA(prn,len,crate);
-        case CType.L1CP  : return gencode_L1CP(prn,len,crate);
-        case CType.L1CD  : return gencode_L1CD(prn,len,crate);
-        case CType.L1CO  : return gencode_L1CO(prn,len,crate);
-        case CType.L2CM  : return gencode_L2CM(prn,len,crate);
-        case CType.L2CL  : return gencode_L2CL(prn,len,crate);
-        case CType.L5I   : return gencode_L5I(prn,len,crate);
-        case CType.L5Q   : return gencode_L5Q(prn,len,crate);
-        case CType.E1B   : return gencode_E1B(prn,len,crate);
-        case CType.E1C   : return gencode_E1C(prn,len,crate);
-        case CType.E5AI  : return gencode_E5AI(prn,len,crate);
-        case CType.E5AQ  : return gencode_E5AQ(prn,len,crate);
-        case CType.E5BI  : return gencode_E5BI(prn,len,crate);
-        case CType.E5BQ  : return gencode_E5BQ(prn,len,crate);
+        case CType.L1CA  : return gencode_L1CA(prn, len,crate);
+        case CType.L1CP  : return gencode_L1CP(prn, len,crate);
+        case CType.L1CD  : return gencode_L1CD(prn, len,crate);
+        case CType.L1CO  : return gencode_L1CO(prn, len,crate);
+        case CType.L2CM  : return gencode_L2CM(prn, len,crate);
+        case CType.L2RCCM : return gencode_L2RCCM(prn, len, crate);
+        case CType.L2CL  : return gencode_L2CL(prn, len,crate);
+        case CType.L5I   : return gencode_L5I(prn, len,crate);
+        case CType.L5Q   : return gencode_L5Q(prn, len,crate);
+        case CType.E1B   : return gencode_E1B(prn, len,crate);
+        case CType.E1C   : return gencode_E1C(prn, len,crate);
+        case CType.E5AI  : return gencode_E5AI(prn, len,crate);
+        case CType.E5AQ  : return gencode_E5AQ(prn, len,crate);
+        case CType.E5BI  : return gencode_E5BI(prn, len,crate);
+        case CType.E5BQ  : return gencode_E5BQ(prn, len,crate);
         case CType.E1CO  : return gencode_E1CO(len,crate);
         case CType.E5AIO : return gencode_E5AIO(len,crate);
-        case CType.E5AQO : return gencode_E5AQO(prn,len,crate);
+        case CType.E5AQO : return gencode_E5AQO(prn, len,crate);
         case CType.E5BIO : return gencode_E5BIO(len,crate);
-        case CType.E5BQO : return gencode_E5BQO(prn,len,crate);
+        case CType.E5BQO : return gencode_E5BQO(prn, len,crate);
         case CType.G1    : return gencode_G1G2(len,crate);
         case CType.G2    : return gencode_G1G2(len,crate);
-        case CType.B1    : return gencode_B1(prn,len,crate);
-        case CType.LEXS  : return gencode_LEXS(prn,len,crate);
-        case CType.LEXL  : return gencode_LEXL(prn,len,crate);
-        case CType.L1SAIF: return gencode_L1CA(prn,len,crate);
-        case CType.L1SBAS: return gencode_L1CA(prn,len,crate);
+        case CType.B1    : return gencode_B1(prn, len,crate);
+        case CType.LEXS  : return gencode_LEXS(prn, len,crate);
+        case CType.LEXL  : return gencode_LEXL(prn, len,crate);
+        case CType.L1SAIF: return gencode_L1CA(prn, len,crate);
+        case CType.L1SBAS: return gencode_L1CA(prn, len,crate);
     }
 }

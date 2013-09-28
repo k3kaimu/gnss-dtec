@@ -1,5 +1,5 @@
 //##& set waitTime 10000            // 10s
-//##$ dmd -m64 -unittest -version=L2Develop -O -release -inline -version=useFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
+//##$ dmd -m64 -unittest  -version=L2Develop -O -release -inline -version=useFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
 
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline  -version=NavigationDecode -version=L2Develop -version=useFFTW
 /*
@@ -10,6 +10,7 @@ Change Log:
 version指定一覧
 + Dnative               なるべくD言語ネイティブなプログラムにします。(外部のdllをなるべく触らないということ)
 + TRACE                 trace, traceln, traceflnが有効になります。
++ TRACE_CSV             csvOutputが有効になります。
 + MAIN_IS_SDRMAIN_MAIN  プログラムのmain関数は、sdrmain.dのmain関数になります。
 + NavigationDecode      航法メッセージを解読しようとします(L1CAのみ)
 + L2Develop             L2CM用のSDR開発のためのバージョン
@@ -206,7 +207,7 @@ struct Constant{
     }
 
 
-    struct L2CM{
+    struct L2C{
         struct Acquisition{
             // this struct is used as name space
             @disable this();
@@ -283,11 +284,11 @@ struct Constant{
             return mixin("L1CA." ~ name);
           case CType.L1SAIF:
             return mixin("L1SAIF." ~ name);
-          case CType.L2CM:{
+          case CType.L2RCCM:{
             static if(name == "Acquisition.LENF" || name == "Acquisition.FFTFRESO" || (name.length >= 10 && name[0 .. 10] == "Navigation") )
                 goto default;
             else
-                return mixin("L2CM." ~ name);
+                return mixin("L2C." ~ name);
           }
 
           default:
@@ -417,6 +418,7 @@ enum CType
     L1CO,
     L2CM,
     L2CL,
+    L2RCCM,     // CM + 0-padding CL(つまり、CLコードを0にしたRCコード)
     L5I,
     L5Q,
     E1B,

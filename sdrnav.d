@@ -29,7 +29,7 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
         sdr.flagnavsync = nav_checksync(biti, sdr.trk.I[0], sdr.trk.oldI[0], &sdr.nav);
 
   version(NavigationDecode){
-    if(sdr.ctype != CType.L2CM){
+    if(sdr.ctype != CType.L2RCCM){
         /* preamble synclonaization */
         if (sdr.flagnavsync) {
             if (nav_checkbit(biti,sdr.trk.I[0],&sdr.nav)==OFF) { /* nav bit determination */
