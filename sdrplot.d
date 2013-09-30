@@ -7,11 +7,13 @@ import sdr;
 
 import core.thread;
 
-import std.stdio;
+
 import std.c.math;
 import std.c.string;
-import std.process;
 import std.datetime;
+import std.process;
+import std.stdio;
+import std.typecons;
 
 /* modify gnuplot ini file ------------------------------------------------------
 * modify gnuplot ini file to set window size and position
@@ -64,7 +66,7 @@ int updatepltini(string file = __FILE__, size_t line = __LINE__)(int nx, int ny,
 *          int    no        I   plot window number
 * return : none
 *------------------------------------------------------------------------------*/
-void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, PlotType type, int nx, int ny, int skip, bool abs, double s, int h, int w, int mh, int mw, int no)
+void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, PlotType type, int nx, int ny, int skip, Flag!"doAbs" abs, double s, int h, int w, int mh, int mw, int no)
 {
     traceln("called");
 
@@ -72,7 +74,7 @@ void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt
     plt.nx = nx;
     plt.ny = ny;
     plt.skip = skip;
-    plt.flagabs = abs;
+    plt.flagabs = abs == Flag!"abs".yes;
     plt.scale = s;
     plt.plth = h;
     plt.pltw = w;

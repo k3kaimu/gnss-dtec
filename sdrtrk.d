@@ -43,7 +43,7 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     
     /* navigation data */
     version(all) sdrnavigation(sdr, buffloc, cnt);
-    sdr.flagtrk = ON;
+    sdr.flagtrk = true;
     
     return buffloc + sdr.currnsamp;
 }
@@ -218,12 +218,12 @@ void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrfl
     /* carrier phase */
     if (!trk.flagremcarradd) {
         trk.L[0]+=trk.remcarr/DPI;
-        trk.flagpolarityadd=ON;
+        trk.flagpolarityadd = true;
     }
 
     if (sdr.flagnavpre&&!trk.flagpolarityadd) {
         if (sdr.nav.polarity==-1) { trk.L[0]+=0.5; }
-        trk.flagpolarityadd=ON;
+        trk.flagpolarityadd = true;
     }
 
     trk.L[0]+=trk.D[0]*trk.prm2.dt; 

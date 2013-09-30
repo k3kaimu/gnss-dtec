@@ -347,7 +347,7 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
     //ReleaseMutex(hbuffmtx);
 
     if ((sdrini.fp1.isOpen && nread1 < sdrini.dtype[0] * FILE_BUFFSIZE)||(sdrini.fp2.isOpen && nread2 < sdrini.dtype[1] * FILE_BUFFSIZE)) {
-        sdrstat.stopflag = ON;
+        sdrstat.stopflag = true;
         SDRPRINTF("end of file!\n");
     }
 

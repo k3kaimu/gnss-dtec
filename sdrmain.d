@@ -155,7 +155,7 @@ void sdrthread(size_t index)
             /* plot aquisition result */
             if (sdr.flagacq && sdrini.pltacq) {
                 pltacq.z=acqpower;
-                plot(&pltacq, "acq_" ~ sdr.satstr ~ "_"); 
+                plot(&pltacq, "acq_" ~ sdr.satstr ~ "_" ~ sdr.ctype.to!string()); 
             }
         }
         /* tracking */
@@ -164,10 +164,10 @@ void sdrthread(size_t index)
 
             if (sdr.flagtrk) {
                 if (sdr.nav.swnavsync) cntsw = 0;
-                if ((cntsw%sdr.trk.loopms)==0) swsync = ON;
-                else swsync = OFF;
-                if (((cntsw-1)%sdr.trk.loopms) == 0) swreset = ON;
-                else swreset = OFF;
+                if ((cntsw%sdr.trk.loopms)==0) swsync = true;
+                else swsync = false;
+                if (((cntsw-1)%sdr.trk.loopms) == 0) swreset = true;
+                else swreset = false;
                 
                 /* correlation output accumulation */
                 cumsumcorr(sdr.trk.I, sdr.trk.Q, &sdr.trk, sdr.flagnavsync, swreset);

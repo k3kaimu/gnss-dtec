@@ -50,7 +50,7 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
 
             /* check acquisition result */
             if (checkacquisition(power, sdr)) {
-                sdr.flagacq = ON;
+                sdr.flagacq = true;
                 break;
             }
         }
@@ -72,7 +72,7 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
 
         /* check fine acquisition result */
         if (std.math.abs(sdr.acq.acqfreqf - sdr.acq.acqfreq) > sdr.acq.step)
-            sdr.flagacq = OFF; /* reset */
+            sdr.flagacq = false; /* reset */
     }else if(sdr.flagacq && sdr.ctype == CType.L2RCCM){
         buffloc += sdr.acq.acqcodei;    // バッファの先頭にコードの先頭が来るようにする
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);

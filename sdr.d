@@ -38,6 +38,7 @@ import core.memory;
 import std.datetime;
 import core.stdc.time;
 
+// time_tがいるらしいが、正直うざい
 alias time_t = long;
 
 
@@ -59,7 +60,6 @@ public import sdracq,
 
 
 // msgpack-d
-
 version(Win64){
     pragma(lib, "msgpack_x64.lib");
 }else version(Win32){
@@ -69,37 +69,40 @@ version(Win64){
 
 /* FEC */
 version(NavigationDecode){
-    static assert(isVersion!"Win64");
-    pragma(lib, "libfec.a");
+    static assert(isVersion!"Win64");   // 64bitビルドの場合だけFFTWが使える
+    pragma(lib, "libfec.a");            // この仕様はlinkerの問題.optlinkはクソ
     public import fec;
 }
 
 /* FFT */
 static if(!isVersion!"Dnative"){
-    static assert(isVersion!"Win64");
-    public import fftw;
+    static assert(isVersion!"Win64");   // 64bitビルドの場合だけFFTWが使える
+    public import fftw;                 // これの仕様はlinkerの問題.optlinkはクソ
     pragma(lib, "libfftw3f-3.lib");
 }
 
 
+/**
+航法システム(GNSS)の種類
+*/
 enum NavSystem
 {
-    GPS = 0x01,
-    SBAS = 0x02,
-    GLONASS = 0x04,
-    Galileo = 0x08,
-    QZSS = 0x10,
-    BeiDou = 0x20,
+    GPS = 0x01,             /// Global Positioning System
+    SBAS = 0x02,            /// Satellite-Based Augmentation System(エスバス)
+    GLONASS = 0x04,         /// ロシア語:ГЛОНАСС - ГЛОбальная НАвигационная Спутниковая Система, ラテン文字転記: GLObal'naya NAvigationnaya Sputnikovaya Sistema(英語: Global Navigation Satellite System, グロナス)
+    Galileo = 0x08,         /// EUのGNSS
+    QZSS = 0x10,            /// Quasi-Zenith Satellite System(準天頂衛星システム)。日本向けのGNSSでJAXAが2010年に初号機「みちびき」を打ち上げた。現在はPRN:193のみ
+    BeiDou = 0x20,          /// 北斗衛星導航系統(BeiDou Navigation Satellite System)は中華版GNSS
 }
 
 
 /* constants -----------------------------------------------------------------*/
-immutable DPI = 2 * PI;
-immutable D2R = PI / 180;
-immutable R2D = 180 / PI;
-immutable CLIGHT = 299792458.0;
-immutable ON = true;
-immutable OFF = false;
+immutable DPI = 2 * PI;             /// 2π
+immutable D2R = PI / 180;           /// 1[degree] = D2R[radian]
+immutable R2D = 180 / PI;           /// 1[radian] = R2D[degree]
+immutable CLIGHT = 299792458.0;     /// 光速[m/s]。たしかに高速
+//immutable ON = true;
+//immutable OFF = false;
 immutable CDIV = 32;
 immutable CMASK = 0x1F;
 immutable CSCALE = 1.0 /16.0;
@@ -117,13 +120,15 @@ enum Fend{
 
 immutable size_t MEMBUFLEN = 5000;
 
-enum FType{
+enum FType
+{
     Type1 = 1,
     Type2
 }
 
 
-enum DType{
+enum DType
+{
     I = 1,
     IQ = 2,
 }
@@ -131,16 +136,18 @@ enum DType{
 immutable size_t FILE_BUFFSIZE = 8192;
 immutable NFFTTHREAD = 4;
 
-struct Constant{
+struct Constant
+{
     // this struct is used as name space
     @disable this();
-    @disable this(this);
 
-    struct L1CA{
+    struct L1CA
+    {
         // this struct is used as name space
         @disable this();
 
-        struct Acquisition{
+        struct Acquisition
+        {
             // this struct is used as name space
             @disable this();
 
@@ -154,7 +161,8 @@ struct Constant{
         }
 
 
-        struct Navigation{
+        struct Navigation
+        {
             // this struct is used as name space
             @disable this();
 
@@ -172,11 +180,13 @@ struct Constant{
     }
 
 
-    struct L1SAIF{
+    struct L1SAIF
+    {
         // this struct is used as name space
         @disable this();
 
-        struct Acquisition{
+        struct Acquisition
+        {
             // this struct is used as name space
             @disable this();
 
@@ -190,7 +200,8 @@ struct Constant{
         }
 
 
-        struct Navigation{
+        struct Navigation
+        {
             // this struct is used as name space
             @disable this();
 
@@ -208,7 +219,8 @@ struct Constant{
 
 
     struct L2C{
-        struct Acquisition{
+        struct Acquisition
+        {
             // this struct is used as name space
             @disable this();
 
@@ -229,7 +241,8 @@ struct Constant{
         // this struct is used as name space
         @disable this();
 
-        struct Parameter1{
+        struct Parameter1
+        {
             // this struct is used as name space
             @disable this();
 
@@ -242,7 +255,8 @@ struct Constant{
         }
 
 
-        struct Parameter2{
+        struct Parameter2
+        {
             // this struct is used as name space
             @disable this();
 
@@ -255,7 +269,8 @@ struct Constant{
         }
     }
 
-    struct Observation{
+    struct Observation
+    {
         // this struct is used as name space
         @disable this();
 
@@ -265,7 +280,8 @@ struct Constant{
     }
 
 
-    struct CodeGeneration{
+    struct CodeGeneration
+    {
         // this struct is used as name space
         @disable this();
 
@@ -311,12 +327,14 @@ struct Constant{
     enum totalSatellites = MAXSAT;
 
 
-    struct GPS{
-        // this struct is used as a name space
+    struct GPS
+    {
+        /// this struct is used as a name space
         @disable this();
 
-        struct PRN{
-            // this struct is used as a name space
+        struct PRN
+        {
+            /// this struct is used as a name space
             @disable this();
 
             enum min = MINPRNGPS;
@@ -327,12 +345,14 @@ struct Constant{
     }
 
 
-    struct GLONASS{
-        // this struct is used as a name space
+    struct GLONASS
+    {
+        /// this struct is used as a name space
         @disable this();
 
-        struct PRN{
-            // this struct is used as a name space
+        struct PRN
+        {
+            /// this struct is used as a name space
             @disable this();
 
             enum min = MINPRNGLO;
@@ -343,12 +363,14 @@ struct Constant{
     }
 
 
-    struct Galileo{
-        // this struct is used as a name space
+    struct Galileo
+    {
+        /// this struct is used as a name space
         @disable this();
 
-        struct PRN{
-            // this struct is used as a name space
+        struct PRN
+        {
+            /// this struct is used as a name space
             @disable this();
 
             enum min = MINPRNGAL;
@@ -359,12 +381,14 @@ struct Constant{
     }
 
 
-    struct QZSS{
-        // this struct is used as a name space
+    struct QZSS
+    {
+        /// this struct is used as a name space
         @disable this();
 
-        struct PRN{
-            // this struct is used as a name space
+        struct PRN
+        {
+            /// this struct is used as a name space
             @disable this();
 
             enum min = MINPRNQZS;
@@ -375,12 +399,14 @@ struct Constant{
     }
 
 
-    struct BeiDou{
-        // this struct is used as a name space
+    struct BeiDou
+    {
+        /// this struct is used as a name space
         @disable this();
 
-        struct PRN{
-            // this struct is used as a name space
+        struct PRN
+        {
+            /// this struct is used as a name space
             @disable this();
 
             enum min = MINPRNCMP;
@@ -391,12 +417,14 @@ struct Constant{
     }
 
 
-    struct SBAS{
-        // this struct is used as a name space
+    struct SBAS
+    {
+        /// this struct is used as a name space
         @disable this();
 
-        struct PRN{
-            // this struct is used as a name space
+        struct PRN
+        {
+            /// this struct is used as a name space
             @disable this();
 
             enum min = MINPRNSBS;
