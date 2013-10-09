@@ -1201,7 +1201,7 @@ double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code
     for (p=rcode;p<rcode+n+2*smax;p++,coff+=ci) {
         //while(coff>=len) coff-=len;
         coff %= len;
-        *p = code[coff.to!int()];
+        *p = code[coff.to!size_t()];
     }
     traceln("return");
     return coff-smax*ci;

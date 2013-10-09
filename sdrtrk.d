@@ -21,8 +21,9 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     traceln("called");
     
     /* memory allocation */
-    immutable tmp = cast(size_t)((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf));
-    sdr.currnsamp = cast(int)tmp;   // [sample/chip]
+    immutable tmp = ((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf)).to!size_t();
+    sdr.currnsamp = tmp.to!int();   // [sample/code]
+                                    // tracking-loopによって更新されるnsamp
 
     //scope byte[] data = new byte[sdr.nsamp * sdr.dtype];
     scope byte[] data = new byte[sdr.currnsamp * sdr.dtype];
@@ -42,7 +43,7 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
                sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code,sdr.clen);
     
     /* navigation data */
-    version(all) sdrnavigation(sdr, buffloc, cnt);
+    /*version(all)*/if(sdr.ctype != CType.L2RCCM) sdrnavigation(sdr, buffloc, cnt);
     sdr.flagtrk = true;
     
     return buffloc + sdr.currnsamp;
@@ -100,6 +101,9 @@ body{
     *remp = mixcarr(data,dtype,ti,n,freq,phi0,dataI,dataQ);
     
     /* resampling code */
+    traceln("coff:= ", coff);
+    traceln("ti:= ", ti);
+    traceln("crate:=", crate);
     *remc = rescode(codein,coden,coff,smax,ti*crate,n,code_e);
 
     /* multiply code and integrate */

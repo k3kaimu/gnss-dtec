@@ -19,14 +19,24 @@ import std.math : abs;
 void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, ulong buffloc, ulong cnt)
 {
     traceln("called");
+    scope(exit) traceln("return");
     int sfn,biti;
     
+    traceln();
+
     /* navigation data */
     biti = cast(int)(cnt % sdr.nav.rate); /* bit location */
 
+    traceln();
+
     /* navigation bit synclonaization */
-    if (!sdr.flagnavsync && cnt > 500) 
+    if (!sdr.flagnavsync && cnt > 500){
+        traceln();
         sdr.flagnavsync = nav_checksync(biti, sdr.trk.I[0], sdr.trk.oldI[0], &sdr.nav);
+        traceln();
+    }
+
+    traceln();
 
   version(NavigationDecode){
     if(sdr.ctype != CType.L2RCCM){

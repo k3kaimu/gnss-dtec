@@ -21,7 +21,7 @@ import std.datetime;
 *          double *power    O   normalized correlation power vector (2D array)
 * return : uint64_t             current buffer location
 *------------------------------------------------------------------------------*/
-size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* sdr, double* power, ref size_t cnt, size_t buffloc)
+size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* sdr, double* power, size_t buffloc)
 {
     traceln("called");
 
@@ -75,6 +75,9 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
             sdr.flagacq = false; /* reset */
     }else if(sdr.flagacq && sdr.ctype == CType.L2RCCM){
         buffloc += sdr.acq.acqcodei;    // バッファの先頭にコードの先頭が来るようにする
+        sdr.acq.acqfreqf = sdr.acq.acqfreq;     // fineサーチしてないけど、してるように見せかけ
+        sdr.trk.carrfreq = sdr.acq.acqfreq;
+        sdr.trk.codefreq = sdr.crate;
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
     }else
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);

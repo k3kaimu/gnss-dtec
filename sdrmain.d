@@ -103,6 +103,7 @@ void startsdr()
         enforce(initsdrch(2, sdrini.sys[1], sdrini.sat[1], sdrini.ctype[1], sdrini.dtype[sdrini.ftype[1]-1], sdrini.ftype[1], sdrini.f_sf[sdrini.ftype[1]-1], sdrini.f_if[sdrini.ftype[1]-1],&sdrch[1]) >= 0);
         //enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[1].ctype == CType.L2RCCM);
         //sdrthread_l2cm(1);
+        util.trace.tracing = true;
         sdrthread(1);
     }
 
@@ -125,7 +126,7 @@ void sdrthread(size_t index)
     int cntsw = 0, swsync, swreset;
     double *acqpower = null;
 
-    immutable resultLFileName = `Result\L1_` ~ sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
+    immutable resultLFileName = `Result\` ~ sdr.ctype.to!string() ~ "_" ~ sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
     File resultLFile = File(resultLFileName, "w");
     resultLFile.writeln("buffloc, carrierPhase[cycle],");
 
@@ -150,7 +151,7 @@ void sdrthread(size_t index)
             acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft * sdr.acq.nfreq).enforce();
             
             /* fft correlation */
-            buffloc = sdracquisition(sdr, acqpower, cnt, buffloc);
+            buffloc = sdracquisition(sdr, acqpower, buffloc);
             
             /* plot aquisition result */
             if (sdr.flagacq && sdrini.pltacq) {
@@ -196,13 +197,18 @@ void sdrthread(size_t index)
 
                 loopcnt++;
 
+                if(loopcnt > 1000 && isNaN(l1ca_doppler)){
+                    l1ca_doppler = sdr.trk.carrfreq;
+                    writeln("doppler find");
+                    
+                    version(L2Develop) return;
+                }
 
-                version(L2Develop)
-                    if(loopcnt > 1000 && isNaN(l1ca_doppler)){
-                        l1ca_doppler = sdr.trk.carrfreq;
-                        writeln("doppler find, so end");
-                        return;
-                    }
+                (sdr.nav.swnavsync) && tracefln("sdr.nav.swnavsync is ON on %s", buffloc);
+                (cntsw) && tracefln("cntsw is ON on %s", buffloc);
+                (swreset) && tracefln("swreset is ON on %s", buffloc);
+                (sdr.flagnavsync) && tracefln("sdr.flagnavsync is ON on %s", buffloc);
+                (swsync) && tracefln("swsync is ON on %s", buffloc);
 
                 if(!sdr.flagnavsync || swsync)
                     resultLFile.writefln("%s,%.9f,", buffloc, sdr.trk.L[0]);
@@ -220,59 +226,6 @@ void sdrthread(size_t index)
 
     SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
 }
-
-/+
-void sdrthread_l2cm(size_t index)
-{
-    sdrch_t* sdr = &(sdrch[index]);
-    sdrplt_t pltacq,plttrk;
-    ulong buffloc = 0, cnt = 0,loopcnt = 0;
-    int cntsw = 0, swsync, swreset;
-    double *acqpower = null;
-
-    immutable resultLFileName = `Result\L1_` ~ sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
-    File resultLFile = File(resultLFileName, "w");
-    resultLFile.writeln("buffloc, carrierPhase[cycle],");
-
-    /* plot setting */
-    initpltstruct(&pltacq,&plttrk,sdr);
-    //enforce(initpltstruct(&pltacq,&plttrk,sdr) !< 0);
-
-    SDRPRINTF("**** %s sdr thread start! ****\n",sdr.satstr);
-
-    /* check the exit flag */
-    bool isStopped()
-    {
-        return sdrstat.stopflag != 0;
-    }
-
-    
-    while (!isStopped() && !sdr.flagacq){
-        /* acquisition */
-        /* memory allocation */
-        if (acqpower != null) free(acqpower);
-        acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft * sdr.acq.nfreq);
-        
-        /* fft correlation */
-        buffloc = sdracquisition(sdr, acqpower, cnt, buffloc);
-        
-        /* plot aquisition result */
-        if (false && sdr.flagacq && sdrini.pltacq) {        // data is too big.
-            pltacq.z=acqpower;
-            plot(&pltacq, "acq_" ~ sdr.satstr ~ "_"); 
-        }
-    }
-
-
-    if(sdr.flagacq)
-        writeln("Done acquisition");
-
-    /* plot termination */
-    quitpltstruct(&pltacq,&plttrk);
-
-    SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
-}
-+/
 
 
 version(none):

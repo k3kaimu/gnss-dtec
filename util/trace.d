@@ -12,6 +12,7 @@ import std.conv : to;
 import std.stdio;
 import std.traits;
 import std.typecons;
+import std.range;
 
 
 /**
@@ -110,17 +111,22 @@ void ctTrace(string file = __FILE__, size_t line = __LINE__)()
 }
 
 
-void csvOutput(T)(T[] data, string filename)
+void csvOutput(R)(R data, string filename)
+if(isInputRange!R)
 {
-    auto file = File(filename, "w");
-    static if(is(T : XL!XT, alias XL, XT...) && is(XL == std.typecons.Tuple)){
-        foreach(e; data){
-            foreach(ee; e.tupleof)
-                file.writef("%s,", ee);
-            file.writeln();
+    version(CSV_TRACE){
+        alias T = ElementType!R;
+
+        auto file = File(filename, "w");
+        static if(is(T : typeof(tuple(T.init.tupleof)))){
+            foreach(e; data){
+                foreach(ee; e.tupleof)
+                    file.writef("%s,", ee);
+                file.writeln();
+            }
+        }else{
+            foreach(e; data)
+                file.writefln("%s,", e);
         }
-    }else{
-        foreach(e; data)
-            file.writefln("%s,", e);
     }
 }

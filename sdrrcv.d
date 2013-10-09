@@ -152,18 +152,22 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
         break;+/
     /* File */
     case Fend.FILE:
+        traceln();
         if (ini.fp1.isOpen)/+ fclose(ini.fp1); ini.fp1=null;+/
             ini.fp1.close();
         if (ini.fp2.isOpen)/+ fclose(ini.fp2); ini.fp2=null;+/
             ini.fp2.close();
+        traceln();
         break;
     default:
         return -1;
     }
+    traceln();
     /* free memory */
-    if (null!=sdrstat.buff)  free(sdrstat.buff);  sdrstat.buff=null;
-    if (null!=sdrstat.buff1) free(sdrstat.buff1); sdrstat.buff1=null;
-    if (null!=sdrstat.buff2) free(sdrstat.buff2); sdrstat.buff2=null;
+    if (null!=sdrstat.buff) { free(sdrstat.buff);  sdrstat.buff=null; }
+    if (null!=sdrstat.buff1) { free(sdrstat.buff1); sdrstat.buff1=null; }
+    if (null!=sdrstat.buff2) { free(sdrstat.buff2); sdrstat.buff2=null; }
+    traceln();
     return 0;
 }
 

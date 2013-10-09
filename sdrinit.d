@@ -7,16 +7,16 @@ import sdr;
 
 import core.sync.mutex;
 
-import std.c.string;
-import std.c.stdlib : atoi, atof;
-import std.string;
-import std.exception;
-import std.traits;
 import std.algorithm;
-import std.stdio;
 import std.array;
-import std.range;
+//import std.c.string;
+//import std.c.stdlib : atoi, atof;
+import std.exception;
 import std.file;
+import std.range;
+import std.stdio;
+import std.string;
+import std.traits;
 import std.typecons;
 
 
@@ -201,6 +201,13 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
         initsdrplot(acq);
         settitle(acq,sdr.satstr);
         setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
+
+        auto app = appender!string();
+        app.formattedWrite("set size 0.8,0.8\n");
+        acq.otherSetting = app.data;
+
+        acq.xvalue = sdr.acq.freq[0 .. sdr.acq.nfreq].dup;
+        acq.yvalue = iota(sdr.acq.nfft).map!"cast(double)a"().array();
     }
 
     /* tracking */
@@ -210,6 +217,10 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
         settitle(trk, sdr.satstr);
         setlabel(trk, "Code Offset (sample)", "Correlation Output");
         setyrange(trk, 0, 8 * sdr.trk.loopms);
+
+        auto app = appender!string();
+        app.formattedWrite("set size 0.8,0.8\n");
+        trk.otherSetting = app.data;
     }
 
     if (sdrini.fend == Fend.FILE||sdrini.fend == Fend.FILESTEREO)
