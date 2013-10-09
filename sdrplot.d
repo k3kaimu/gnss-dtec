@@ -420,7 +420,10 @@ void plotthread(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, s
     obj.yrange = plt.yrange;
     obj.xlabel = plt.xlabel;
     obj.ylabel = plt.ylabel;
+    obj.xvalue = plt.xvalue;
+    obj.yvalue = plt.yvalue;
     obj.title = plt.title;
+    obj.otherSetting = plt.otherSetting;
 
     immutable fileName = `SerializedData\` ~ initial ~ "_" ~ Clock.currTime.toISOString() ~ ".dat";
     fileName.serializedWrite(obj);

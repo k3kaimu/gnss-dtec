@@ -739,7 +739,10 @@ struct sdrplt_t
     double[] yrange;
     string xlabel;
     string ylabel;
+    double[] xvalue;
+    double[] yvalue;
     string title;
+    string otherSetting;
 }
 
 

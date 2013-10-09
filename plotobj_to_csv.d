@@ -132,8 +132,18 @@ version(MAIN_IS_PLOTOBJ_TO_CSV_MAIN){
 
           case PlotType.SurfZ:
             file.writeln("PlotType, SurfZ,");
-            foreach(i; iota(0, obj.ny, obj.skip+1)){
-                foreach(j; iota(0, obj.nx, obj.skip+1))
+            file.writeln(",");
+
+            // x軸の値
+            foreach(j; iota(0, obj.nx, obj.xskip+1))
+                file.writef("%s,", obj.xvalue[j]);
+
+            // 実データの書き込み
+            foreach(i; iota(0, obj.ny, obj.yskip+1)){
+                // y軸の値
+                file.writef("%s,", obj.yvalue[i]);
+
+                foreach(j; iota(0, obj.nx, obj.xskip+1))
                     file.writef("%s,", abs(obj.z[j * obj.ny + i], obj.flagabs) * obj.scale);
                 file.writeln();
             }
@@ -188,9 +198,9 @@ version(MAIN_IS_PLOTOBJ_TO_CSV_MAIN){
             file.writeln("unset key");
             file.writeln("splot '-' with pm3d");
             
-            foreach(i; iota(0, obj.ny, obj.skip+1)){
-                foreach(j; iota(0, obj.nx, obj.skip+1))
-                    file.writefln("%s", abs(obj.z[j * obj.ny + i], obj.flagabs) * obj.scale);
+            foreach(i; iota(0, obj.ny, obj.yskip+1)){
+                foreach(j; iota(0, obj.nx, obj.xskip+1))
+                    file.writefln("%s %s %s", obj.xvalue[j], obj.yvalue[i], abs(obj.z[j * obj.ny + i], obj.flagabs) * obj.scale);
                 file.writeln();
             }
             file.writeln("e");
@@ -245,4 +255,16 @@ version(MAIN_IS_PLOTOBJ_TO_CSV_MAIN){
         std.file.append(filename ~ "_eps.plt", buff);
     }
   }
+}
+
+
+auto yskip(in PlotObject obj) pure nothrow @safe
+{
+    return obj.ny < obj.nx ? 0 : obj.skip;
+}
+
+
+auto xskip(in PlotObject obj) pure nothrow @safe
+{
+    return obj.ny < obj.nx ? obj.skip : 0;
 }

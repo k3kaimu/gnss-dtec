@@ -24,7 +24,10 @@ struct PlotObject
     double[] yrange;
     string xlabel;
     string ylabel;
+    double[] xvalue;
+    double[] yvalue;
     string title;
+    string otherSetting;
 
 
     string toString() const
@@ -43,10 +46,13 @@ struct PlotObject
     double pltms = 0    = %s;
     double[] xrange     = %s;
     double[] yrange     = %s;
-    string xlabel       = "%s";
-    string ylabel       = "%s";
-    string title        = "%s";
-}`, nx, ny, x, y, z, type, skip, flagabs, scale, pltno, pltms, xrange, yrange, xlabel, ylabel, title);
+    string xlabel       = %(%s%);
+    string ylabel       = %(%s%);
+    double[] xvalue     = %s;
+    double[] yvalue     = %s;
+    string title        = %(%s%);
+    string otherSetting = %(%s%);
+}`, nx, ny, x, y, z, type, skip, flagabs, scale, pltno, pltms, xrange, yrange, [xlabel], [ylabel], xvalue, yvalue, [title], [otherSetting]);
     }
 }
 
