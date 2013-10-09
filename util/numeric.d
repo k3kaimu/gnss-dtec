@@ -4,7 +4,7 @@ import std.exception;
 import std.math;
 import std.traits;
 
-F isValidNum(F)(F f) pure nothrow @safe @property
+bool isValidNum(F)(F f) pure nothrow @safe @property
 {
     return !(isNaN(f) || isInfinity(f));
 }

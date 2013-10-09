@@ -1,4 +1,4 @@
-//##$ dmd -m64 -unittest -version=MAIN_IS_PLOTOBJ_TO_CSV_MAIN plotobj_to_csv sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize
+//##$ dmd -m64 -unittest -version=MAIN_IS_PLOTOBJ_TO_CSV_MAIN plotobj_to_csv sdr fec rtklib sdracq sdrcmn sdrcode sdrinit sdrmain sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
 
 /**
 sdr.exeが吐くSerializedData内のdatファイルを解析して、様々な形式に変換するプログラム

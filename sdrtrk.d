@@ -69,7 +69,19 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
 void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, 
                        double crate, double coff, int* s, int ns, double *I, double *Q,
                        double *remc, double *remp, short* codein, int coden)
-{
+in{
+    bool b0 = (ti.isValidNum),
+         b1 = (freq.isValidNum),
+         b2 = (phi0.isValidNum),
+         b3 = (crate.isValidNum),
+         b4 = (coff.isValidNum);
+
+    scope(failure)
+        traceln([b0, b1, b2, b3, b4]);
+
+    assert(b0 && b1 && b2 && b3 && b4);
+}
+body{
     traceln("called");
     short* dataI, dataQ, code_e, code;
     int i;
