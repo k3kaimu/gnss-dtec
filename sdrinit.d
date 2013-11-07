@@ -298,34 +298,34 @@ void initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
 *          int    sw        I   tracking mode selector switch (1 or 2)
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(sdrtrkprm_t *prm, int sw)
+void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(CType ctype, sdrtrkprm_t *prm, int sw)
 {
-    with(Constant.Tracking){
+    //with(Constant.Tracking){
         traceln("called");
         int trkcp, trkcdn;
         
         /* tracking parameter selection */
         switch (sw) {
           case 1:
-            with(Parameter1){
-                prm.dllb = DLLB;
-                prm.pllb = PLLB;
-                prm.fllb = FLLB;
-                prm.dt   = DT;
-                trkcp    = CP;
-                trkcdn   = CDN;
-            }
+            //with(Parameter1){
+                prm.dllb = Constant.get!"Tracking.Parameter1.DLLB"(ctype);
+                prm.pllb = Constant.get!"Tracking.Parameter1.PLLB"(ctype);
+                prm.fllb = Constant.get!"Tracking.Parameter1.FLLB"(ctype);
+                prm.dt   = Constant.get!"Tracking.Parameter1.DT"(ctype);
+                trkcp    = Constant.get!"Tracking.Parameter1.CP"(ctype);
+                trkcdn   = Constant.get!"Tracking.Parameter1.CDN"(ctype);
+            //}
             break;
 
           case 2:
-            with(Parameter2){
-                prm.dllb = DLLB;
-                prm.pllb = PLLB;
-                prm.fllb = FLLB;
-                prm.dt   = DT;
-                trkcp    = CP;
-                trkcdn   = CDN;
-            }
+            //with(Parameter2){
+                prm.dllb = Constant.get!"Tracking.Parameter2.DLLB"(ctype);
+                prm.pllb = Constant.get!"Tracking.Parameter2.PLLB"(ctype);
+                prm.fllb = Constant.get!"Tracking.Parameter2.FLLB"(ctype);
+                prm.dt   = Constant.get!"Tracking.Parameter2.DT"(ctype);
+                trkcp    = Constant.get!"Tracking.Parameter2.CP"(ctype);
+                trkcdn   = Constant.get!"Tracking.Parameter2.CDN"(ctype);
+            //}
             break;
 
           default:
@@ -365,7 +365,7 @@ void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(sdrtrkprm_
             prm.pllaw = 1.414 * pll_k;
             prm.fllw  = prm.fllb / 0.25;
         }
-    }
+    //}
 }
 
 
@@ -380,8 +380,8 @@ void inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
 {
     traceln("called");
 
-    inittrkprmstruct(&trk.prm1, 1);
-    inittrkprmstruct(&trk.prm2, 2);
+    inittrkprmstruct(ctype, &trk.prm1, 1);
+    inittrkprmstruct(ctype, &trk.prm2, 2);
 
     trk.ncorrp = Constant.TRKCN;
     trk.I      =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
@@ -535,7 +535,8 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
     if(ctype != CType.L2RCCM){
         /* navigation struct */
         initnavstruct(sys, ctype, &sdr.nav);
-
+    //if(ctype != CType.L2RCCM)
+    //{
         /* memory allocation */
         sdr.lcode = cast(short*)malloc(short.sizeof * sdr.clen * sdr.acq.lenf).enforce();
         scope(failure) free(sdr.lcode);

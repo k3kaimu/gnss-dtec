@@ -1,7 +1,7 @@
 //##& set waitTime 10000            // 10s
-//##$ dmd -m64 -unittest -version=useFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
+//##$ dmd -O -inline -gs -m64 -unittest -version=useFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
 
-//　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline  -version=NavigationDecode -version=L2Develop -version=useFFTW
+//　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
 /*
 Change Log:
 2013/07/18          単一スレッド化
@@ -110,7 +110,8 @@ immutable CSCALE = 1.0 /16.0;
 
 
 /* front end setting */
-enum Fend{
+enum Fend
+{
     STEREO = 0,
     GN3SV2 = -1,
     GN3SV3 = 1,
@@ -162,6 +163,40 @@ struct Constant
         }
 
 
+        struct Tracking
+        {
+            // this struct is used as name space
+            @disable this();
+
+            struct Parameter1
+            {
+                // this struct is used as name space
+                @disable this();
+
+                enum CDN = 3;
+                enum CP = 12;
+                enum DLLB = 1.0;
+                enum PLLB = 20.0;
+                enum FLLB = 250.0;
+                enum DT = 0.001;
+            }
+
+
+            struct Parameter2
+            {
+                // this struct is used as name space
+                @disable this();
+
+                enum CDN = 3;
+                enum CP = 12;
+                enum DLLB = 0.5;
+                enum PLLB = 20.0;
+                enum FLLB = 50.0;
+                enum DT = 0.001;
+            }
+        }
+
+
         struct Navigation
         {
             // this struct is used as name space
@@ -201,6 +236,40 @@ struct Constant
         }
 
 
+        struct Tracking
+        {
+            // this struct is used as name space
+            @disable this();
+
+            struct Parameter1
+            {
+                // this struct is used as name space
+                @disable this();
+
+                enum CDN = 3;
+                enum CP = 12;
+                enum DLLB = 1.0;
+                enum PLLB = 20.0;
+                enum FLLB = 250.0;
+                enum DT = 0.001;
+            }
+
+
+            struct Parameter2
+            {
+                // this struct is used as name space
+                @disable this();
+
+                enum CDN = 3;
+                enum CP = 12;
+                enum DLLB = 0.5;
+                enum PLLB = 20.0;
+                enum FLLB = 50.0;
+                enum DT = 0.001;
+            }
+        }
+
+
         struct Navigation
         {
             // this struct is used as name space
@@ -225,8 +294,8 @@ struct Constant
             // this struct is used as name space
             @disable this();
 
-            enum INTG = 4;
-            enum HBAND = 40;
+            enum INTG = 1;
+            enum HBAND = 4;
             enum STEP = 2;
             enum TH = 2.0;
             //enum LENF = 10;
@@ -234,10 +303,47 @@ struct Constant
             enum SLEEP = 2000;
         }
 
-        enum LOOP_MS = 10;
+
+        struct Tracking
+        {
+            // this struct is used as name space
+            @disable this();
+
+            struct Parameter1
+            {
+                // this struct is used as name space
+                @disable this();
+
+                enum CDN = 3;
+                enum CP = 12;
+                enum DLLB = 0.5;
+                enum PLLB = 20.0;
+                enum FLLB = 250.0;
+                enum DT = 0.02;
+            }
+
+
+            struct Parameter2
+            {
+                // this struct is used as name space
+                @disable this();
+
+                enum CDN = 3;
+                enum CP = 12;
+                enum DLLB = 0.5;
+                enum PLLB = 20.0;
+                enum FLLB = 50.0;
+                enum DT = 0.02;
+            }
+        }
+
+
+        enum LOOP_MS = 100;
         enum freq = 10.23e6 * 2 * 60;
     }
 
+
+/+
     struct Tracking{
         // this struct is used as name space
         @disable this();
@@ -269,6 +375,8 @@ struct Constant
             enum DT = 0.001;
         }
     }
++/
+
 
     struct Observation
     {

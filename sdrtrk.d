@@ -21,31 +21,49 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     traceln("called");
     
     /* memory allocation */
-    immutable tmp = ((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf)).to!size_t();
-    sdr.currnsamp = tmp.to!int();   // [sample/code]
-                                    // tracking-loopによって更新されるnsamp
+
+    // [sample/code]
+    // tracking-loopによって更新されるnsamp
+    enforce(sdr.clen.isValidNum);
+    enforce(sdr.trk.remcode.isValidNum);
+    enforce(sdr.trk.codefreq.isValidNum);
+    enforce(sdr.f_sf.isValidNum);
+    sdr.currnsamp = ((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf)).to!int();
+
+    traceln();
 
     //scope byte[] data = new byte[sdr.nsamp * sdr.dtype];
     scope byte[] data = new byte[sdr.currnsamp * sdr.dtype];
     rcvgetbuff(&sdrini, buffloc, sdr.currnsamp, sdr.ftype, sdr.dtype, data);
 
+    traceln();
+
     {
+        traceln();
         immutable copySize = 1 + 2 * sdr.trk.ncorrp;
         sdr.trk.oldI[0 .. copySize] = sdr.trk.I[0 .. copySize];
         sdr.trk.oldQ[0 .. copySize] = sdr.trk.Q[0 .. copySize];
     }
 
+    traceln();
+
     sdr.trk.oldremcode = sdr.trk.remcode;
     sdr.trk.oldremcarr = sdr.trk.remcarr;
+
+    traceln();
 
     /* correlation */
     correlator(data, sdr.dtype, sdr.ti, sdr.currnsamp, sdr.trk.carrfreq, sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
                sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code,sdr.clen);
     
+    traceln();
+
     /* navigation data */
-    /*version(all)*/if(sdr.ctype != CType.L2RCCM) sdrnavigation(sdr, buffloc, cnt);
+    /*version(all)*//*if(sdr.ctype != CType.L2RCCM)*/ sdrnavigation(sdr, buffloc, cnt);
     sdr.flagtrk = true;
     
+    traceln();
+
     return buffloc + sdr.currnsamp;
 }
 
@@ -154,7 +172,18 @@ void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(double *I, doubl
 * return : none
 *------------------------------------------------------------------------------*/
 void pll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm_t *prm)
-{
+in{
+    assert(sdr.trk.sumI[0].isValidNum);
+    assert(sdr.trk.sumQ[0].isValidNum);
+    assert(sdr.trk.oldsumI[0].isValidNum);
+    assert(sdr.trk.oldsumQ[0].isValidNum);
+}
+out{
+    assert(sdr.trk.carrNco.isValidNum);
+    assert(sdr.trk.carrfreq.isValidNum);
+    assert(sdr.trk.carrErr.isValidNum);
+}
+body{
     traceln("called");
     double carrErr,freqErr;
     immutable IP = sdr.trk.sumI[0],
@@ -169,7 +198,7 @@ void pll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
     sdr.trk.carrNco+=prm.pllaw*(carrErr-sdr.trk.carrErr)+prm.pllw2*prm.dt*carrErr+prm.fllw*prm.dt*freqErr;
 
     sdr.trk.carrfreq = sdr.acq.acqfreqf + sdr.trk.carrNco;
-    sdr.trk.carrErr=carrErr;
+    sdr.trk.carrErr = carrErr;
 }
 
 
@@ -181,7 +210,29 @@ void pll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
 * return : none
 *------------------------------------------------------------------------------*/
 void dll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm_t *prm)
-{
+in{
+    assert(sdr.trk.sumI[sdr.trk.prm1.ne].isValidNum);
+    assert(sdr.trk.sumI[sdr.trk.prm1.nl].isValidNum);
+    assert(sdr.trk.sumQ[sdr.trk.prm1.ne].isValidNum);
+    assert(sdr.trk.sumQ[sdr.trk.prm1.nl].isValidNum);
+
+    assert(prm.dllaw.isValidNum);
+    assert(sdr.trk.codeErr.isValidNum);
+    assert(prm.dllw2.isValidNum);
+    assert(prm.dt.isValidNum);
+
+    assert(sdr.crate.isValidNum);
+    assert(sdr.trk.codeNco.isValidNum);
+    assert(sdr.trk.carrfreq.isValidNum);
+    assert(sdr.f_if.isValidNum);
+    assert(Constant.get!"freq"(sdr.ctype).isValidNum);
+}
+out{
+    assert(sdr.trk.codeNco.isValidNum);
+    assert(sdr.trk.codefreq.isValidNum);
+    assert(sdr.trk.codeErr.isValidNum);
+}
+body{
     static real cpxAbs(real i, real q) pure nothrow @safe { return (i^^2 + q^^2) ^^ 0.5; }
 
     traceln("called");
@@ -194,13 +245,15 @@ void dll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm
               QL = sdr.trk.sumQ[nl],
               IEQE = cpxAbs(IE, QE),
               ILQL = cpxAbs(IL, QL),
-              codeErr = (IEQE - ILQL) / (IEQE + ILQL);
+              codeErr = (IEQE + ILQL) != 0 ? ((IEQE - ILQL) / (IEQE + ILQL)) : 0;
     
+    enforce(codeErr.isValidNum);
+
     /* 2nd order DLL */
     sdr.trk.codeNco += prm.dllaw * (codeErr - sdr.trk.codeErr)
                      + prm.dllw2 * prm.dt * codeErr;
     
-    sdr.trk.codefreq = sdr.crate - sdr.trk.codeNco + (sdr.trk.carrfreq - sdr.f_if) / (Constant.L1CA.freq / sdr.crate); /* carrier aiding */
+    sdr.trk.codefreq = sdr.crate - sdr.trk.codeNco + (sdr.trk.carrfreq - sdr.f_if) / (Constant.get!"freq"(sdr.ctype) / sdr.crate); /* carrier aiding */
     sdr.trk.codeErr = codeErr;
 }
 

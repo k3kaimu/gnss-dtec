@@ -25,15 +25,20 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
     traceln();
 
     /* navigation data */
-    biti = cast(int)(cnt % sdr.nav.rate); /* bit location */
+    if(sdr.ctype != CType.L2RCCM)
+        biti = cast(int)(cnt % sdr.nav.rate); /* bit location */
 
     traceln();
 
     /* navigation bit synclonaization */
-    if (!sdr.flagnavsync && cnt > 500){
+    if (sdr.ctype != CType.L2RCCM && !sdr.flagnavsync && cnt > 500){
         traceln();
         sdr.flagnavsync = nav_checksync(biti, sdr.trk.I[0], sdr.trk.oldI[0], &sdr.nav);
         traceln();
+    }
+
+    if(sdr.ctype == CType.L2RCCM && cnt > 500){
+        sdr.flagnavsync = true;
     }
 
     traceln();
@@ -42,7 +47,7 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
     if(sdr.ctype != CType.L2RCCM){
         /* preamble synclonaization */
         if (sdr.flagnavsync) {
-            if (nav_checkbit(biti,sdr.trk.I[0],&sdr.nav)==OFF) { /* nav bit determination */
+            if (nav_checkbit(biti,sdr.trk.I[0],&sdr.nav)==false) { /* nav bit determination */
                 SDRPRINTF("%s nav sync error!!\n",sdr.satstr);
             }
                         
@@ -58,7 +63,7 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
                     sdr.nav.firstsf=buffloc;
                     sdr.nav.firstsfcnt=cnt;
                     SDRPRINTF("*** find preamble! %s %d %d ***\n",sdr.satstr,cast(int)cnt,sdr.nav.polarity);
-                    sdr.flagfirstsf=ON;
+                    sdr.flagfirstsf=true;
                 }
             }
             /* decoding navigation data */
@@ -66,7 +71,7 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
                 if (cast(int)(cnt-sdr.nav.firstsfcnt)%(sdr.nav.flen*sdr.nav.rate)==0) {
                     sfn=nav_decodenav(&sdr.nav);
                     sdr.nav.eph.sat=sdr.sat;
-                    sdr.flagnavdec=ON;
+                    sdr.flagnavdec=true;
                     SDRPRINTF("%s sfn=%d tow:%.1f week=%d\n",sdr.satstr,sfn,sdr.nav.eph.tow,sdr.nav.eph.week);
 
                     /* set reference tow data */
@@ -138,7 +143,7 @@ static int decode_subfrm1(string file = __FILE__, size_t line = __LINE__)(ubyte 
     
     /* ephemeris update flag */
     if (oldiodc-eph.iodc!=0)
-        eph.update=ON;
+        eph.update=true;
 
     /* subframe counter */
     if (eph.cnt==3) eph.cnt=0; /* reset */
@@ -184,7 +189,7 @@ int decode_subfrm2(string file = __FILE__, size_t line = __LINE__)(ubyte *buff, 
     
     /* ephemeris update flag */
     if (oldiode-eph.iode!=0)
-        eph.update=ON;
+        eph.update=true;
     
     /* subframe counter */
     if (eph.cnt==3) eph.cnt=0; /* reset */
@@ -227,7 +232,7 @@ int decode_subfrm3(string file = __FILE__, size_t line = __LINE__)(ubyte *buff, 
 
     /* ephemeris update flag */
     if (oldiode-iode!=0)
-        eph.update=ON;
+        eph.update=true;
    
     /* subframe counter */
     if (eph.cnt==3) eph.cnt=0; /* reset */
@@ -299,7 +304,7 @@ int nav_decode_frame(string file = __FILE__, size_t line = __LINE__)(ubyte *buff
 *          sdrnav_t *nav    I/O navigation struct
 * return : int                  1:synchronization 0: not synchronization
 *------------------------------------------------------------------------------*/
-int nav_checksync(string file = __FILE__, size_t line = __LINE__)(int biti, double IP, double IPold, sdrnav_t *nav)
+bool nav_checksync(string file = __FILE__, size_t line = __LINE__)(int biti, double IP, double IPold, sdrnav_t *nav)
 {
     traceln("called");
     int maxi;
@@ -309,10 +314,10 @@ int nav_checksync(string file = __FILE__, size_t line = __LINE__)(int biti, doub
         if (maxi>nav.bitth) {
             nav.bitind--; /* minus 1 index */
             if (nav.bitind<0) nav.bitind=nav.rate-1;
-            return 1;
+            return true;
         }
     }
-    return 0;
+    return false;
 }
 
 
@@ -327,15 +332,15 @@ int nav_checkbit(string file = __FILE__, size_t line = __LINE__)(int biti, doubl
 {
     traceln("called");
     int diffi=biti-nav.bitind;
-    int syncflag=ON;
-    nav.swnavreset=OFF;
-    nav.swnavsync=OFF;
+    int syncflag=true;
+    nav.swnavreset=false;
+    nav.swnavsync=false;
     if (diffi==1||diffi==-nav.rate+1) {
         nav.bitIP=IP; /* reset */
-        nav.swnavreset=ON;
+        nav.swnavreset=true;
     } else {
         nav.bitIP+=IP; /* cumsum */
-        if (nav.bitIP*IP<0) syncflag=OFF;
+        if (nav.bitIP*IP<0) syncflag=false;
     }
 
     /* sync */
@@ -346,7 +351,7 @@ int nav_checkbit(string file = __FILE__, size_t line = __LINE__)(int biti, doubl
         /* set bit*/
         memcpy(&nav.fbits[0],&nav.fbits[1],int.sizeof*(nav.flen+nav.addflen-1)); /* shift to left */
         nav.fbits[nav.flen+nav.addflen-1]=nav.bit; /* add last */
-        nav.swnavsync=ON;
+        nav.swnavsync=true;
     }
     return syncflag;
 }

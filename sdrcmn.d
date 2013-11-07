@@ -1260,8 +1260,7 @@ double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] dat
             *I=cast(short)(cost[index]*p[0]);
             *Q=cast(short)(cost[index]*p[1]);
         }
-    }
-    if (dtype==DType.I) { /* real */
+    }else if (dtype==DType.I) { /* real */
         for (p=data.ptr;p<data.ptr+n;p++,I++,Q++,phi+=ps) {
             index=(cast(int)phi)&CMASK;
             *I=cast(short)(cost[index]*p[0]);

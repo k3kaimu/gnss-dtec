@@ -55,7 +55,7 @@ double l1ca_doppler;
 version(MAIN_IS_SDRMAIN_MAIN){
     void main(string[] args)
     {
-        util.trace.tracing = false;
+        //util.trace.tracing = false;
 
         import std.datetime : StopWatch;
         StopWatch sw;
@@ -86,6 +86,7 @@ void startsdr()
     enforce(rcvinit(&sdrini) >= 0);
     scope(exit) rcvquit(&sdrini);
 
+    util.trace.tracing = false;
     enforce(sdrini.nch >= 1);
     enforce(initsdrch(1, sdrini.sys[0], sdrini.sat[0], sdrini.ctype[0], sdrini.dtype[sdrini.ftype[0]-1], sdrini.ftype[0], sdrini.f_sf[sdrini.ftype[0]-1], sdrini.f_if[sdrini.ftype[0]-1],&sdrch[0]) >= 0);
     enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[0].ctype == CType.L1CA);
@@ -128,7 +129,7 @@ void sdrthread(size_t index)
 
     immutable resultLFileName = `Result\` ~ sdr.ctype.to!string() ~ "_" ~ sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
     File resultLFile = File(resultLFileName, "w");
-    resultLFile.writeln("buffloc, carrierPhase[cycle],");
+    resultLFile.writeln("buffloc, carrierPhase[cycle], pll_carrErr, pll_carNco, pll_carrfreq, dll_codeErr, dll_codeNco, dll_codefreq, sumIP, sumQP");
 
     /* plot setting */
     initpltstruct(&pltacq,&plttrk,sdr);
@@ -146,13 +147,19 @@ void sdrthread(size_t index)
     while (!isStopped()) {
         /* acquisition */
         if (!sdr.flagacq) {
+            StopWatch sw;
+            sw.start();
+
             /* memory allocation */
             if (acqpower != null) free(acqpower);
             acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft * sdr.acq.nfreq).enforce();
             
             /* fft correlation */
             buffloc = sdracquisition(sdr, acqpower, buffloc);
-            
+            sw.stop();
+            writefln("AcqTime: %s[us]", sw.peek.usecs);
+
+
             /* plot aquisition result */
             if (sdr.flagacq && sdrini.pltacq) {
                 pltacq.z=acqpower;
@@ -197,7 +204,9 @@ void sdrthread(size_t index)
 
                 loopcnt++;
 
-                if(loopcnt > 1000 && isNaN(l1ca_doppler)){
+                if(loopcnt > 1000 && isNaN(l1ca_doppler))
+                {
+                    assert(sdr.ctype == CType.L1CA);
                     l1ca_doppler = sdr.trk.carrfreq;
                     writeln("doppler find");
                     
