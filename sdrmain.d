@@ -220,7 +220,7 @@ void sdrthread(size_t index)
                 (swsync) && tracefln("swsync is ON on %s", buffloc);
 
                 if(!sdr.flagnavsync || swsync)
-                    resultLFile.writefln("%s,%.9f,", buffloc, sdr.trk.L[0]);
+                    resultLFile.writefln("%s, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f,", buffloc, sdr.trk.L[0], sdr.trk.carrErr, sdr.trk.carrNco, sdr.trk.carrfreq, sdr.trk.codeErr, sdr.trk.codeNco, sdr.trk.codefreq, sdr.trk.sumI[0], sdr.trk.sumQ[0]);
 
                 if (sdr.no==1&&cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
                 cnt++;

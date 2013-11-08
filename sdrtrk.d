@@ -7,6 +7,16 @@ import sdr;
 
 import std.math;
 import std.stdio;
+import std.traits;
+
+private F atan(F)(F y, F x)
+if(isFloatingPoint!F)
+out(r){
+    assert(r.isNaN || (-PI/2 <= r && r <= PI/2));
+}
+body{
+    return x.signbit ? atan2(-y, -x) : atan2(y, x);
+}
 
 
 /* sdr tracking function --------------------------------------------------------
@@ -191,7 +201,8 @@ body{
     immutable oldIP = sdr.trk.oldsumI[0],
               oldQP = sdr.trk.oldsumQ[0];
     
-    carrErr=atan(QP / IP) / DPI;
+    //carrErr=atan(QP / IP) / DPI;
+    carrErr = atan(QP, IP) / DPI;
     freqErr=atan2(cast(real)oldIP*QP-IP*oldQP, fabs(oldIP*IP)+fabs(oldQP*QP))/PI;
 
     /* 2nd order PLL with 1st order FLL */
