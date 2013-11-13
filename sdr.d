@@ -1,4 +1,4 @@
-//##& set waitTime 10000            // 10s
+//##& set waitTime 20000            // 10s
 //##$ dmd -O -inline -gs -m64 -unittest -version=useFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
 
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
@@ -811,9 +811,9 @@ struct sdrch_t
     double ctime = 0;
     double ti = 0;
     double ci = 0;
-    int nsamp;
-    int nsampchip;
-    int currnsamp;
+    int nsamp;              // PRNコード一周期のサンプル数
+    int nsampchip;          // PRNコード1チップのサンプル数
+    int currnsamp;          // 現在のnsamp
     sdracq_t acq;
     sdrtrk_t trk;
     sdrnav_t nav;

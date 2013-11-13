@@ -129,7 +129,7 @@ void sdrthread(size_t index)
 
     immutable resultLFileName = `Result\` ~ sdr.ctype.to!string() ~ "_" ~ sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
     File resultLFile = File(resultLFileName, "w");
-    resultLFile.writeln("buffloc, carrierPhase[cycle], pll_carrErr, pll_carNco, pll_carrfreq, dll_codeErr, dll_codeNco, dll_codefreq, sumIP, sumQP");
+    resultLFile.writeln("buffloc, carrierPhase[cycle], pll_carrErr, pll_carNco, pll_carrfreq, dll_codeErr, dll_codeNco, dll_codefreq, IP, QP, IE, QE, IL, QL,");
 
     /* plot setting */
     initpltstruct(&pltacq,&plttrk,sdr);
@@ -219,8 +219,13 @@ void sdrthread(size_t index)
                 (sdr.flagnavsync) && tracefln("sdr.flagnavsync is ON on %s", buffloc);
                 (swsync) && tracefln("swsync is ON on %s", buffloc);
 
-                if(!sdr.flagnavsync || swsync)
-                    resultLFile.writefln("%s, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f,", buffloc, sdr.trk.L[0], sdr.trk.carrErr, sdr.trk.carrNco, sdr.trk.carrfreq, sdr.trk.codeErr, sdr.trk.codeNco, sdr.trk.codefreq, sdr.trk.sumI[0], sdr.trk.sumQ[0]);
+                //if(!sdr.flagnavsync || swsync)
+                    resultLFile.writefln("%s, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f,%.9f,%.9f,%.9f,%.9f,",
+                                          buffloc, sdr.trk.L[0], sdr.trk.carrErr, sdr.trk.carrNco, sdr.trk.carrfreq,
+                                          sdr.trk.codeErr, sdr.trk.codeNco, sdr.trk.codefreq,
+                                          sdr.trk.sumI[0], sdr.trk.sumQ[0],
+                                          sdr.trk.sumI[sdr.trk.prm1.ne], sdr.trk.sumQ[sdr.trk.prm1.ne],
+                                          sdr.trk.sumI[sdr.trk.prm1.nl], sdr.trk.sumQ[sdr.trk.prm1.nl]);
 
                 if (sdr.no==1&&cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
                 cnt++;
