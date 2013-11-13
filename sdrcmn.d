@@ -1257,8 +1257,8 @@ double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] dat
     if (dtype==DType.IQ) { /* complex */
         for (p=data.ptr;p<data.ptr+n*2;p+=2,I++,Q++,phi+=ps) {
             index=(cast(int)phi)&CMASK;
-            *I=cast(short)(cost[index]*p[0]);
-            *Q=cast(short)(cost[index]*p[1]);
+            *I=cast(short)(cost[index]*p[0] - sint[index]*p[1]);
+            *Q=cast(short)(cost[index]*p[1] + sint[index]*p[0]);
         }
     }else if (dtype==DType.I) { /* real */
         for (p=data.ptr;p<data.ptr+n;p++,I++,Q++,phi+=ps) {
