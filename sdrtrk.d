@@ -244,7 +244,7 @@ out{
     assert(sdr.trk.codeErr.isValidNum);
 }
 body{
-    static real cpxAbs(real i, real q) pure nothrow @safe { return (i^^2 + q^^2) ^^ 0.5; }
+    static real cpxAbsSq(real i, real q) pure nothrow @safe { return (i^^2 + q^^2); }
 
     traceln("called");
 
@@ -254,8 +254,8 @@ body{
               IL = sdr.trk.sumI[nl],
               QE = sdr.trk.sumQ[ne],
               QL = sdr.trk.sumQ[nl],
-              IEQE = cpxAbs(IE, QE),
-              ILQL = cpxAbs(IL, QL),
+              IEQE = cpxAbsSq(IE, QE),
+              ILQL = cpxAbsSq(IL, QL),
               codeErr = (IEQE + ILQL) != 0 ? ((IEQE - ILQL) / (IEQE + ILQL)) : 0;
     
     enforce(codeErr.isValidNum);
