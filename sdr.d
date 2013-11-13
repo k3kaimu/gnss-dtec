@@ -319,7 +319,7 @@ struct Constant
                 enum DLLB = 0.5;
                 enum PLLB = 20.0;
                 enum FLLB = 250.0;
-                enum DT = 0.02;
+                enum DT = 0.001;
             }
 
 
@@ -333,12 +333,12 @@ struct Constant
                 enum DLLB = 0.5;
                 enum PLLB = 20.0;
                 enum FLLB = 50.0;
-                enum DT = 0.02;
+                enum DT = 0.001;
             }
         }
 
 
-        enum LOOP_MS = 100;
+        enum LOOP_MS = 10;
         enum freq = 10.23e6 * 2 * 60;
     }
 

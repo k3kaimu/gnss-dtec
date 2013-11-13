@@ -230,8 +230,8 @@ void sdrthread(size_t index)
                 if (sdr.no==1&&cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
                 cnt++;
                 cntsw++;
-                buffloc+=sdr.currnsamp;
             }
+            buffloc = bufflocnow;
         }
         sdr.trk.buffloc = buffloc;
     }

@@ -38,13 +38,14 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     enforce(sdr.trk.remcode.isValidNum);
     enforce(sdr.trk.codefreq.isValidNum);
     enforce(sdr.f_sf.isValidNum);
-    sdr.currnsamp = ((sdr.clen-sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf)).to!int();
+    sdr.currnsamp = ((sdr.clen/*-sdr.trk.remcode*/)/(sdr.trk.codefreq/sdr.f_sf)).to!int();
+    immutable trkN = (sdr.currnsamp / sdr.ctime * sdr.trk.prm1.dt).to!int();
 
     traceln();
 
     //scope byte[] data = new byte[sdr.nsamp * sdr.dtype];
-    scope byte[] data = new byte[sdr.currnsamp * sdr.dtype];
-    rcvgetbuff(&sdrini, buffloc, sdr.currnsamp, sdr.ftype, sdr.dtype, data);
+    scope byte[] data = new byte[trkN * sdr.dtype];
+    rcvgetbuff(&sdrini, buffloc, trkN, sdr.ftype, sdr.dtype, data);
 
     traceln();
 
@@ -63,7 +64,7 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     traceln();
 
     /* correlation */
-    correlator(data, sdr.dtype, sdr.ti, sdr.currnsamp, sdr.trk.carrfreq, sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
+    correlator(data, sdr.dtype, sdr.ti, trkN, sdr.trk.carrfreq, sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
                sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code,sdr.clen);
     
     traceln();
@@ -74,7 +75,7 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     
     traceln();
 
-    return buffloc + sdr.currnsamp;
+    return buffloc + trkN;
 }
 
 
