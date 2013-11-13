@@ -107,7 +107,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
 
         if (ini.fp2.isOpen)
-            sdrstat.buff2 = cast(byte*)malloc(ini.dtype[1]*ini.buffsize);
+            sdrstat.buff2 = cast(byte*)malloc(ini.dtype[1]*ini.buffsize).enforce();
 
         scope(failure)
             if(sdrstat.buff2 !is null)
@@ -374,7 +374,7 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
 void file_getbuff(string file = __FILE__, size_t line = __LINE__)(size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
 {
     traceln("called");
-    size_t membuffloc = buffloc % (MEMBUFLEN * dtype * FILE_BUFFSIZE);
+    size_t membuffloc = (buffloc * dtype) % (MEMBUFLEN * dtype * FILE_BUFFSIZE);
     
     n *= dtype;
     immutable ptrdiff_t nout = membuffloc + n - MEMBUFLEN * dtype * FILE_BUFFSIZE;
@@ -394,6 +394,8 @@ void file_getbuff(string file = __FILE__, size_t line = __LINE__)(size_t buffloc
     }
     
     if (ftype==FType.Type2) {
+        writefln("getSize : %s, buffloc : %s", n, buffloc);
+
         if (nout>0) {
             //memcpy(expbuf,&sdrstat.buff2[membuffloc],n-nout);
             expbuf[0 .. n-nout] = sdrstat.buff2[membuffloc .. membuffloc + n-nout];
