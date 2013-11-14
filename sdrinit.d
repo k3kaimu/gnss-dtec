@@ -532,11 +532,10 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
     /* tracking struct */
     inittrkstruct(sys, ctype, &sdr.trk);
 
-    if(ctype != CType.L2RCCM){
+    //if(ctype != CType.L2RCCM){
         /* navigation struct */
         initnavstruct(sys, ctype, &sdr.nav);
-    //if(ctype != CType.L2RCCM)
-    //{
+    if(ctype != CType.L2RCCM){
         /* memory allocation */
         sdr.lcode = cast(short*)malloc(short.sizeof * sdr.clen * sdr.acq.lenf).enforce();
         scope(failure) free(sdr.lcode);

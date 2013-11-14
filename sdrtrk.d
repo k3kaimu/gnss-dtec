@@ -245,7 +245,7 @@ out{
     assert(sdr.trk.codeErr.isValidNum);
 }
 body{
-    static real cpxAbsSq(real i, real q) pure nothrow @safe { return (i^^2 + q^^2); }
+    static real cpxAbsSq(real i, real q) pure nothrow @safe { return i^^2 + q^^2; }
 
     traceln("called");
 
@@ -280,7 +280,7 @@ body{
 * return : none
 *------------------------------------------------------------------------------*/
 void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrflag)
-{   
+{
     shiftright(&trk.tow[1],&trk.tow[0],double.sizeof,Constant.Observation.OBSINTERPN);
     shiftright(&trk.L[1],&trk.L[0],double.sizeof,Constant.Observation.OBSINTERPN);
     shiftright(&trk.D[1],&trk.D[0],double.sizeof,Constant.Observation.OBSINTERPN);
@@ -297,17 +297,23 @@ void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrfl
     trk.D[0]=trk.carrfreq-sdr.f_if;
 
     /* carrier phase */
-    if (!trk.flagremcarradd) {
-        trk.L[0]+=trk.remcarr/DPI;
-        trk.flagpolarityadd = true;
-    }
+    //if (!trk.flagremcarradd) {
+    //    immutable tmpL = trk.L[0];
 
-    if (sdr.flagnavpre&&!trk.flagpolarityadd) {
-        if (sdr.nav.polarity==-1) { trk.L[0]+=0.5; }
-        trk.flagpolarityadd = true;
-    }
+    //    trk.L[0]+=trk.remcarr/DPI;
+    //    trk.flagpolarityadd = true;
 
+    //    (sdr.ctype == CType.L1CA) && writefln("%s [cyc] + (%s / DPI)[cyc] -> %s [cyc]", tmpL, trk.remcarr, trk.L[0]);
+    //}
+
+    //if (sdr.flagnavpre&&!trk.flagpolarityadd) {
+    //    if (sdr.nav.polarity==-1) { trk.L[0]+=0.5; }
+    //    trk.flagpolarityadd = true;
+    //}
+
+    //immutable tmpL = trk.L[0];
     trk.L[0]+=trk.D[0]*trk.prm2.dt; 
+    //(sdr.ctype == CType.L1CA) && writefln("(%s - %s)[Hz] * %s[s] == %s[cyc], sum : %s [cyc] -> %s [cyc]", trk.carrfreq, sdr.f_if, trk.prm2.dt, trk.D[0]* trk.prm2.dt, tmpL, trk.L[0]);
     
     trk.Isum+=fabs(trk.sumI[0]);
     if (snrflag) {

@@ -174,6 +174,7 @@ void sdrthread(size_t index)
                 if (sdr.nav.swnavsync) cntsw = 0;
                 if ((cntsw%sdr.trk.loopms)==0) swsync = true;
                 else swsync = false;
+
                 if (((cntsw-1)%sdr.trk.loopms) == 0) swreset = true;
                 else swreset = false;
                 
@@ -184,7 +185,7 @@ void sdrthread(size_t index)
                     pll(sdr,&sdr.trk.prm1); /* PLL */
                     dll(sdr,&sdr.trk.prm1); /* DLL */
                 }
-                else if (swsync) {
+                else/* if (swsync) */{
                     pll(sdr,&sdr.trk.prm2); /* PLL */
                     dll(sdr,&sdr.trk.prm2); /* DLL */
 
@@ -227,7 +228,7 @@ void sdrthread(size_t index)
                                           sdr.trk.sumI[sdr.trk.prm1.ne], sdr.trk.sumQ[sdr.trk.prm1.ne],
                                           sdr.trk.sumI[sdr.trk.prm1.nl], sdr.trk.sumQ[sdr.trk.prm1.nl]);
 
-                if (sdr.no==1&&cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
+                if (/*sdr.no==1&&*/cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
                 cnt++;
                 cntsw++;
             }

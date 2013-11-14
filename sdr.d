@@ -338,6 +338,20 @@ struct Constant
         }
 
 
+        struct Navigation
+        {
+            // this struct is used as name space
+            @disable this();
+
+            enum BITTH = 5;
+            enum RATE = 20;
+            enum FLEN = 300;
+            enum ADDFLEN = 2;
+            enum ADDPLEN = 2;
+            enum PRELEN = 8;
+        }
+
+
         enum LOOP_MS = 10;
         enum freq = 10.23e6 * 2 * 60;
     }
@@ -410,7 +424,7 @@ struct Constant
           case CType.L1SAIF:
             return mixin("L1SAIF." ~ name);
           case CType.L2RCCM:{
-            static if(name == "Acquisition.LENF" || name == "Acquisition.FFTFRESO" || (name.length >= 10 && name[0 .. 10] == "Navigation") )
+            static if(name == "Acquisition.LENF" || name == "Acquisition.FFTFRESO")
                 goto default;
             else
                 return mixin("L2C." ~ name);

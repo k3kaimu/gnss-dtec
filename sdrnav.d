@@ -20,37 +20,37 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
 {
     traceln("called");
     scope(exit) traceln("return");
-    int sfn,biti;
     
     traceln();
 
     /* navigation data */
-    if(sdr.ctype != CType.L2RCCM)
-        biti = cast(int)(cnt % sdr.nav.rate); /* bit location */
+    //if(sdr.ctype != CType.L2RCCM)
+    immutable biti = cast(int)(cnt % sdr.nav.rate); /* bit location */
 
     traceln();
 
     /* navigation bit synclonaization */
-    if (sdr.ctype != CType.L2RCCM && !sdr.flagnavsync && cnt > 500){
+    if (/*sdr.ctype != CType.L2RCCM && */!sdr.flagnavsync && cnt > 500){
         traceln();
         sdr.flagnavsync = nav_checksync(biti, sdr.trk.I[0], sdr.trk.oldI[0], &sdr.nav);
         traceln();
     }
 
-    if(sdr.ctype == CType.L2RCCM && cnt > 500){
-        sdr.flagnavsync = true;
-    }
+    //if(sdr.ctype == CType.L2RCCM && cnt > 500)
+    //    sdr.flagnavsync = true;
 
     traceln();
 
-  version(NavigationDecode){
-    if(sdr.ctype != CType.L2RCCM){
+  //version(NavigationDecode){
+    //if(sdr.ctype != CType.L2RCCM || true){
         /* preamble synclonaization */
         if (sdr.flagnavsync) {
+            /+
             if (nav_checkbit(biti,sdr.trk.I[0],&sdr.nav)==false) { /* nav bit determination */
                 SDRPRINTF("%s nav sync error!!\n",sdr.satstr);
             }
-                        
+            +/
+            /+
             if (sdr.nav.swnavsync) {
                 /* decode FEC */
                 nav_decodefec(&sdr.nav);
@@ -69,7 +69,7 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
             /* decoding navigation data */
             if (sdr.flagnavpre&&sdr.nav.swnavsync) {
                 if (cast(int)(cnt-sdr.nav.firstsfcnt)%(sdr.nav.flen*sdr.nav.rate)==0) {
-                    sfn=nav_decodenav(&sdr.nav);
+                    immutable sfn = nav_decodenav(&sdr.nav);
                     sdr.nav.eph.sat=sdr.sat;
                     sdr.flagnavdec=true;
                     SDRPRINTF("%s sfn=%d tow:%.1f week=%d\n",sdr.satstr,sfn,sdr.nav.eph.tow,sdr.nav.eph.week);
@@ -78,9 +78,10 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
                     if (cnt-sdr.nav.firstsfcnt==0) sdr.nav.firstsftow=sdr.nav.eph.tow;
                 }
             }
+            +/
         }
-    }
-  }
+    //}
+  //}
 }
 
 

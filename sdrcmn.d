@@ -1268,6 +1268,7 @@ double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] dat
         }
     }
     prem=phi*DPI/CDIV;
-    while(prem>DPI) prem-=DPI;
+    //while(prem > DPI) prem -= DPI;
+    prem %= DPI;        // 周波数, 位相がマイナスの場合も考慮する必要がある
     return prem;
 }

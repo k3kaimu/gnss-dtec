@@ -394,7 +394,7 @@ void file_getbuff(string file = __FILE__, size_t line = __LINE__)(size_t buffloc
     }
     
     if (ftype==FType.Type2) {
-        writefln("getSize : %s, buffloc : %s", n, buffloc);
+        //writefln("getSize : %s, buffloc : %s", n, buffloc);
 
         if (nout>0) {
             //memcpy(expbuf,&sdrstat.buff2[membuffloc],n-nout);
