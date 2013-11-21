@@ -13,6 +13,7 @@ import std.stdio;
 import std.traits;
 import std.typecons;
 import std.range;
+import std.functional;
 
 
 /**
@@ -129,4 +130,31 @@ if(isInputRange!R)
                 file.writefln("%s,", e);
         }
     }
+}
+
+
+T ifExpr(alias pred, T)(T value, scope void delegate(T a) dg)
+if(is(typeof(unaryFun!pred(value))))
+{
+    if(unaryFun!pred(value))
+        dg(value);
+
+    return value;
+}
+
+
+T ifExpr(alias pred, T)(T value, void delegate() dg)
+if(is(typeof(unaryFun!pred(value))))
+{
+    if(unaryFun!pred(value))
+        dg();
+
+    return value;
+}
+
+
+T tryExpr(T)(lazy T expr, scope void delegate() dg)
+{
+    scope(failure) dg();
+    return expr;
 }
