@@ -8,6 +8,7 @@ import sdr;
 import std.math;
 import std.stdio;
 import std.traits;
+import std.parallelism;
 
 private F atan(F)(F y, F x)
 if(isFloatingPoint!F)

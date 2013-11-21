@@ -1,5 +1,5 @@
 //##& set waitTime 20000            // 10s
-//##$ dmd -O -inline -gs -m64 -unittest -version=useFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
+//##$ dmd -O -inline -gs -m64 -unittest -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
 
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
 /*
@@ -176,7 +176,7 @@ struct Constant
                 // this struct is used as name space
                 @disable this();
 
-                enum CDN = 3;
+                enum CDN = 12;
                 enum CP = 12;
                 enum DLLB = 1.0;
                 enum PLLB = 20.0;
@@ -190,7 +190,7 @@ struct Constant
                 // this struct is used as name space
                 @disable this();
 
-                enum CDN = 3;
+                enum CDN = 12;
                 enum CP = 12;
                 enum DLLB = 0.5;
                 enum PLLB = 20.0;
@@ -321,7 +321,7 @@ struct Constant
                 // this struct is used as name space
                 @disable this();
 
-                enum CDN = 3;
+                enum CDN = 12;
                 enum CP = 12;
                 enum DLLB = 0.5;
                 enum PLLB = 20.0;
@@ -335,7 +335,7 @@ struct Constant
                 // this struct is used as name space
                 @disable this();
 
-                enum CDN = 3;
+                enum CDN = 12;
                 enum CP = 12;
                 enum DLLB = 0.5;
                 enum PLLB = 20.0;
@@ -410,7 +410,7 @@ struct Constant
     }
 
 
-    enum TRKCN = 8;
+    enum TRKCN = 1;
     enum LOOP_MS_L1CA = 10;
     enum LOOP_MS_SBAS = 2;
     enum LOOP_MS_LEX = 4;
