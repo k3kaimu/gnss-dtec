@@ -364,41 +364,6 @@ struct Constant
     }
 
 
-/+
-    struct Tracking{
-        // this struct is used as name space
-        @disable this();
-
-        struct Parameter1
-        {
-            // this struct is used as name space
-            @disable this();
-
-            enum CDN = 3;
-            enum CP = 12;
-            enum DLLB = 1.0;
-            enum PLLB = 20.0;
-            enum FLLB = 250.0;
-            enum DT = 0.001;
-        }
-
-
-        struct Parameter2
-        {
-            // this struct is used as name space
-            @disable this();
-
-            enum CDN = 3;
-            enum CP = 12;
-            enum DLLB = 0.5;
-            enum PLLB = 20.0;
-            enum FLLB = 50.0;
-            enum DT = 0.001;
-        }
-    }
-+/
-
-
     struct Observation
     {
         // this struct is used as name space
@@ -680,6 +645,14 @@ struct sdrini_t
     bool pltspec;
     int buffsize;
     int fendbuffsize;
+
+
+    /// コンストラクタ
+    this(string filename)
+    {
+        readIniFile(this, filename);
+        checkInitValue(this);
+    }
 }
 
 
@@ -721,6 +694,13 @@ struct sdracq_t
     int nfftf;
     double cn0 = 0;
     double peakr = 0;
+
+
+    /// コンストラクタ
+    this(int sys, CType ctype)
+    {
+        initacqstruct(sys, ctype, &this);
+    }
 }
 
 
@@ -741,6 +721,13 @@ struct sdrtrkprm_t
     double pllw2 = 0;
     double pllaw = 0;
     double fllw = 0;
+
+
+    /// コンストラクタ
+    this(CType ctype, int sw)
+    {
+        inittrkprmstruct(ctype, &this, sw);
+    }
 }
 
 
