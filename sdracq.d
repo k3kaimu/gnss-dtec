@@ -13,6 +13,7 @@ import std.algorithm;
 import std.range;
 import std.conv;
 import std.datetime;
+import std.random;
 
 
 /* sdr acquisition function -----------------------------------------------------
@@ -82,6 +83,10 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
     }else
         SDRPRINTF("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f\n",sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
+
+
+    if(!sdr.flagacq)
+        buffloc += uniform(0, sdr.nsamp >> 7);
 
     return buffloc;
 }
