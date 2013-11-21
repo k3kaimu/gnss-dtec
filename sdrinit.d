@@ -478,21 +478,11 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
     sdr.nsamp     = cast(int)(f_sf * sdr.ctime);
     sdr.nsampchip = cast(int)(sdr.nsamp / sdr.clen);
     sdr.satstr    = satno2Id(sdr.sat);
-    
 
     /* acqisition struct */
     initacqstruct(sys, ctype, &sdr.acq);
 
-    sdr.acq.nfft  = (){
-        if(ctype == CType.L1CA)
-            return cast(int)nextPow2(sdr.nsamp); //sdr.nsamp;           // PRNコード1周期分
-        else if(ctype == CType.L2RCCM)
-            return cast(int)nextPow2(sdr.nsamp * 2);
-        else
-            enforce(0);
-
-        assert(0);
-    }();
+    sdr.acq.nfft = cast(int)nextPow2(sdr.nsamp); //sdr.nsamp;           // PRNコード1周期分
 
     sdr.acq.nfftf = (){
         if(ctype == CType.L1CA)
