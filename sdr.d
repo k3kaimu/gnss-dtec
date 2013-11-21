@@ -288,7 +288,11 @@ struct Constant
     }
 
 
-    struct L2C{
+    struct L2C
+    {
+        // this struct is used as name space
+        @disable this();
+
         struct Acquisition
         {
             // this struct is used as name space

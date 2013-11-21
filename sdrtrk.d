@@ -26,7 +26,7 @@ body{
 *          ulong cnt      I   counter of sdr channel thread
 * return : ulong              current buffer location
 *------------------------------------------------------------------------------*/
-ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, size_t buffloc, size_t cnt)
+size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, size_t buffloc, size_t cnt)
 {
     traceln("called");
     
@@ -38,12 +38,17 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     enforce(sdr.trk.remcode.isValidNum);
     enforce(sdr.trk.codefreq.isValidNum);
     enforce(sdr.f_sf.isValidNum);
-    sdr.currnsamp = ((sdr.clen/*-sdr.trk.remcode*/)/(sdr.trk.codefreq/sdr.f_sf)).to!int();
-    immutable trkN = (sdr.currnsamp / sdr.ctime * sdr.trk.prm1.dt).to!int();
+    
+    //sdr.currnsamp = ((sdr.clen - sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf)).to!int();
+
+    immutable lenOf1ms = sdr.crate * 0.001,
+              remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))(sdr.trk.remcode % lenOf1ms),
+              trkN = ((lenOf1ms - remcode1ms)/(sdr.trk.codefreq/sdr.f_sf)).to!int();
+
+    sdr.currnsamp = ((lenOf1ms - remcode1ms)/(sdr.trk.codefreq/sdr.f_sf) * (sdr.ctime / 0.001L)).to!int();
 
     traceln();
 
-    //scope byte[] data = new byte[sdr.nsamp * sdr.dtype];
     scope byte[] data = new byte[trkN * sdr.dtype];
     rcvgetbuff(&sdrini, buffloc, trkN, sdr.ftype, sdr.dtype, data);
 
@@ -70,7 +75,7 @@ ulong sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, 
     traceln();
 
     /* navigation data */
-    /*version(all)*//*if(sdr.ctype != CType.L2RCCM)*/ sdrnavigation(sdr, buffloc, cnt);
+    sdrnavigation(sdr, buffloc, cnt);
     sdr.flagtrk = true;
     
     traceln();
@@ -114,7 +119,7 @@ in{
 body{
     traceln("called");
     short* dataI, dataQ, code_e, code;
-    int i;
+    //int i;
     int smax=s[ns-1];
 
     dataI = cast(short*)sdrmalloc(short.sizeof * n+32);
@@ -123,12 +128,12 @@ body{
     scope(exit) sdrfree(dataQ);
     code_e = cast(short*)sdrmalloc(short.sizeof * (n+2*smax));
     scope(exit) sdrfree(code_e);
-    
+
     code = code_e + smax;
-    
+
     /* mix local carrier */
     *remp = mixcarr(data,dtype,ti,n,freq,phi0,dataI,dataQ);
-    
+
     /* resampling code */
     traceln("coff:= ", coff);
     traceln("ti:= ", ti);
@@ -137,14 +142,11 @@ body{
 
     /* multiply code and integrate */
     dot_23(dataI,dataQ,code,code-s[0],code+s[0],n,I,Q);
-    for (i=1;i<ns;i++) {
-        dot_22(dataI,dataQ,code-s[i],code+s[i],n,I+1+i*2,Q+1+i*2);
-    }
+    foreach(i; 1 .. ns)
+        dot_22(dataI, dataQ, code-s[i], code+s[i], n, I+1+i*2, Q+1+i*2);
 
     I[0 .. 1 + 2 * ns] *= CSCALE;
     Q[0 .. 1 + 2 * ns] *= CSCALE;
-
-    //dataI=dataQ=code_e=null;
 }
 
 
@@ -196,10 +198,11 @@ out{
 }
 body{
     traceln("called");
+
     double carrErr,freqErr;
     immutable IP = sdr.trk.sumI[0],
-              QP = sdr.trk.sumQ[0];
-    immutable oldIP = sdr.trk.oldsumI[0],
+              QP = sdr.trk.sumQ[0],
+              oldIP = sdr.trk.oldsumI[0],
               oldQP = sdr.trk.oldsumQ[0];
     
     //carrErr=atan(QP / IP) / DPI;
@@ -207,7 +210,9 @@ body{
     freqErr=atan2(cast(real)oldIP*QP-IP*oldQP, fabs(oldIP*IP)+fabs(oldQP*QP))/PI;
 
     /* 2nd order PLL with 1st order FLL */
-    sdr.trk.carrNco+=prm.pllaw*(carrErr-sdr.trk.carrErr)+prm.pllw2*prm.dt*carrErr+prm.fllw*prm.dt*freqErr;
+    sdr.trk.carrNco += prm.pllaw * (carrErr - sdr.trk.carrErr)
+                     + prm.pllw2 * prm.dt * carrErr
+                     + prm.fllw  * prm.dt * freqErr;
 
     sdr.trk.carrfreq = sdr.acq.acqfreqf + sdr.trk.carrNco;
     sdr.trk.carrErr = carrErr;
@@ -316,7 +321,7 @@ void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrfl
     //(sdr.ctype == CType.L1CA) && writefln("(%s - %s)[Hz] * %s[s] == %s[cyc], sum : %s [cyc] -> %s [cyc]", trk.carrfreq, sdr.f_if, trk.prm2.dt, trk.D[0]* trk.prm2.dt, tmpL, trk.L[0]);
     
     trk.Isum+=fabs(trk.sumI[0]);
-    if (snrflag) {
+    if (snrflag){
         shiftright(&trk.S[1],&trk.S[0],double.sizeof,Constant.Observation.OBSINTERPN);
         shiftright(&trk.codeisum[1],&trk.codeisum[0],ulong.sizeof,Constant.Observation.OBSINTERPN);
         
