@@ -1039,15 +1039,6 @@ ushort MAKEWORD(ubyte bLow, ubyte bHigh) pure nothrow @safe
 }
 
 
-string formattedString(S, T...)(S format, T args)
-if(isSomeString!S)
-{
-    auto writer = appender!string();
-    writer.formattedWrite(format, args);
-    return writer.data;
-}
-
-
 bool isValidPRN(int prn, NavSystem sys) pure nothrow @safe
 {
     final switch(sys){
