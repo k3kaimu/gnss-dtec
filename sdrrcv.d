@@ -260,11 +260,11 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 {
     traceln("called");
-    switch (ini.fend) {
+    final switch (ini.fend) {
     /* STEREO Binary File */
-    //case Fend.FILESTEREO: 
-    //    filestereo_pushtomembuf(); /* copy to membuffer */
-    //    break;
+    case Fend.FILESTEREO: 
+        filestereo_pushtomembuf(); /* copy to membuffer */
+        break;
     /* File */
     case Fend.FILE:
         file_pushtomembuf(); /* copy to membuffer */
