@@ -13,7 +13,7 @@ version指定一覧
 + MAIN_IS_SDRMAIN_MAIN  プログラムのmain関数は、sdrmain.dのmain関数になります。
 + NavigationDecode      航法メッセージを解読しようとします(L1CAのみ)
 + L2Develop             L2CM用のSDR開発のためのバージョン
-+ useFFTW               FFTの計算にFFTWを使用します(デフォルトだと、std.numeric.Fftを使用します)
++ UseFFTW               FFTの計算にFFTWを使用します(デフォルトだと、std.numeric.Fftを使用します)
 
 debug指定一覧
 + PrintBuffloc          すでにどれだけデータを読み込んだかを表示します。
