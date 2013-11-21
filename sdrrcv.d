@@ -116,7 +116,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     }
 
     /* FFT initialization */
-    //fftwf_init_threads();
+    version(UseFFTW) fftwf_init_threads();
 
     return 0;
 }

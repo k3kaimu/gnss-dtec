@@ -1,5 +1,5 @@
 //##& set waitTime 20000            // 10s
-//##$ dmd -O -inline -gs -m64 -unittest -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
+//##$ dmd -O -inline -gs -m64 -unittest -version=UseFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
 
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
 /*
@@ -8,7 +8,6 @@ Change Log:
 2013/07/16 v2.0beta バッファ読み込みを、sdrスレッドが操るように修正
 
 version指定一覧
-+ Dnative               なるべくD言語ネイティブなプログラムにします。(外部のdllをなるべく触らないということ)
 + TRACE                 trace, traceln, traceflnが有効になります。
 + TRACE_CSV             csvOutputが有効になります。
 + MAIN_IS_SDRMAIN_MAIN  プログラムのmain関数は、sdrmain.dのmain関数になります。
@@ -76,7 +75,7 @@ version(NavigationDecode){
 }
 
 /* FFT */
-static if(!isVersion!"Dnative"){
+version(UseFFTW){
     static assert(isVersion!"Win64");   // 64bitビルドの場合だけFFTWが使える
     public import fftw;                 // これの仕様はlinkerの問題.   optlinkはクソ
     pragma(lib, "libfftw3f-3.lib");

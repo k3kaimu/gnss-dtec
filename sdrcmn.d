@@ -22,7 +22,8 @@ version(unittest) import std.stdio;
 private short cost[CDIV];            /* carrier lookup table cos(t) */
 private short sint[CDIV];            /* carrier lookup table sin(t) */
 
-version(Dnative){
+static if(!isVersion!"UseFFTW")
+{
     private Fft fftObj;
     private size_t fftObjSize;
     private cpx_t[] buffer;
@@ -245,7 +246,7 @@ out{
 body{
     traceln("called");
 
-  version(Dnative){
+  static if(!isVersion!"UseFFTW"){
     immutable size = cpx.length;
 
     if(size != fftObjSize)
@@ -336,7 +337,7 @@ body{
     //cpxifft(cpx.ptr, cpx.length.to!int());
     traceln("called");
 
-  version(Dnative){
+  static if(!isVersion!"UseFFTW"){
     immutable size = cpx.length;
 
     if(size != fftObjSize)
