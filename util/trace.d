@@ -133,7 +133,7 @@ if(isInputRange!R)
 }
 
 
-T ifExpr(alias pred, T)(T value, scope void delegate(T a) dg)
+T ifExpr(alias pred = "a", T)(T value, scope void delegate(T a) dg)
 if(is(typeof(unaryFun!pred(value))))
 {
     if(unaryFun!pred(value))
@@ -143,7 +143,7 @@ if(is(typeof(unaryFun!pred(value))))
 }
 
 
-T ifExpr(alias pred, T)(T value, void delegate() dg)
+T ifExpr(alias pred = "a", T)(T value, void delegate() dg)
 if(is(typeof(unaryFun!pred(value))))
 {
     if(unaryFun!pred(value))
