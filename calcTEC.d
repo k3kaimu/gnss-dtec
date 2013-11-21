@@ -6,6 +6,8 @@ import std.string;
 import std.algorithm;
 import std.conv;
 import std.traits;
+import std.getopt;
+import std.parallelism;
 
 
 alias Elem = Tuple!(real, real, real);
@@ -17,19 +19,44 @@ CSVの1行目にbuffloc,
 */
 void main(string[] args)
 {
-    enforce(args.length > 1, "please enter a input file name of L1.");
-    enforce(args.length > 2, "please enter a input file name of L2.");
+    string qzssL1, qzssL2, gpsL1, gpsL2, output = "resultTEC.csv";
 
-    Elem[] l1data = readData(args[1]);
-    Elem[] l2data = readData(args[2]);
+    getopt(args,
+        "qzssl1", &qzssL1,
+        "qzssl2", &qzssL2,
+        "gpsl1", &gpsL1,
+        "gpsl2", &gpsL2,
+        "output", &output);
 
-    Elem[] tec = calcTEC(l1data, l2data);
+    auto data = (){
+        auto qzssL2Task = task!readData(qzssL2),
+             gpsL1Task = task!readData(gpsL1),
+             gpsL2Task = task!readData(gpsL2);
 
-    real avgVel = ((a, b) => (b[2] - a[2])/(b[0] - a[0]))(tec[$/4*1], tec[$/4*3]);
+        taskPool.put(qzssL2Task);
+        taskPool.put(gpsL1Task);
+        taskPool.put(gpsL2Task);
 
-    File file = File("calcTECResult.csv", "w");
-    foreach(e; tec)
-        file.writefln("%s, %.9f, %.9f, %.9f", cast(long)e[0], e[1], e[2], e[2] - avgVel*e[0]);
+        return [tuple(readData(qzssL1), qzssL2Task.yieldForce),
+                tuple(gpsL1Task.yieldForce, gpsL2Task.yieldForce)];
+    }();
+
+
+    auto tecData = (){
+        auto gpsTECTask = task!calcTEC(data[1].tupleof);
+        taskPool.put(gpsTECTask);
+
+        return [calcTEC(data[0].tupleof), gpsTECTask.yieldForce];
+    }();
+
+    auto qzssTEC = tecData[0],
+         gpsTEC = tecData[1];
+
+    immutable qzssAvgTECVel = ((a, b) => (b[2] - a[2])/(b[0] - a[0]))(qzssTEC[$/4*1], qzssTEC[$/4*3]);
+
+    File file = File(output, "w");
+    foreach(e; gpsTEC)
+        file.writefln("%s, %.9f, %.9f, %.9f", cast(long)e[0], e[1], e[2], e[2] - qzssAvgTECVel*e[0]);
 }
 
 
@@ -55,7 +82,7 @@ Elem[] readData(string filename)
 }
 
 
-Elem[] calcTEC(Elem[] l1data, Elem[] l2data)
+Elem[] calcTEC(Elem[] l1data, Elem[] l2data) pure nothrow @safe
 {
     auto l2Buffloc =  l2data.map!"a[0]".array();
     auto l2CarrPhase = l2data.map!"a[2]".array();
@@ -94,9 +121,6 @@ real calcDTEC(real phiL1, real phiL2) pure nothrow @safe
 
     return dx / a * f_l1^^2 * f_l2^^2 / (f_l1^^2 - f_l2^^2);
 }
-
-
-//real calcTEC()
 
 
 /**
@@ -174,8 +198,11 @@ body{
             return interp1(x[s .. s+3], y[s .. s+3], t);
     }
 }
+
+
 ///
-pure nothrow @safe unittest{
+pure nothrow @safe
+unittest{
     assert(approxEqual(interp1([0.0], [1.3], 5), 1.3));                             // 1点の場合は、y[0]を返すしかない
     assert(approxEqual(interp1([1.0, 2.0], [0.0, 4.0], 3), 8));                     // 2点の場合は線形補間
     assert(approxEqual(interp1([0.0, 1.0, 2.0], [0.0, 1.0, 4.0], 0.1), 0.01));      // 3点以上では、近傍3点のラグランジュ補完
