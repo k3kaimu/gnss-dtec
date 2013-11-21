@@ -31,12 +31,12 @@ import std.stdio;
 import std.c.stdlib;
 import std.c.math;
 import std.math;
-import std.format : formattedWrite;
 import std.array  : appender;
 import std.traits : isSomeString;
 import core.memory;
 import std.datetime;
 import core.stdc.time;
+import std.string;
 
 // time_tがいるらしいが、正直うざい
 alias time_t = long;
@@ -1134,12 +1134,12 @@ string satno2Id(int sat)
 {
     int prn = void;
     final switch (satsys(sat, prn)) {
-        case NavSystem.GPS:     return "G%02d".formattedString(prn - Constant.GPS.PRN.min + 1);
-        case NavSystem.GLONASS: return "R%02d".formattedString(prn - Constant.GLONASS.PRN.min + 1);
-        case NavSystem.Galileo: return "E%02d".formattedString(prn - Constant.Galileo.PRN.min + 1);
-        case NavSystem.QZSS:    return "J%02d".formattedString(prn - Constant.QZSS.PRN.min + 1);
-        case NavSystem.BeiDou:  return "C%02d".formattedString(prn - Constant.BeiDou.PRN.min + 1);
-        case NavSystem.SBAS:    return "%03d".formattedString(prn);
+        case NavSystem.GPS:     return "G%02d".format(prn - Constant.GPS.PRN.min + 1);
+        case NavSystem.GLONASS: return "R%02d".format(prn - Constant.GLONASS.PRN.min + 1);
+        case NavSystem.Galileo: return "E%02d".format(prn - Constant.Galileo.PRN.min + 1);
+        case NavSystem.QZSS:    return "J%02d".format(prn - Constant.QZSS.PRN.min + 1);
+        case NavSystem.BeiDou:  return "C%02d".format(prn - Constant.BeiDou.PRN.min + 1);
+        case NavSystem.SBAS:    return "%03d".format(prn);
     }
 
     assert(0);

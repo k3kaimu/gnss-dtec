@@ -4,7 +4,7 @@ import sdr;
 import msgpack;
 import std.file;
 import std.stdio;
-import std.format;
+import std.string;
 
 
 struct PlotObject
@@ -32,7 +32,7 @@ struct PlotObject
 
     string toString() const
     {
-        return formattedString(`PlotObject{
+        return format(`PlotObject{
     int nx              = %s;
     int ny              = %s;
     double[] x          = %s;

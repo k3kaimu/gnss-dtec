@@ -108,7 +108,7 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
         ini.confini = iniLines.readIniValue!int("RCV", "CONFINI");
     }
     
-    ini.nch = iniLines.readIniValue!int("CHANNEL", "NCH").enforce("error: wrong inifile value NCH=%d".formattedString(ini.nch));
+    ini.nch = iniLines.readIniValue!int("CHANNEL", "NCH").enforce("error: wrong inifile value NCH=%d".format(ini.nch));
     
     {
         T[] getChannelSpec(T)(string key)
@@ -148,7 +148,7 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
         }else if(sdrini.ctype[i] == CType.L2RCCM)
             sdrini.nchL2++;
         else
-            enforce(0, "ctype: %s is not supported.".formattedString(sdrini.ctype[i]));
+            enforce(0, "ctype: %s is not supported.".format(sdrini.ctype[i]));
     }
 }
 
@@ -162,25 +162,25 @@ void checkInitValue(string file = __FILE__, size_t line = __LINE__)(in ref sdrin
 {
     traceln("called");
 
-    enforce(ini.f_sf[0] > 0 && ini.f_sf[0] < 100e6, "error: wrong freq. input sf1: %s".formattedString(ini.f_sf[0]));
-    enforce(ini.f_if[0] >= 0 && ini.f_if[0] < 100e6, "error: wrong freq. input if1: %s".formattedString(ini.f_if[0]));
+    enforce(ini.f_sf[0] > 0 && ini.f_sf[0] < 100e6, "error: wrong freq. input sf1: %s".format(ini.f_sf[0]));
+    enforce(ini.f_if[0] >= 0 && ini.f_if[0] < 100e6, "error: wrong freq. input if1: %s".format(ini.f_if[0]));
 
-    enforce(ini.f_sf[1] > 0 && ini.f_sf[1] < 100e6, "error: wrong freq. input sf1: %s".formattedString(ini.f_sf[1]));
-    enforce(ini.f_if[1] >= 0 && ini.f_if[1] < 100e6, "error: wrong freq. input if1: %s".formattedString(ini.f_if[1]));
+    enforce(ini.f_sf[1] > 0 && ini.f_sf[1] < 100e6, "error: wrong freq. input sf1: %s".format(ini.f_sf[1]));
+    enforce(ini.f_if[1] >= 0 && ini.f_if[1] < 100e6, "error: wrong freq. input if1: %s".format(ini.f_if[1]));
 
-    enforce(ini.rtcmport >= 0 && ini.rtcmport <= short.max, "error: wrong rtcm port rtcm:%s".formattedString(ini.rtcmport));
-    enforce(ini.lexport >= 0 && ini.lexport <= short.max, "error: wrong rtcm port lex:%d".formattedString(ini.lexport));
+    enforce(ini.rtcmport >= 0 && ini.rtcmport <= short.max, "error: wrong rtcm port rtcm:%s".format(ini.rtcmport));
+    enforce(ini.lexport >= 0 && ini.lexport <= short.max, "error: wrong rtcm port lex:%d".format(ini.lexport));
 
     /* checking filepath */
     if(ini.fend == Fend.FILE || ini.fend == Fend.FILESTEREO){
-        enforce(!ini.useif1 || exists(ini.file1), "error: file1 doesn't exist: %s".formattedString(ini.file1));
-        enforce(!ini.useif2 || exists(ini.file2), "error: file1 or file2 are not selected".formattedString(ini.file2));
+        enforce(!ini.useif1 || exists(ini.file1), "error: file1 doesn't exist: %s".format(ini.file1));
+        enforce(!ini.useif2 || exists(ini.file2), "error: file1 or file2 are not selected".format(ini.file2));
         enforce(ini.useif1 || ini.useif2, "error: file1 or file2 are not selected");
     }
 
     /* checking rinex directory */
     if (ini.rinex) 
-        enforce(exists(ini.rinexpath), "error: rinex output directory doesn't exist: %s".formattedString(ini.rinexpath));
+        enforce(exists(ini.rinexpath), "error: rinex output directory doesn't exist: %s".format(ini.rinexpath));
 }
 
 
@@ -202,9 +202,7 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
         settitle(acq,sdr.satstr);
         setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
 
-        auto app = appender!string();
-        app.formattedWrite("set size 0.8,0.8\n");
-        acq.otherSetting = app.data;
+        acq.otherSetting = "set size 0.8,0.8\n";
 
         acq.xvalue = sdr.acq.freq[0 .. sdr.acq.nfreq].dup;
         acq.yvalue = iota(sdr.acq.nfft).map!"cast(double)a"().array();
@@ -218,9 +216,7 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
         setlabel(trk, "Code Offset (sample)", "Correlation Output");
         setyrange(trk, 0, 8 * sdr.trk.loopms);
 
-        auto app = appender!string();
-        app.formattedWrite("set size 0.8,0.8\n");
-        trk.otherSetting = app.data;
+        trk.otherSetting = "set size 0.8,0.8\n";
     }
 
     if (sdrini.fend == Fend.FILE||sdrini.fend == Fend.FILESTEREO)
