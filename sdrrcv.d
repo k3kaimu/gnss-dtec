@@ -19,11 +19,10 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 {
     traceln("called");
     sdrstat.buff = sdrstat.buff1 = sdrstat.buff2 = null;
-    
 
     switch (ini.fend) {
-    /* NSL stereo */
-/+    case Fend.STEREO: 
+      /* NSL stereo */
+      case Fend.STEREO: 
         if (stereo_init()<0) return -1; /* stereo initialization */
         if (ini.confini)
             if (stereo_initconf()<0) return -1; /* stereo initialize configurations */
@@ -32,35 +31,37 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
             return -1; /* signal glab initialization */
         }
         /* frontend buffer size */
-        ini.fendbuffsize=STEREO_DATABUFF_SIZE;
+        ini.fendbuffsize = STEREO_DATABUFF_SIZE;
         /* total buffer size */
-        ini.buffsize=STEREO_DATABUFF_SIZE*MEMBUFLEN;
+        ini.buffsize = to!int(STEREO_DATABUFF_SIZE*MEMBUFLEN);
         
         /* memory allocation */
-        sdrstat.buff=(unsigned char*)malloc(ini.buffsize);
-        if (null==sdrstat.buff) {
+        sdrstat.buff = cast(byte*)malloc(ini.buffsize);
+        if (sdrstat.buff is null){
             SDRPRINTF("error: failed to allocate memory for the buffer\n");
             return -1;
         }
-        break;+/
-    /* STEREO Binary File */
-    //case Fend.FILESTEREO: 
-    //    /* IF file open */
-    //    ini.fp1 = File(ini.file1, "rb");
-    //    enforce(ini.fp1.isOpen);
+        break;
 
-    //    /* frontend buffer size */
-    //    ini.fendbuffsize = STEREO_DATABUFF_SIZE;
-    //     total buffer size 
-    //    ini.buffsize=STEREO_DATABUFF_SIZE*MEMBUFLEN;
+      /* STEREO Binary File */
+      case Fend.FILESTEREO: 
+        /* IF file open */
+        ini.fp1 = File(ini.file1, "rb");
+        enforce(ini.fp1.isOpen);
+
+        /* frontend buffer size */
+        ini.fendbuffsize = STEREO_DATABUFF_SIZE;
+        // total buffer size 
+        ini.buffsize = to!int(STEREO_DATABUFF_SIZE * MEMBUFLEN);
                 
-    //    /* memory allocation */
-    //    sdrstat.buff = cast(byte*)malloc(ini.buffsize).enforce();
-    //    scope(failure) free(sdrstat.buff);
-    //    break;
-/+    /* SiGe GN3S v2/v3 */
-    case Fend.GN3SV2: 
-    case Fend.GN3SV3: 
+        /* memory allocation */
+        sdrstat.buff = cast(byte*)malloc(ini.buffsize).enforce();
+        scope(failure) free(sdrstat.buff);
+        break;
+
+      /+
+      /* SiGe GN3S v2/v3 */
+      case Fend.GN3SV2, Fend.GN3SV3:
         if (gn3s_init()<0) return -1; /* GN3S initialization */
 
         /* frontend buffer size */
@@ -75,18 +76,13 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
             return -1;
         }
         break;+/
-    /* File */
-    case Fend.FILE:
-        
+
+      /* File */
+      case Fend.FILE:
         /* IF file open (FILE1) */
         ini.fp1 = File(ini.file1,"rb");
         enforce(ini.fp1.isOpen);
 
-        /* IF file open (FILE2) */
-        //if(strlen(ini.file2.ptr) != 0)
-        //    ini.fp2 = fopen(ini.file2.ptr, "rb".ptr).enforce();
-        //else
-        //    ini.fp2 = null;
         if(ini.file2.length){
             ini.fp2 = File(ini.file2, "rb");
             enforce(ini.fp2.isOpen);
@@ -113,11 +109,10 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
             if(sdrstat.buff2 !is null)
                 free(sdrstat.buff2);
 
-        
         break;
-    default:
-        enforce(0);
-        return -1;
+
+      default:
+        assert(0);
     }
 
     /* FFT initialization */
@@ -136,22 +131,24 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
 {
     traceln("called");
     switch (ini.fend) {
-    /* NSL stereo */
-/+    case Fend.STEREO: 
+      /* NSL stereo */
+      case Fend.STEREO: 
          stereo_quit();
-        break;+/
-    /* STEREO Binary File */
-    //case Fend.FILESTEREO: 
-    //    if (ini.fp1.isOpen) fclose(ini.fp1); ini.fp1=null;
-    //        ini.fp1.close();
-    //    break;
-    /* SiGe GN3S v2/v3 */
-/+    case Fend.GN3SV2:
-    case Fend.GN3SV3:
-        gn3s_quit();
-        break;+/
-    /* File */
-    case Fend.FILE:
+        break;
+
+      /* STEREO Binary File */
+      case Fend.FILESTEREO: 
+        if (ini.fp1.isOpen)
+            ini.fp1.close();
+        break;
+      
+      /* SiGe GN3S v2/v3 */
+      //case Fend.GN3SV2, Fend.GN3SV3:
+      //  gn3s_quit();
+      //  break;
+
+      /* File */
+      case Fend.FILE:
         traceln();
         if (ini.fp1.isOpen)/+ fclose(ini.fp1); ini.fp1=null;+/
             ini.fp1.close();
@@ -159,7 +156,7 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
             ini.fp2.close();
         traceln();
         break;
-    default:
+      default:
         return -1;
     }
     traceln();
@@ -181,26 +178,32 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 {
     traceln("called");
     switch (ini.fend) {
-    /* NSL stereo */
-/+    case Fend.STEREO: 
+      /* NSL stereo */
+      case Fend.STEREO: 
         if (STEREO_GrabStart()<0) {
             SDRPRINTF("error: STEREO_GrabStart\n");
             return -1;
         }
-        break;+/
-    /* STEREO Binary File */
-    //case Fend.FILESTEREO: 
-    //    break;
-    /* SiGe GN3S v2/v3 */
-/+    case Fend.GN3SV2:
-    case Fend.GN3SV3:
-        break;+/
-    /* File */
-    case Fend.FILE: 
         break;
-    default:
-        enforce(0);
+
+      /* STEREO Binary File */
+      case Fend.FILESTEREO: 
+        break;
+
+      /* SiGe GN3S v2/v3 */
+      /+
+      case Fend.GN3SV2:
+      case Fend.GN3SV3:
+        break;+/
+
+      /* File */
+      case Fend.FILE: 
+        break;
+
+      default:
+        assert(0);
     }
+
     return 0;
 }
 
@@ -215,19 +218,19 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     traceln("called");
     switch (ini.fend) {
     /* NSL stereo */
-/+    case Fend.STEREO: 
+    case Fend.STEREO: 
         if (STEREO_RefillDataBuffer()<0) {
             SDRPRINTF("error: STEREO Buffer overrun...\n");
             return -1;
         }
         stereo_pushtomembuf(); /* copy to membuffer */
-        break;+/;
+        break;
+
     /* STEREO Binary File */
-    //case Fend.FILESTEREO: 
-    //    filestereo_pushtomembuf();  copy to membuffer 
-    //    //Sleep(1);
-    //    //Thread.sleep(dur!"usecs"(2000));
-    //    break;
+    case Fend.FILESTEREO: 
+        filestereo_pushtomembuf();  //copy to membuffer 
+        break;
+
     /* SiGe GN3S v2/v3 */
 /+    case Fend.GN3SV2:
     case Fend.GN3SV3:
@@ -298,28 +301,31 @@ int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype
             enforce(rcvgrabdata(&sdrini) >= 0);
 
         switch (ini.fend) {
-        /* NSL stereo */
-    /+    case Fend.STEREO: 
+          /* NSL stereo */
+          case Fend.STEREO: 
             stereo_getbuff(buffloc,n,dtype,expbuf);
-            break;+/
-        /* STEREO Binary File */
-        //case Fend.FILESTEREO: 
-        //    stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
-        //    break;
-        /* SiGe GN3S v2 */
-    /+    case Fend.GN3SV2:
+            break;
+
+          /* STEREO Binary File */
+          case Fend.FILESTEREO: 
+            stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
+            break;
+
+          /* SiGe GN3S v2 */
+      /+    case Fend.GN3SV2:
             gn3s_getbuff_v2(buffloc,n,dtype,expbuf);
             break;
-        /* SiGe GN3S v3 */
-        case Fend.GN3SV3:
+          /* SiGe GN3S v3 */
+          case Fend.GN3SV3:
             gn3s_getbuff_v3(buffloc,n,dtype,expbuf);
             break;+/
-        /* File */
-        case Fend.FILE:
+          /* File */
+          case Fend.FILE:
             file_getbuff(buffloc, n, ftype, dtype, expbuf);
             break;
-        default:
-            enforce(0);
+
+          default:
+            assert(0);
         }
     }
 

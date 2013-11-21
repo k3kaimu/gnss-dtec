@@ -6,32 +6,33 @@
 *-----------------------------------------------------------------------------*/
 
 import sdr;
-import std.c.stdio,
-       std.c.string;
+import std.stdio;
 
 import std.conv : to;
 import std.exception : enforce;
 
-version(none):
+import std.functional;
+import core.thread;
+
 
 /* constants -----------------------------------------------------------------*/
 /* sterei confugration file path */
-immutable DEF_FW_FILENAME       = "../../src/rcv/stereo/conf/stereo_fx2fw.ihx";
-immutable DEF_FPGA_FILENAME     = "../../src/rcv/stereo/conf/stereo_fpga0125_intClk.bin";
-immutable DEF_SYNTH_FILENAME    = "../../src/rcv/stereo/conf/stereo_clksynth.cfg";
-immutable DEF_ADC_FILENAME      = "../../src/rcv/stereo/conf/stereo_adc.cfg";
-immutable DEF_MAX2769_FILENAME  = "../../src/rcv/stereo/conf/max2769.cfg";
-immutable DEF_MAX2112_FILENAME  = "../../src/rcv/stereo/conf/max2112_e6.cfg";
-immutable MAX_FILENAME_LEN = 256;
+/*deprecated*/ immutable DEF_FW_FILENAME       = "../../src/rcv/stereo/conf/stereo_fx2fw.ihx";
+/*deprecated*/ immutable DEF_FPGA_FILENAME     = "../../src/rcv/stereo/conf/stereo_fpga0125_intClk.bin";
+/*deprecated*/ immutable DEF_SYNTH_FILENAME    = "../../src/rcv/stereo/conf/stereo_clksynth.cfg";
+/*deprecated*/ immutable DEF_ADC_FILENAME      = "../../src/rcv/stereo/conf/stereo_adc.cfg";
+/*deprecated*/ immutable DEF_MAX2769_FILENAME  = "../../src/rcv/stereo/conf/max2769.cfg";
+/*deprecated*/ immutable DEF_MAX2112_FILENAME  = "../../src/rcv/stereo/conf/max2112_l2.cfg";
+//immutable MAX_FILENAME_LEN = 256;
 
 /* global variables -----------------------------------------------------------*/
-__gshared char[MAX_FILENAME_LEN] fx2lpFileName;
-__gshared char[MAX_FILENAME_LEN] fpgaFileName;
-__gshared char[MAX_FILENAME_LEN] max2769FileName;
-__gshared char[MAX_FILENAME_LEN] max2112FileName;
-__gshared char[MAX_FILENAME_LEN] synthFileName;
-__gshared char[MAX_FILENAME_LEN] adcFileName;
-__gshared char[MAX_FILENAME_LEN] dataFileName;
+string fx2lpFileName;
+string fpgaFileName;
+string max2769FileName;
+string max2112FileName;
+string synthFileName;
+string adcFileName;
+string dataFileName;
 
 /* type definition -----------------------------------------------------------*/
 /* max2769 struct */
@@ -107,12 +108,12 @@ void stereo_quit()
 *------------------------------------------------------------------------------*/
 void stereo_initoptions() 
 {
-    strcpy(fx2lpFileName.ptr,DEF_FW_FILENAME.ptr);
-    strcpy(fpgaFileName.ptr,DEF_FPGA_FILENAME.ptr);
-    strcpy(max2769FileName.ptr,DEF_MAX2769_FILENAME.ptr);
-    strcpy(max2112FileName.ptr,DEF_MAX2112_FILENAME.ptr);
-    strcpy(synthFileName.ptr,DEF_SYNTH_FILENAME.ptr);
-    strcpy(adcFileName.ptr,DEF_ADC_FILENAME.ptr);
+    fx2lpFileName = DEF_FW_FILENAME;
+    fpgaFileName = DEF_FPGA_FILENAME;
+    max2769FileName = DEF_MAX2769_FILENAME;
+    max2112FileName = DEF_MAX2112_FILENAME;
+    synthFileName = DEF_SYNTH_FILENAME;
+    adcFileName = DEF_ADC_FILENAME;
 }
 /* stereo configuration function ------------------------------------------------
 * load configuration file and setting
@@ -121,113 +122,92 @@ void stereo_initoptions()
 *------------------------------------------------------------------------------*/
 int stereo_initconf() 
 {
-    int ret=0, length;
-    FILE* fwFileId, fpgaFileId, synthFileId, max2769FileId, max2112FileId, adcFileId;
-    max2769Conf_t max2769res;
-    max2112Conf_t max2112res;
-    synthConf_t synthConfResult;
-    adcConf_t adcConfResult;
-    ubyte* binaryStream;
-
-    SDRPRINTF("STEREO configuration start...\n");
+    writeln("STEREO configuration start...");
 
     /* FIRMWARE UPLOAD SECTION */
     if (!STEREO_IsConfigured()) {
-        fwFileId=fopen(fx2lpFileName.ptr,"rt".ptr);
-        if (null==fwFileId) {
-            SDRPRINTF("error: Firmware file not present in folder: %s\n",fx2lpFileName); return -1;
-        }
-        ret=STEREO_LoadFirmware(fwFileId);
-        if (ret<0) {
-            SDRPRINTF("error: %s\n",STEREO_Perror().to!string());
-        }
-        if (null!=fwFileId) {
-            fclose(fwFileId);
-        }
-        Sleep(1000);
+        auto fwFileId = File(fx2lpFileName, "rt")
+                        .tryExpr({writeln("error: Firmware file not present in folder: ", fx2lpFileName);});
+
+        STEREO_LoadFirmware(fwFileId.getFP)
+        .ifExpr!"a < 0"({writef("error: %s\n",STEREO_Perror().to!string());});
+
+        Thread.sleep(dur!"seconds"(1));
     }
 
     /* FPGA CONFIGURATION SECTION */
-    fpgaFileId=fopen(fpgaFileName.ptr,"rb".ptr);
-    if (null==fpgaFileId) {
-        SDRPRINTF("error: Could not open FPGA configuration file: %s\n",fpgaFileName); return -1;
-    }
-    binaryStream=cast(ubyte*)malloc(1<<20).enforce();
-    scope(failure) free(binaryStream);
+    {
+        auto fpgaFileId = File(fpgaFileName, "rb")
+                         .tryExpr({writeln("error: Could not open FPGA configuration file: ", fpgaFileName);});
 
-    length=cast(int)fread(binaryStream,1,1<<20,fpgaFileId);
-    if (length>0) {
-        ret=STEREO_SendFpga(binaryStream,length);
-        if (ret<0) {
-            SDRPRINTF("error: programming FPGA\n");
-        }
+        auto binaryStream = new ubyte[1 << 20];
+
+        fpgaFileId.rawRead(binaryStream).length
+        .ifExpr!"a > 0"((size_t size){
+            STEREO_SendFpga(binaryStream.ptr ,size.to!int())
+            .ifExpr!"a < 0"({
+                writeln("error: programming FPGA");
+                writeln("error: ", STEREO_Perror().to!string());
+            });
+        });
     }
-    free(binaryStream);
-    if (ret<0) {
-        SDRPRINTF("error: %s\n",STEREO_Perror().to!string());
-    }
-    if(null!=fpgaFileId) {
-        fclose(fpgaFileId);
-    }
+
     /* LMK03033C CONFIGURATION SECTION */
-    synthFileId=fopen(synthFileName.ptr,"rt".ptr);
-    if (null==synthFileId) {
-        SDRPRINTF("error: Could not open synthesizer configuration file: %s\n",synthFileName); return -1;
-    }
-    ret=STEREO_ConfigureSynth(synthFileId,&synthConfResult);
-    if (ret<0) {
-        SDRPRINTF("error: %s\n",STEREO_Perror().to!string());
-    }
-    if(null!=synthFileId) {
-        fclose(synthFileId);
-    }
+    {
+        synthConf_t synthConfResult = void;
+
+        auto synthFileId = File(synthFileName, "rt")
+                          .tryExpr({writeln("error: Could not open synthesizer configuration file: ", synthFileName);});
     
+        STEREO_ConfigureSynth(synthFileId.getFP, &synthConfResult)
+        .ifExpr!"a < 0"({writeln("error: ", STEREO_Perror().to!string());});
+    }
+
     /* MAX2769 CONFIGURATION SECTION */
-    max2769FileId=fopen(max2769FileName.ptr,"rt".ptr);
-    if (null==max2769FileId) {
-        SDRPRINTF("error: Could not open 1st max2769 configuration file: %s\n",max2769FileName); return -1;
+    {
+        max2769Conf_t max2769res = void;
+
+        auto max2769FileId = File(max2769FileName, "rt")
+                            .tryExpr({writeln("error: Could not open 1st max2769 configuration file: ", max2769FileName);});
+        
+        STEREO_ConfigureMax2769(max2769FileId.getFP, &max2769res)
+        .ifExpr!"a < 0"({writeln("error: ",STEREO_Perror().to!string);});
+        
+        STEREO_FprintfMax2769Conf(stdout.getFP, &max2769res);
     }
-    ret=STEREO_ConfigureMax2769(max2769FileId,&max2769res);
-    if (ret<0) {
-        SDRPRINTF("error: %s\n",STEREO_Perror().to!string);
-    }
-    if(null!=max2769FileId) {
-        fclose(max2769FileId);
-    }
-    STEREO_FprintfMax2769Conf(stdout,&max2769res);
  
     /* MAX2112 CONFIGURATION SECTION */
-    max2112FileId=fopen(max2112FileName.ptr,"rt".ptr);
-    if (null==max2112FileId) {
-        SDRPRINTF("error: Could not open max2112 configuration file: %s\n",max2112FileName); return -1;
+    {
+        max2112Conf_t max2112res = void;
+
+        auto max2112FileId = File(max2112FileName, "rt")
+                            .tryExpr({writeln("error: Could not open max2112 configuration file: ",max2112FileName);});
+        
+        STEREO_ConfigureMax2112(max2112FileId.getFP, &max2112res)
+        .ifExpr!"a < 0"({writeln("error: ", STEREO_Perror().to!string());});
+
+        STEREO_FprintfMax2112Conf(stdout.getFP, &max2112res);
     }
-    ret=STEREO_ConfigureMax2112(max2112FileId,&max2112res);
-    if (ret<0) {
-        SDRPRINTF("error: %s\n", STEREO_Perror().to!string());
-    }
-    if(null!=max2112FileId) {
-        fclose(max2112FileId);
-    }
-    STEREO_FprintfMax2112Conf(stdout,&max2112res);
 
     /* ADC CONFIGURATION SECTION */
-    adcFileId=fopen(adcFileName.ptr,"rt".ptr);
-    if (null==adcFileId) {
-        SDRPRINTF("error: Could not open adc configuration file: %s\n",adcFileName); return -1;
-    }
-    ret=STEREO_ConfigureAdc(adcFileId,&adcConfResult);
-    if (ret<0) {
-        SDRPRINTF("error: %s\n",STEREO_Perror().to!string());
-    }
-    if(null!=adcFileId) {
-        fclose(adcFileId);
-    }
-    STEREO_FprintfAdcConf(stdout,&adcConfResult);
+    {
+        adcConf_t adcConfResult = void;
 
-    SDRPRINTF("STEREO configuration finished\n");
-    
+        auto adcFileId = File(adcFileName, "rt")
+                        .tryExpr({writeln("error: Could not open adc configuration file: ", adcFileName);});
+
+        STEREO_ConfigureAdc(adcFileId.getFP, &adcConfResult)
+        .ifExpr!"a < 0"({writeln("error: ",STEREO_Perror().to!string());});
+
+        STEREO_FprintfAdcConf(stdout.getFP, &adcConfResult);
+    }
+
+    writeln("STEREO configuration finished");
+
     return 0;
 }
+
+
 /* initialization of data expansion ---------------------------------------------
 * initialization of data expansion
 * args   : none
@@ -235,20 +215,21 @@ int stereo_initconf()
 *------------------------------------------------------------------------------*/
 byte[256] lut1;
 byte[2][256] lut2;
+
 void stereo_exp_init()
 {
     byte[4] BASELUT1=[-3,-1,+1,+3]; /* 2bits */
     byte[8] BASELUT2=[+1,+3,+5,+7,-7,-5,-3,-1]; /* 3bits */
-    ubyte r; 
-    ubyte tmp;
 
-    for (r=0;r<256;r++) {
-        tmp = r;
-        lut1[r]   =BASELUT1[((tmp>>6)&0x03)];
-        lut2[r][0]=BASELUT2[((tmp>>3)&0x07)];
-        lut2[r][1]=BASELUT2[((tmp   )&0x07)];
+    //for (r=0;r<256;r++) {
+    foreach(i; 0 .. 256){
+        lut1[i]   =BASELUT1[((i>>6)&0x03)];
+        lut2[i][0]=BASELUT2[((i>>3)&0x07)];
+        lut2[i][1]=BASELUT2[((i   )&0x07)];
     }
 }
+
+
 /* data expansion to binary (stereo)  -------------------------------------------
 * get current data buffer from memory buffer
 * args   : char   *buf      I   memory buffer
@@ -257,23 +238,26 @@ void stereo_exp_init()
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void stereo_exp(const(byte)* buf, size_t n, DType dtype, byte[] expbuf)
-{
-    int i;
+void stereo_exp(const(ubyte)* buf, size_t n, DType dtype, byte[] expbuf)
+in{
+    assert(n <= expbuf.length);
+}
+body{
     if (!lut1[0]||!lut2[0][0]) stereo_exp_init();
 
     final switch (dtype) {
         /* front end 1 (max2769) */
         case DType.I:
-            for (i=0;i<n;i++) {
-                expbuf[i]=lut1[buf[i]];
-            }
+            //for (i=0;i<n;i++) {
+            foreach(i; 0 .. n)
+                expbuf[i] = lut1[buf[i]];
             break;
         /* front end 2 (max2112) */
         case DType.IQ:
-            for (i=0;i<n;i++) {
-                expbuf[2*i  ]=lut2[buf[i]][0];
-                expbuf[2*i+1]=lut2[buf[i]][1];
+            //for (i=0;i<n;i++) {
+            foreach(i; 0 .. n){
+                expbuf[2*i  ] = lut2[buf[i]][0];
+                expbuf[2*i+1] = lut2[buf[i]][1];
             }
             break;
     }
@@ -286,19 +270,17 @@ void stereo_exp(const(byte)* buf, size_t n, DType dtype, byte[] expbuf)
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void stereo_getbuff(ulong buffloc, size_t n, DType dtype, byte[] expbuf)
+void stereo_getbuff(size_t buffloc, size_t n, DType dtype, byte[] expbuf)
 {
-    ulong membuffloc=buffloc%(MEMBUFLEN*STEREO_DATABUFF_SIZE);
+    size_t membuffloc = buffloc%(MEMBUFLEN*STEREO_DATABUFF_SIZE);
     int nout = cast(int)((membuffloc+n)-(MEMBUFLEN*STEREO_DATABUFF_SIZE));
 
     //WaitForSingleObject(hbuffmtx,INFINITE);
-    synchronized(hbuffmtx){
-        if (nout>0) {
-            stereo_exp(&sdrstat.buff[membuffloc],n-nout,dtype,expbuf);
-            stereo_exp(&sdrstat.buff[0],nout,dtype,expbuf[dtype*(n-nout) .. $]);
-        } else {
-            stereo_exp(&sdrstat.buff[membuffloc],n,dtype,expbuf);
-        }
+    if (nout>0) {
+        stereo_exp(cast(ubyte*)(&sdrstat.buff[membuffloc]), n-nout, dtype, expbuf);
+        stereo_exp(cast(ubyte*)(&sdrstat.buff[0]), nout, dtype, expbuf[dtype*(n-nout) .. $]);
+    } else {
+        stereo_exp(cast(ubyte*)(&sdrstat.buff[membuffloc]), n, dtype, expbuf);
     }
     //ReleaseMutex(hbuffmtx);
 }
@@ -310,13 +292,11 @@ void stereo_getbuff(ulong buffloc, size_t n, DType dtype, byte[] expbuf)
 void stereo_pushtomembuf() 
 {
     //WaitForSingleObject(hbuffmtx,INFINITE);
-    synchronized(hbuffmtx)
-        memcpy(&sdrstat.buff[(sdrstat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE],STEREO_dataBuffer.ptr,STEREO_DATABUFF_SIZE);
+    memcpy(&sdrstat.buff[(sdrstat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE], STEREO_dataBuffer, STEREO_DATABUFF_SIZE);
     //ReleaseMutex(hbuffmtx);
 
     //WaitForSingleObject(hreadmtx,INFINITE);
-    synchronized(hreadmtx)
-        sdrstat.buffloccnt++;
+    sdrstat.buffloccnt++;
     //ReleaseMutex(hreadmtx);
 }
 /* push data to memory buffer ---------------------------------------------------
@@ -329,18 +309,16 @@ void filestereo_pushtomembuf()
     size_t nread;
 
     //WaitForSingleObject(hbuffmtx,INFINITE);
-    synchronized(hbuffmtx)
-        nread = fread(&sdrstat.buff[(sdrstat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE],1,STEREO_DATABUFF_SIZE,sdrini.fp1.getFP);
+    nread = fread(&sdrstat.buff[(sdrstat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE],1,STEREO_DATABUFF_SIZE,sdrini.fp1.getFP);
     //ReleaseMutex(hbuffmtx);
 
-    if (nread<STEREO_DATABUFF_SIZE) {
-        sdrstat.stopflag=ON;
+    if (nread < STEREO_DATABUFF_SIZE){
+        sdrstat.stopflag=true;
         SDRPRINTF("end of file!\n");
     }
 
     //WaitForSingleObject(hreadmtx,INFINITE);
-    synchronized(hreadmtx)
-        sdrstat.buffloccnt++;
+    sdrstat.buffloccnt++;
     //ReleaseMutex(hreadmtx);
 }
 
@@ -348,7 +326,7 @@ void filestereo_pushtomembuf()
 extern(C):
 
 extern __gshared const uint STEREO_DATABUFF_SIZE;
-extern __gshared ubyte[] STEREO_dataBuffer;
+extern __gshared ubyte* STEREO_dataBuffer;
 
 int STEREO_InitLibrary();
 void STEREO_QuitLibrary();

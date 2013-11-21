@@ -82,6 +82,9 @@ static if(!isVersion!"Dnative"){
     pragma(lib, "libfftw3f-3.lib");
 }
 
+pragma(lib, "rcv/stereo/lib/libnslstereo.a");
+pragma(lib, "lib/usb/libusb.lib");
+
 
 /**
 航法システム(GNSS)の種類
