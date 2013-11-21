@@ -70,15 +70,15 @@ version(Win64){
 
 /* FEC */
 version(NavigationDecode){
-    static assert(isVersion!"Win64");   // 64bitビルドの場合だけFFTWが使える
-    pragma(lib, "libfec.a");            // この仕様はlinkerの問題.optlinkはクソ
+    static assert(isVersion!"Win64");   // 64bitビルドの場合だけlibfecが使える
+    pragma(lib, "libfec.a");            // この仕様はlinkerの問題.   optlinkはクソ
     public import fec;
 }
 
 /* FFT */
 static if(!isVersion!"Dnative"){
     static assert(isVersion!"Win64");   // 64bitビルドの場合だけFFTWが使える
-    public import fftw;                 // これの仕様はlinkerの問題.optlinkはクソ
+    public import fftw;                 // これの仕様はlinkerの問題.   optlinkはクソ
     pragma(lib, "libfftw3f-3.lib");
 }
 
