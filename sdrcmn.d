@@ -29,7 +29,8 @@ static if(!isVersion!"UseFFTW")
     private cpx_t[] buffer;
 }
 
-static this(){      // モジュールコンストラクタ(スレッド起動時に実行される)
+static this()
+{      // モジュールコンストラクタ(スレッド起動時に実行される)
     // carrier loopup tableの初期化
     foreach(i; 0 .. CDIV){
         cost[i] = cast(short)floor((cos(DPI/CDIV*i)/CSCALE+0.5));
