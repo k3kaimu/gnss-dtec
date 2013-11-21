@@ -213,19 +213,19 @@ int stereo_initconf()
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
-byte[256] lut1;
-byte[2][256] lut2;
+private byte[256] lut1;
+private byte[2][256] lut2;
 
-void stereo_exp_init()
+static this()
 {
-    byte[4] BASELUT1=[-3,-1,+1,+3]; /* 2bits */
-    byte[8] BASELUT2=[+1,+3,+5,+7,-7,-5,-3,-1]; /* 3bits */
+    byte[4] baseLUT1=[-3,-1,+1,+3]; /* 2bits */
+    byte[8] baseLUT2=[+1,+3,+5,+7,-7,-5,-3,-1]; /* 3bits */
 
     //for (r=0;r<256;r++) {
     foreach(i; 0 .. 256){
-        lut1[i]   =BASELUT1[((i>>6)&0x03)];
-        lut2[i][0]=BASELUT2[((i>>3)&0x07)];
-        lut2[i][1]=BASELUT2[((i   )&0x07)];
+        lut1[i]    = baseLUT1[((i>>6)&0x03)];
+        lut2[i][0] = baseLUT2[((i>>3)&0x07)];
+        lut2[i][1] = baseLUT2[((i   )&0x07)];
     }
 }
 
@@ -243,8 +243,6 @@ in{
     assert(n <= expbuf.length);
 }
 body{
-    if (!lut1[0]||!lut2[0][0]) stereo_exp_init();
-
     final switch (dtype) {
         /* front end 1 (max2769) */
         case DType.I:
