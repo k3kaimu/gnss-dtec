@@ -115,8 +115,8 @@ immutable CSCALE = 1.0 /16.0;
 enum Fend
 {
     STEREO = 0,
-    GN3SV2 = -1,
-    GN3SV3 = 1,
+    //GN3SV2 = -1,
+    //GN3SV3 = 1,
     FILESTEREO,
     FILE
 }

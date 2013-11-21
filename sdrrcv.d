@@ -20,7 +20,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     traceln("called");
     sdrstat.buff = sdrstat.buff1 = sdrstat.buff2 = null;
 
-    switch (ini.fend) {
+    final switch (ini.fend) {
       /* NSL stereo */
       case Fend.STEREO: 
         if (stereo_init()<0) return -1; /* stereo initialization */
@@ -110,9 +110,6 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
                 free(sdrstat.buff2);
 
         break;
-
-      default:
-        assert(0);
     }
 
     /* FFT initialization */
@@ -130,7 +127,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
 {
     traceln("called");
-    switch (ini.fend) {
+    final switch (ini.fend) {
       /* NSL stereo */
       case Fend.STEREO: 
          stereo_quit();
@@ -156,8 +153,6 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
             ini.fp2.close();
         traceln();
         break;
-      default:
-        return -1;
     }
     traceln();
     /* free memory */
@@ -177,7 +172,7 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
 int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 {
     traceln("called");
-    switch (ini.fend) {
+    final switch (ini.fend) {
       /* NSL stereo */
       case Fend.STEREO: 
         if (STEREO_GrabStart()<0) {
@@ -199,9 +194,6 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
       /* File */
       case Fend.FILE: 
         break;
-
-      default:
-        assert(0);
     }
 
     return 0;
@@ -216,7 +208,7 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 {
     traceln("called");
-    switch (ini.fend) {
+    final switch (ini.fend) {
     /* NSL stereo */
     case Fend.STEREO: 
         if (STEREO_RefillDataBuffer()<0) {
@@ -245,8 +237,6 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         //Thread.sleep(dur!"usecs"(2000));
         //Sleep(1);
         break;
-    default:
-        enforce(0);
     }
     return 0;
 }
@@ -300,7 +290,7 @@ int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype
         while(needNewBuffer())
             enforce(rcvgrabdata(&sdrini) >= 0);
 
-        switch (ini.fend) {
+        final switch (ini.fend) {
           /* NSL stereo */
           case Fend.STEREO: 
             stereo_getbuff(buffloc,n,dtype,expbuf);
@@ -323,9 +313,6 @@ int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype
           case Fend.FILE:
             file_getbuff(buffloc, n, ftype, dtype, expbuf);
             break;
-
-          default:
-            assert(0);
         }
     }
 
