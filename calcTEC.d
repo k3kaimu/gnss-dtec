@@ -8,6 +8,7 @@ import std.conv;
 import std.traits;
 import std.getopt;
 import std.parallelism;
+import std.math;
 
 
 alias Elem = Tuple!(real, real, real);
@@ -19,16 +20,18 @@ CSVの1行目にbuffloc,
 */
 void main(string[] args)
 {
-    string qzssL1, qzssL2, gpsL1, gpsL2, output = "resultTEC.csv";
+    string qzssL1, qzssL2, gpsL1, gpsL2, outputTEC = "resultTEC.csv", outputDTEC = "resultDTEC.csv";
 
     getopt(args,
         "qzssl1", &qzssL1,
         "qzssl2", &qzssL2,
         "gpsl1", &gpsL1,
         "gpsl2", &gpsL2,
-        "output", &output);
+        "oDtec", &outputDTEC,
+        "oTec", &outputTEC);
 
     auto data = (){
+        // multi thread programming
         auto qzssL2Task = task!readData(qzssL2),
              gpsL1Task = task!readData(gpsL1),
              gpsL2Task = task!readData(gpsL2);
@@ -43,6 +46,7 @@ void main(string[] args)
 
 
     auto tecData = (){
+        // multi thread programming
         auto gpsTECTask = task!calcTEC(data[1].tupleof);
         taskPool.put(gpsTECTask);
 
@@ -54,9 +58,15 @@ void main(string[] args)
 
     immutable qzssAvgTECVel = ((a, b) => (b[2] - a[2])/(b[0] - a[0]))(qzssTEC[$/4*1], qzssTEC[$/4*3]);
 
-    File file = File(output, "w");
-    foreach(e; gpsTEC)
-        file.writefln("%s, %.9f, %.9f, %.9f", cast(long)e[0], e[1], e[2], e[2] - qzssAvgTECVel*e[0]);
+    auto fileTEC = File(outputTEC, "w"),
+         fileDTEC = File(outputDTEC, "w");
+
+    foreach(e; gpsTEC){
+        if(!e[1].isNaN)
+            fileTEC.writefln("%s, %.4f", cast(long)e[0], e[1]);
+
+        fileDTEC.writefln("%s, %.4f", cast(long)e[0], e[2] - qzssAvgTECVel*e[0]);
+    }
 }
 
 
@@ -82,33 +92,38 @@ Elem[] readData(string filename)
 }
 
 
-Elem[] calcTEC(Elem[] l1data, Elem[] l2data) pure nothrow @safe
+Elem[] calcTEC(in Elem[] l1data, in Elem[] l2data) pure nothrow @safe
 {
     auto l2Buffloc =  l2data.map!"a[0]".array();
+    auto l2Remcode = l2data.map!(a => toNear(a[1], 1023))().array();
     auto l2CarrPhase = l2data.map!"a[2]".array();
+
+    auto l2RawRemcode = l2data.map!"a[1]"().array();
 
     Elem[] output;
     foreach(e; l1data)
     {
         immutable l1Idx = e[0],
-                  l1remcode = e[1],
+                  l1P = e[1] * (3.0e8 / 1.023e6),
                   l1L = e[2];
 
-        immutable l2L = interp1(l2Buffloc, l2CarrPhase, l1Idx);
+        immutable l2L = interp1(l2Buffloc, l2CarrPhase, l1Idx),
+                  l2P = interp1(l2Buffloc, l2Remcode, l1Idx) * (3.0e8 / 1.023e6);
 
-        //writefln("%s : %s", l1L, l2L);
+        immutable dtec = calcTEC(l1L, l2L),
+                  tec = calcTEC!"m"(l1P - l2P);
 
-        immutable dtec = calcDTEC(l1L, l2L),
-                  tec = real.nan;                                   // TODO
-
-        output ~= Elem(l1Idx, tec, dtec);
+        if(interp1(l2Buffloc, l2RawRemcode, l1Idx) > (1023/2))
+            output ~= Elem(l1Idx, real.nan, dtec);
+        else
+            output ~= Elem(l1Idx, tec, dtec);
     }
 
     return output;
 }
 
 
-real calcDTEC(real phiL1, real phiL2) pure nothrow @safe
+real calcTEC(real phiL1, real phiL2) pure nothrow @safe
 {
     immutable a = 4.03e17,
               c = 3.0e8,
@@ -119,7 +134,22 @@ real calcDTEC(real phiL1, real phiL2) pure nothrow @safe
 
     immutable dx = lambda(f_l1) * phiL1 - lambda(f_l2) * phiL2;
 
-    return dx / a * f_l1^^2 * f_l2^^2 / (f_l1^^2 - f_l2^^2);
+    return calcTEC!"m"(dx);
+}
+
+
+real calcTEC(string unit : "m")(real meter) pure nothrow @safe
+{
+    immutable a = 4.03e17,
+              f_l1 = 10.23e6 * 77 * 2,
+              f_l2 = 10.23e6 * 60 * 2;
+
+    return meter / a * f_l1^^2 * f_l2^^2 / (f_l1^^2 - f_l2^^2);
+}
+
+real calcTEC(string unit : "s")(real sec) pure nothrow @safe
+{
+    return calcTEC!"m"(sec * 3.0e8);
 }
 
 
@@ -202,7 +232,8 @@ body{
 
 ///
 pure nothrow @safe
-unittest{
+unittest
+{
     assert(approxEqual(interp1([0.0], [1.3], 5), 1.3));                             // 1点の場合は、y[0]を返すしかない
     assert(approxEqual(interp1([1.0, 2.0], [0.0, 4.0], 3), 8));                     // 2点の場合は線形補間
     assert(approxEqual(interp1([0.0, 1.0, 2.0], [0.0, 1.0, 4.0], 0.1), 0.01));      // 3点以上では、近傍3点のラグランジュ補完
@@ -217,4 +248,24 @@ unittest{
 
     foreach(i, xe; x)
         assert(interp1(x, y, xe) == y[i]);
+}
+
+
+real toNear(real value, real pole) pure nothrow @safe
+{
+    value %= pole;
+    if(value > pole/2)
+        return value - pole;
+    else if(value < -pole/2)
+        return value + pole;
+    return value;
+}
+
+pure nothrow @safe
+unittest
+{
+    assert(toNear(0.01, 1).approxEqual(0.01));
+    assert(toNear(1.99, 1).approxEqual(-0.01));
+    assert(toNear(-1.99, 1).approxEqual(0.01));
+    assert(toNear(-0.01, 1).approxEqual(-0.01));
 }
