@@ -1,5 +1,5 @@
 //##& set waitTime 20000            // 10s
-//##$ dmd -O -inline -gs -m64 -unittest -version=UseFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric
+//##$ dmd -O -inline -gs -m64 -unittest -version=UseFFTW -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric util/server
 
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
 /*
@@ -56,7 +56,8 @@ public import sdracq,
               util.range,
               util.trace,
               util.serialize,
-              util.numeric;
+              util.numeric,
+              util.server;
 
 
 // msgpack-d
