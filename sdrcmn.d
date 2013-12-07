@@ -1251,33 +1251,43 @@ if(isInputRange!R && hasLength!R && isOutputRange!(W, ElementType!R))
 *          short  *I,*Q     O   carrier mixed data I, Q component
 * return : double               phase remainder
 *------------------------------------------------------------------------------*/
-double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, short *I, short *Q)
-{
+double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, double freq, double phi0, short[] I, short[] Q)
+in{
+    final switch(dtype){
+      case DType.I:
+        assert(data.length == I.length);
+        assert(data.length == Q.length);
+        break;
+
+      case DType.IQ:
+        assert(data.length == I.length * 2);
+        assert(data.length == Q.length * 2);
+    }
+}
+body{
     traceln("called");
 
-    const(byte)* p;
-    double phi,ps,prem;
+    double phi = phi0 * CDIV / DPI;
+    immutable ps = freq * CDIV * ti; /* phase step */
 
-    int i,index;
+    if (dtype==DType.IQ)        /* complex */
+        foreach(i; 0 .. data.length / 2){
+            immutable idx = (cast(int)phi)&CMASK;
+            I[i] = cast(short)(cost[idx]*data[0] - sint[idx]*data[1]);
+            Q[i] = cast(short)(cost[idx]*data[1] + sint[idx]*data[0]);
 
-    phi=phi0*CDIV/DPI;
-    ps=freq*CDIV*ti; /* phase step */
-
-    if (dtype==DType.IQ) { /* complex */
-        for (p=data.ptr;p<data.ptr+n*2;p+=2,I++,Q++,phi+=ps) {
-            index=(cast(int)phi)&CMASK;
-            *I=cast(short)(cost[index]*p[0] - sint[index]*p[1]);
-            *Q=cast(short)(cost[index]*p[1] + sint[index]*p[0]);
+            data.popFrontN(2);
+            phi += ps;
         }
-    }else if (dtype==DType.I) { /* real */
-        for (p=data.ptr;p<data.ptr+n;p++,I++,Q++,phi+=ps) {
-            index=(cast(int)phi)&CMASK;
-            *I=cast(short)(cost[index]*p[0]);
-            *Q=cast(short)(sint[index]*p[0]);
+
+    else if (dtype==DType.I)    /* real */
+        foreach(i, e; data){
+            immutable idx=(cast(int)phi)&CMASK;
+            I[i] = cast(short)(cost[idx] * e);
+            Q[i] = cast(short)(sint[idx] * e);
+
+            phi += ps;
         }
-    }
-    prem=phi*DPI/CDIV;
-    //while(prem > DPI) prem -= DPI;
-    prem %= DPI;        // 周波数, 位相がマイナスの場合も考慮する必要がある
-    return prem;
+
+    return (phi*DPI/CDIV) % DPI;
 }

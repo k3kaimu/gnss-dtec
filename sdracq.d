@@ -200,12 +200,12 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(in byte[] data,
         scope(exit) tracing = tmp;
 
         /* mix local carrier */
-        mixcarr(dataR, dtype, ti, m, freq[i], 0.0, dataI.ptr, dataQ.ptr);
+        mixcarr(dataR, dtype, ti, freq[i], 0.0, dataI, dataQ);
         dataI.zip(dataQ).csvOutput("mix_carr_" ~ freq[i].to!string() ~ ".csv");
 
 
         /* to complex */
-        cpxcpx(dataI.ptr, dataQ.ptr, CSCALE / m, m, datax.ptr);
+        cpxcpx(dataI, dataQ, CSCALE / m, datax);
     
         /* convolution */
         cpxconv(datax, codex, true, P[i*n .. (i+1)*n]);
