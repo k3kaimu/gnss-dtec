@@ -325,7 +325,7 @@ void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(CType ctyp
             break;
 
           default:
-            SDRPRINTF("error: inittrkprmstruct sw=%d\n",sw);
+            assert(0, "error: inittrkprmstruct sw = %s".format(sw));
         }
 
 

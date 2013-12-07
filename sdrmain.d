@@ -108,7 +108,7 @@ void startsdr()
         sdrthread(1);
     }
 
-    SDRPRINTF("GNSS-SDRLIB is finished!\n");
+    writeln("GNSS-SDRLIB is finished!");
 }
 
 
@@ -135,7 +135,7 @@ void sdrthread(size_t index)
     initpltstruct(&pltacq,&plttrk,sdr);
     //enforce(initpltstruct(&pltacq,&plttrk,sdr) !< 0);
 
-    SDRPRINTF("**** %s sdr thread start! ****\n",sdr.satstr);
+    writefln("**** %s sdr thread start! ****", sdr.satstr);
 
     /* check the exit flag */
     bool isStopped()
@@ -228,7 +228,7 @@ void sdrthread(size_t index)
                                           sdr.trk.sumI[sdr.trk.prm1.ne], sdr.trk.sumQ[sdr.trk.prm1.ne],
                                           sdr.trk.sumI[sdr.trk.prm1.nl], sdr.trk.sumQ[sdr.trk.prm1.nl]);
 
-                if (/*sdr.no==1&&*/cnt%(1000*10)==0) SDRPRINTF("process %d sec...\n",cast(int)cnt/(1000));
+                if (/*sdr.no==1&&*/cnt%(1000*10)==0) writefln("process %s sec...", cast(int)cnt/(1000));
                 cnt++;
                 cntsw++;
             }
@@ -239,7 +239,7 @@ void sdrthread(size_t index)
     /* plot termination */
     quitpltstruct(&pltacq,&plttrk);
 
-    SDRPRINTF("SDR channel %s thread finished!\n",sdr.satstr);
+    writefln("SDR channel %s thread finished!", sdr.satstr);
 }
 
 

@@ -175,8 +175,8 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     final switch (ini.fend) {
       /* NSL stereo */
       case Fend.STEREO: 
-        if (STEREO_GrabStart()<0) {
-            SDRPRINTF("error: STEREO_GrabStart\n");
+        if(STEREO_GrabStart() < 0){
+            writeln("error: STEREO_GrabStart\n");
             return -1;
         }
         break;
@@ -211,8 +211,8 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     final switch (ini.fend) {
     /* NSL stereo */
     case Fend.STEREO: 
-        if (STEREO_RefillDataBuffer()<0) {
-            SDRPRINTF("error: STEREO Buffer overrun...\n");
+        if(STEREO_RefillDataBuffer() < 0){
+            writeln("error: STEREO Buffer overrun...");
             return -1;
         }
         stereo_pushtomembuf(); /* copy to membuffer */
@@ -227,7 +227,7 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 /+    case Fend.GN3SV2:
     case Fend.GN3SV3:
         if (gn3s_pushtomembuf()<0) {
-            SDRPRINTF("error: GN3S Buffer overrun...\n");
+            writeln("error: GN3S Buffer overrun...");
             return -1;
         }
         break;+/
@@ -345,7 +345,7 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
 
     if ((sdrini.fp1.isOpen && nread1 < sdrini.dtype[0] * FILE_BUFFSIZE)||(sdrini.fp2.isOpen && nread2 < sdrini.dtype[1] * FILE_BUFFSIZE)) {
         sdrstat.stopflag = true;
-        SDRPRINTF("end of file!\n");
+        writeln("end of file!");
     }
 
     //WaitForSingleObject(hreadmtx,INFINITE);

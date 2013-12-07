@@ -73,22 +73,16 @@ struct adcConf_t {
 * args   : none
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int stereo_init() 
+void stereo_init()
 {
-    int ret;
-    
     /* initiarize option strings */
     stereo_initoptions();
-    
-    ret=STEREO_InitLibrary();
-    if (ret!=0) {
-        SDRPRINTF("error: initialising Stereo driver\n"); return -1;
-    }
 
-    if (!STEREO_IsConnected()) {
-        SDRPRINTF("error: STEREO does not appear to be connected\n"); return -1;
-    }
-    return 0;
+    if (STEREO_InitLibrary())
+        enforce("error: initialising Stereo driver");
+
+    if (!STEREO_IsConnected())
+        enforce("error: STEREO does not appear to be connected");
 }
 /* stop front-end ---------------------------------------------------------------
 * stop grabber of front end
@@ -312,7 +306,7 @@ void filestereo_pushtomembuf()
 
     if (nread < STEREO_DATABUFF_SIZE){
         sdrstat.stopflag=true;
-        SDRPRINTF("end of file!\n");
+        writeln("end of file!");
     }
 
     //WaitForSingleObject(hreadmtx,INFINITE);

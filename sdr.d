@@ -1002,9 +1002,6 @@ unittest
 }
 
 
-alias SDRPRINTF = writef;
-
-
 auto malloc(size_t size) nothrow
 {
     return GC.malloc(size);
