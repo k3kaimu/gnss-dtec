@@ -179,7 +179,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
 * notes  : P=abs(ifft(conj(fft(code)).*fft(data.*e^(2*pi*freq*t*i)))).^2
 *------------------------------------------------------------------------------*/
 void pcorrelator(string file = __FILE__, size_t line = __LINE__)(in byte[] data, DType dtype, double ti, int n, in double[] freq,
-                        int nfreq, double crate, int m, cpx_t* codex, double* P)
+                        int nfreq, double crate, int m, in cpx_t[] codex, double* P)
 {
     traceln("called");
 
@@ -208,7 +208,7 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(in byte[] data,
         cpxcpx(dataI.ptr, dataQ.ptr, CSCALE / m, m, datax.ptr);
     
         /* convolution */
-        cpxconv(datax.ptr, codex, m, n, 1, &P[i*n]);
+        cpxconv(datax, codex, true, P[i*n .. (i+1)*n]);
     }
 }
 
@@ -225,7 +225,7 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(in byte[] data,
 *          short  *code     I   long code
 * return : double               doppler frequency (Hz)
 *------------------------------------------------------------------------------*/
-double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, double crate, int n, int m, short[] code)
+double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, double crate, int n, int m, in short[] code)
 {
     traceln("called");
 

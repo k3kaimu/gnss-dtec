@@ -862,9 +862,9 @@ struct sdrch_t
     FType ftype;
     double f_sf = 0;
     double f_if = 0;
-    short* code;
-    short* lcode;
-    cpx_t* xcode;
+    immutable(short)[] code;
+    immutable(short)[] lcode;
+    immutable(cpx_t)[] xcode;
     int clen;
     double crate = 0;
     double ctime = 0;

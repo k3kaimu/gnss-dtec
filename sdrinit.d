@@ -467,9 +467,10 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
 
 
     /* code generation */
-    sdr.code = gencode(prn,ctype, &sdr.clen, &sdr.crate).enforce();
-    scope(failure) free(sdr.code);
-    
+    sdr.code = (){
+        auto ptr = gencode(prn,ctype, &sdr.clen, &sdr.crate);
+        return ptr[0 .. sdr.clen].idup;
+    }();
 
     sdr.ci        = sdr.ti*sdr.crate;
     sdr.ctime     = sdr.clen/sdr.crate;
@@ -522,25 +523,27 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
         /* navigation struct */
         initnavstruct(sys, ctype, &sdr.nav);
     if(ctype != CType.L2RCCM){
-        /* memory allocation */
-        sdr.lcode = cast(short*)malloc(short.sizeof * sdr.clen * sdr.acq.lenf).enforce();
-        scope(failure) free(sdr.lcode);
+        ///* memory allocation */
+        //sdr.lcode = cast(short*)malloc(short.sizeof * sdr.clen * sdr.acq.lenf).enforce();
+        //scope(failure) free(sdr.lcode);
 
-        foreach(i; 0 .. sdr.clen * sdr.acq.lenf) /* long code for fine search */
-            sdr.lcode[i] = sdr.code[i % sdr.clen];
+        //foreach(i; 0 .. sdr.clen * sdr.acq.lenf) /* long code for fine search */
+        //    sdr.lcode[i] = sdr.code[i % sdr.clen];
+        sdr.lcode = sdr.code.cycle.take(sdr.clen * sdr.acq.lenf).array.assumeUnique;
     }
 
     /* memory allocation */
-    scope rcode = cast(short*)sdrmalloc(short.sizeof * sdr.acq.nfft).enforce();
+    sdr.xcode = (){
+        scope rcode = new short[sdr.acq.nfft];
+        scope dst = new Complex!float[sdr.acq.nfft];
 
-    sdr.xcode = cpxmalloc(sdr.acq.nfft);
-    scope(failure) cpxfree(sdr.xcode);
-
-    /* other code generation */
-    rcode[0 .. sdr.acq.nfft] = 0;       // zero padding
-    rescode(sdr.code, sdr.clen, 0, 0, sdr.ci, sdr.nsamp, rcode); /* resampled code */
-    cpxcpx(rcode, null, 1.0, sdr.acq.nfft, sdr.xcode); /* FFT code */
-    cpxfft(sdr.xcode, sdr.acq.nfft);
+        /* other code generation */
+        rcode[] = 0;       // zero padding
+        rescode(sdr.code.ptr, sdr.clen, 0, 0, sdr.ci, sdr.acq.nfft, rcode.ptr); /* resampled code */
+        cpxcpx(rcode.ptr, null, 1.0, sdr.acq.nfft, dst.ptr); /* FFT code */
+        cpxfft(dst.ptr, sdr.acq.nfft);
+        return dst.idup;
+    }();
     
     return 0;
 }

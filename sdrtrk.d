@@ -112,7 +112,7 @@ size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
 *------------------------------------------------------------------------------*/
 void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, 
                        double crate, double coff, in size_t[] s, int ns, double[] I, double[] Q,
-                       double *remc, double *remp, short* codein, int coden)
+                       double *remc, double *remp, in short[] codein, int coden)
 in{
     bool b0 = (ti.isValidNum),
          b1 = (freq.isValidNum),
@@ -147,7 +147,7 @@ body{
     traceln("coff:= ", coff);
     traceln("ti:= ", ti);
     traceln("crate:=", crate);
-    *remc = rescode(codein,coden,coff,smax,ti*crate,n,code_e);
+    *remc = rescode(codein.ptr, coden, coff, smax, ti*crate, n, code_e);
 
     /* multiply code and integrate */
     dot_23(dataI, dataQ, code, code-s[0], code+s[0], n, I.ptr, Q.ptr);
