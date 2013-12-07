@@ -33,8 +33,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         ini.fendbuffsize = STEREO_DATABUFF_SIZE;                // frontend buffer size
         ini.buffsize = to!int(STEREO_DATABUFF_SIZE*MEMBUFLEN);  // total buffer size
 
-        sdrstat.buff = cast(byte*)malloc(ini.buffsize)
-                       .enforce("error: failed to allocate memory for the buffer");
+        sdrstat.buff = new byte[ini.buffsize];
         break;
     }
 
@@ -46,9 +45,6 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         ini.fendbuffsize = STEREO_DATABUFF_SIZE;                    // frontend buffer size
         ini.buffsize = to!int(ini.fendbuffsize * MEMBUFLEN);    // total buffer size 
 
-        //sdrstat.buff = cast(byte*)malloc(ini.buffsize)
-        //               .enforce("error: failed to allocate memory for the buffer");
-        //scope(failure) free(sdrstat.buff);
         sdrstat.buff = new byte[ini.buffsize];
         break;
 
@@ -61,9 +57,6 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         ini.fendbuffsize = GN3S_BUFFSIZE;                           // frontend buffer size
         ini.buffsize = GN3S_BUFFSIZE * MEMBUFLEN;                   // total buffer size
 
-        //sdrstat.buff = cast(byte*)malloc(ini.buffsize)
-        //               .enforce("error: failed to allocate memory for the buffer");
-        //scope(failure) free(sdrstat.buff);
         sdrstat.buff = new  byte[ini.buffsize];
         break;
     }
@@ -87,21 +80,9 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         /* memory allocation */
         if (ini.fp1.isOpen)
             sdrstat.buff1 = new byte[ini.dtype[0] * ini.buffsize];
-            //sdrstat.buff1 = cast(byte*)malloc(ini.dtype[0]*ini.buffsize)
-            //                .enforce("error: failed to allocate memory for the buffer");
-        
-        //scope(failure) 
-        //    free(sdrstat.buff1);
-
 
         if (ini.fp2.isOpen)
             sdrstat.buff2 = new byte[ini.dtype[1] * ini.buffsize];
-            //sdrstat.buff2 = cast(byte*)malloc(ini.dtype[1]*ini.buffsize)
-            //                .enforce("error: failed to allocate memory for the buffer");
-
-        //scope(failure)
-        //    free(sdrstat.buff2);
-
         break;
     }
 
@@ -131,8 +112,7 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
 
       /* STEREO Binary File */
       case Fend.FILESTEREO: 
-        if (ini.fp1.isOpen)
-            ini.fp1.close();
+        if (ini.fp1.isOpen) ini.fp1.close();
         break;
 
     version(none)
@@ -146,20 +126,13 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
       /* File */
       case Fend.FILE:
         traceln();
-        if (ini.fp1.isOpen)/+ fclose(ini.fp1); ini.fp1=null;+/
-            ini.fp1.close();
-        if (ini.fp2.isOpen)/+ fclose(ini.fp2); ini.fp2=null;+/
-            ini.fp2.close();
+        if(ini.fp1.isOpen) ini.fp1.close();
+        if(ini.fp2.isOpen) ini.fp2.close();
         traceln();
         break;
     }
     traceln();
-    /* free memory */
-    //if (sdrstat.buff !is null) { free(sdrstat.buff);  sdrstat.buff = null; }
-    //if (sdrstat.buff1 !is null) { free(sdrstat.buff1); sdrstat.buff1 = null; }
-    //if (sdrstat.buff2 !is null) { free(sdrstat.buff2); sdrstat.buff2 = null; }
-    traceln();
-    
+
     return 0;
 }
 

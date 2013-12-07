@@ -736,7 +736,7 @@ struct sdracq_t
     double hband = 0;
     double step = 0;
     int nfreq;
-    double[] freq;
+    immutable(double)[] freq;
     int acqcodei;
     double acqfreq = 0;
     double acqfreqf = 0;
@@ -759,8 +759,8 @@ struct sdrtrkprm_t
 {
     double cspace = 0;
     int cspaces;
-    size_t[] corrp;
-    double[] corrx;
+    immutable(size_t)[] corrp;
+    immutable(double)[] corrx;
     size_t ne;
     size_t nl;
     double pllb = 0;

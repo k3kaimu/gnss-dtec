@@ -297,44 +297,39 @@ void initacqstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
 *------------------------------------------------------------------------------*/
 void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(CType ctype, sdrtrkprm_t *prm, int sw)
 {
-    //with(Constant.Tracking){
-        traceln("called");
-        int trkcp, trkcdn;
-        
-        /* tracking parameter selection */
-        switch (sw) {
-          case 1:
-            //with(Parameter1){
-                prm.dllb = Constant.get!"Tracking.Parameter1.DLLB"(ctype);
-                prm.pllb = Constant.get!"Tracking.Parameter1.PLLB"(ctype);
-                prm.fllb = Constant.get!"Tracking.Parameter1.FLLB"(ctype);
-                prm.dt   = Constant.get!"Tracking.Parameter1.DT"(ctype);
-                trkcp    = Constant.get!"Tracking.Parameter1.CP"(ctype);
-                trkcdn   = Constant.get!"Tracking.Parameter1.CDN"(ctype);
-            //}
-            break;
+    traceln("called");
+    int trkcp, trkcdn;
+    
+    /* tracking parameter selection */
+    switch(sw){
+      case 1:
+        prm.dllb = Constant.get!"Tracking.Parameter1.DLLB"(ctype);
+        prm.pllb = Constant.get!"Tracking.Parameter1.PLLB"(ctype);
+        prm.fllb = Constant.get!"Tracking.Parameter1.FLLB"(ctype);
+        prm.dt   = Constant.get!"Tracking.Parameter1.DT"(ctype);
+        trkcp    = Constant.get!"Tracking.Parameter1.CP"(ctype);
+        trkcdn   = Constant.get!"Tracking.Parameter1.CDN"(ctype);
+        break;
 
-          case 2:
-            //with(Parameter2){
-                prm.dllb = Constant.get!"Tracking.Parameter2.DLLB"(ctype);
-                prm.pllb = Constant.get!"Tracking.Parameter2.PLLB"(ctype);
-                prm.fllb = Constant.get!"Tracking.Parameter2.FLLB"(ctype);
-                prm.dt   = Constant.get!"Tracking.Parameter2.DT"(ctype);
-                trkcp    = Constant.get!"Tracking.Parameter2.CP"(ctype);
-                trkcdn   = Constant.get!"Tracking.Parameter2.CDN"(ctype);
-            //}
-            break;
+      case 2:
+        prm.dllb = Constant.get!"Tracking.Parameter2.DLLB"(ctype);
+        prm.pllb = Constant.get!"Tracking.Parameter2.PLLB"(ctype);
+        prm.fllb = Constant.get!"Tracking.Parameter2.FLLB"(ctype);
+        prm.dt   = Constant.get!"Tracking.Parameter2.DT"(ctype);
+        trkcp    = Constant.get!"Tracking.Parameter2.CP"(ctype);
+        trkcdn   = Constant.get!"Tracking.Parameter2.CDN"(ctype);
+        break;
 
-          default:
-            assert(0, "error: inittrkprmstruct sw = %s".format(sw));
-        }
+      default:
+        assert(0, "error: inittrkprmstruct sw = %s".format(sw));
+    }
 
 
-        /* correlation point */
-        //prm.corrp = cast(int*)malloc(int.sizeof * Constant.TRKCN).enforce();
-        prm.corrp = new size_t[Constant.TRKCN];
-        foreach(i, ref e; prm.corrp){
-
+    /* correlation point */
+    //prm.corrp = cast(int*)malloc(int.sizeof * Constant.TRKCN).enforce();
+    prm.corrp = (){
+        auto dst = new size_t[Constant.TRKCN];
+        foreach(i, ref e; dst){
             e = trkcdn * (i + 1);
 
             if (e == trkcp){
@@ -343,28 +338,34 @@ void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(CType ctyp
             }
         }
 
+        return dst.idup;
+    }();
 
-        /* correlation point for plot */
-        //prm.corrx = cast(double*)calloc(Constant.TRKCN *2 + 1, double.sizeof).enforce();
-        prm.corrx = new double[Constant.TRKCN *2 + 1];
+
+    /* correlation point for plot */
+    //prm.corrx = cast(double*)calloc(Constant.TRKCN *2 + 1, double.sizeof).enforce();
+    prm.corrx = (){
+        auto dst = new double[Constant.TRKCN *2 + 1];
         foreach(i; 1 .. Constant.TRKCN){
-            prm.corrx[i*2 - 1] = -trkcdn * i;
-            prm.corrx[i*2    ] = +trkcdn * i;
+            dst[i*2 - 1] = -trkcdn * i;
+            dst[i*2    ] = +trkcdn * i;
         }
 
+        return dst.idup;
+    }();
 
-        /* calculation loop filter parameters */
-        {
-            immutable dll_k = prm.dllb / 0.53,
-                      pll_k = prm.pllb / 0.53;
 
-            prm.dllw2 = dll_k ^^ 2;
-            prm.dllaw = 1.414 * dll_k;
-            prm.pllw2 = pll_k ^^ 2;
-            prm.pllaw = 1.414 * pll_k;
-            prm.fllw  = prm.fllb / 0.25;
-        }
-    //}
+    /* calculation loop filter parameters */
+    {
+        immutable dll_k = prm.dllb / 0.53,
+                  pll_k = prm.pllb / 0.53;
+
+        prm.dllw2 = dll_k ^^ 2;
+        prm.dllaw = 1.414 * dll_k;
+        prm.pllw2 = pll_k ^^ 2;
+        prm.pllaw = 1.414 * pll_k;
+        prm.fllw  = prm.fllb / 0.25;
+    }
 }
 
 
@@ -488,24 +489,25 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
     }();
 
 
-    /* memory allocation */
-    //sdr.acq.freq = cast(double*)malloc(double.sizeof * sdr.acq.nfreq).enforce();
-    //scope(failure) free(sdr.acq.freq);
-    sdr.acq.freq = new double[sdr.acq.nfreq];
-
 
     /* doppler search frequency */
-    if(ctype != CType.L2RCCM)
-        foreach(i; 0 .. sdr.acq.nfreq)
-            sdr.acq.freq[i] = sdr.f_if + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
-    else{
-        immutable carrierRatio = 60.0 / 77.0;   // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
-        immutable inferenced = (sdrmain.l1ca_doppler - sdrini.f_if[0]) * carrierRatio + sdr.f_if;
-        writefln("l1ca_doppler=%s, inferenced=%s,",sdrmain.l1ca_doppler, inferenced);
+    sdr.acq.freq = {
+        auto dst = new double[sdr.acq.nfreq];
 
-        foreach(i; 0 .. sdr.acq.nfreq)
-            sdr.acq.freq[i] = inferenced + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
-    }
+        if(ctype != CType.L2RCCM)
+            foreach(i; 0 .. sdr.acq.nfreq)
+                dst[i] = sdr.f_if + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
+        else{
+            immutable carrierRatio = 60.0 / 77.0;   // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
+            immutable inferenced = (sdrmain.l1ca_doppler - sdrini.f_if[0]) * carrierRatio + sdr.f_if;
+            writefln("l1ca_doppler=%s, inferenced=%s,",sdrmain.l1ca_doppler, inferenced);
+
+            foreach(i; 0 .. sdr.acq.nfreq)
+                dst[i] = inferenced + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
+        }
+
+        return dst.idup;
+    }();
 
 
     /* tracking struct */
