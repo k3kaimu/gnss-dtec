@@ -195,7 +195,8 @@ void sdrthread(size_t index)
                     /* plot correator output */
                     if (loopcnt%(cast(int)(plttrk.pltms/sdr.trk.loopms))==0&&sdrini.plttrk&&loopcnt>200) {
                         plttrk.x=sdr.trk.prm2.corrx.ptr;
-                        memcpy(plttrk.y,sdr.trk.sumI,double.sizeof*(sdr.trk.ncorrp*2+1));
+                        //memcpy(plttrk.y,sdr.trk.sumI,double.sizeof*(sdr.trk.ncorrp*2+1));
+                        plttrk.y[0 .. sdr.trk.sumI.length] = sdr.trk.sumI[];
                         plotthread(&plttrk, "trk_" ~ sdr.satstr ~ "_");
                     }
                 }

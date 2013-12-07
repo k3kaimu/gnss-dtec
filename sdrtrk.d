@@ -103,7 +103,7 @@ size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
 * notes  : see above for data
 *------------------------------------------------------------------------------*/
 void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, 
-                       double crate, double coff, in size_t[] s, int ns, double *I, double *Q,
+                       double crate, double coff, in size_t[] s, int ns, double[] I, double[] Q,
                        double *remc, double *remp, short* codein, int coden)
 in{
     bool b0 = (ti.isValidNum),
@@ -142,9 +142,9 @@ body{
     *remc = rescode(codein,coden,coff,smax,ti*crate,n,code_e);
 
     /* multiply code and integrate */
-    dot_23(dataI,dataQ,code,code-s[0],code+s[0],n,I,Q);
+    dot_23(dataI, dataQ, code, code-s[0], code+s[0], n, I.ptr, Q.ptr);
     foreach(i; 1 .. ns)
-        dot_22(dataI, dataQ, code-s[i], code+s[i], n, I+1+i*2, Q+1+i*2);
+        dot_22(dataI, dataQ, code-s[i], code+s[i], n, I.ptr + 1 + i*2, Q.ptr + 1 + i*2);
 
     I[0 .. 1 + 2 * ns] *= CSCALE;
     Q[0 .. 1 + 2 * ns] *= CSCALE;
@@ -161,19 +161,18 @@ body{
 *          int    flag2     I   reset flag 2
 * return : none
 *------------------------------------------------------------------------------*/
-void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(double *I, double *Q, sdrtrk_t *trk, int flag1, int flag2)
+void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(double[] I, double[] Q, sdrtrk_t *trk, int flag1, int flag2)
 {
     traceln("called");
-    immutable loopMax = 1+2*trk.ncorrp;
 
     if (!flag1||(flag1&&flag2)) {
-        trk.oldsumI[0 .. loopMax] = trk.sumI[0 .. loopMax];
-        trk.oldsumQ[0 .. loopMax] = trk.sumQ[0 .. loopMax];
-        trk.sumI[0 .. loopMax] = I[0 .. loopMax];
-        trk.sumQ[0 .. loopMax] = Q[0 .. loopMax];
+        trk.oldsumI[] = trk.sumI[];
+        trk.oldsumQ[] = trk.sumQ[];
+        trk.sumI[] = I[];
+        trk.sumQ[] = Q[];
     }else{
-        trk.sumI[0 .. loopMax] += I[0 .. loopMax];
-        trk.sumQ[0 .. loopMax] += Q[0 .. loopMax];
+        trk.sumI[] += I[];
+        trk.sumQ[] += Q[];
     }
 }
 

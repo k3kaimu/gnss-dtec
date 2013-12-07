@@ -18,6 +18,7 @@ import std.stdio;
 import std.string;
 import std.traits;
 import std.typecons;
+import std.typetuple;
 
 
 string[] readLines(File file)
@@ -382,22 +383,11 @@ void inittrkstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
     inittrkprmstruct(ctype, &trk.prm2, 2);
 
     trk.ncorrp = Constant.TRKCN;
-    trk.I      =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
-    scope(failure) free(trk.I);
-    trk.Q      =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
-    scope(failure) free(trk.Q);
-    trk.oldI   =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
-    scope(failure) free(trk.oldI);
-    trk.oldQ   =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
-    scope(failure) free(trk.oldQ);
-    trk.sumI   =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
-    scope(failure) free(trk.sumI);
-    trk.sumQ   =cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
-    scope(failure) free(trk.sumQ);
-    trk.oldsumI=cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
-    scope(failure) free(trk.oldsumI);
-    trk.oldsumQ=cast(double*)calloc(1 + 2 * trk.ncorrp, double.sizeof).enforce();
-    scope(failure) free(trk.oldsumQ);
+
+    with(trk) foreach(e; TypeTuple!("I", "Q", "oldI", "oldQ", "sumI", "sumQ", "oldsumI", "oldsumQ")){
+        mixin(e) = new double[1 + 2 * trk.ncorrp];
+        mixin(e)[] = 0;
+    }
 
     trk.loopms = Constant.get!"LOOP_MS"(ctype);
 }
