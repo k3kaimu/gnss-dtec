@@ -710,9 +710,9 @@ struct sdrstat_t
 {
     bool stopflag;
     bool specflag;
-    byte* buff;
-    byte* buff1;
-    byte* buff2;
+    byte[] buff;
+    byte[] buff1;
+    byte[] buff2;
     size_t buffloccnt;
 }
 
