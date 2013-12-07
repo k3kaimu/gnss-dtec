@@ -21,8 +21,24 @@ import std.complex;
 version(unittest) import std.stdio;
 
 /* global variables -----------------------------------------------------------*/
-private short cost[CDIV];            /* carrier lookup table cos(t) */
-private short sint[CDIV];            /* carrier lookup table sin(t) */
+private shared immutable(short[]) cost, sint;   // sin, cos lockup table
+
+shared static this()
+{    
+    // モジュールコンストラクタ(スレッド起動時に実行される)
+    // carrier loopup tableの初期化
+    short[] c = new short[CDIV],
+            s = new short[CDIV];
+
+    foreach(i; 0 .. CDIV){
+        c[i] = cast(short)floor((cos(DPI/CDIV*i)/CSCALE+0.5));
+        s[i] = cast(short)floor((sin(DPI/CDIV*i)/CSCALE+0.5));
+    }
+
+    cost = c.dup;
+    sint = s.dup;
+}
+
 
 static if(!isVersion!"UseFFTW")
 {
@@ -31,14 +47,6 @@ static if(!isVersion!"UseFFTW")
     private cpx_t[] buffer;
 }
 
-static this()
-{      // モジュールコンストラクタ(スレッド起動時に実行される)
-    // carrier loopup tableの初期化
-    foreach(i; 0 .. CDIV){
-        cost[i] = cast(short)floor((cos(DPI/CDIV*i)/CSCALE+0.5));
-        sint[i] = cast(short)floor((sin(DPI/CDIV*i)/CSCALE+0.5));
-    }
-}
 
 
 /**
@@ -445,31 +453,28 @@ body{
 *          double *conv     O   output convolution data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxconv(cpx_t *cpxa, cpx_t *cpxb, size_t m, size_t n, bool flagsum, double *conv)
+void cpxconv(cpx_t[] cpxa, in cpx_t[] cpxb, bool flagsum, double[] conv)
 out{
-    foreach(e; conv[0 .. n]){
+    foreach(e; conv){
         assert(!isNaN(e));
     }
 }
 body{
     traceln("called");
-    float* p, q;
-    float real_, m2 = cast(float)m*m;
-    int i;
+
+    cpxfft(cpxa); /* fft */
     
-    cpxfft(cpxa,m); /* fft */
-    
-    for (i=0,p=cast(float *)cpxa,q=cast(float *)cpxb;i<m;i++,p+=2,q+=2) {
-        real_=-p[0]*q[0]-p[1]*q[1];
-        p[1]= p[0]*q[1]-p[1]*q[0];
-        p[0]=real_;
-    }
-    cpxifft(cpxa,m); /* ifft */
-    for (i=0,p=cast(float *)cpxa;i<n;i++,p+=2) {
-        if (flagsum) /* cumulative sum */
-            conv[i]+=(p[0]*p[0]+p[1]*p[1])/m2;
+    foreach(i, ref e; cpxa)
+        e *= -cpxb[i].conj;
+
+    cpxifft(cpxa); /* ifft */
+
+    immutable m2 = (cast(double)cpxa.length) ^^ 2;
+    foreach(j, ref e; conv){
+        if(flagsum)
+            e += cpxa[j].abs^^2 / m2;
         else
-            conv[i]=(p[0]*p[0]+p[1]*p[1])/m2;
+            e = cpxa[j].abs^^2 / m2;
     }
 }
 
