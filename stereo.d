@@ -14,29 +14,31 @@ import std.exception : enforce;
 import std.functional;
 import core.thread;
 
-
 /* constants -----------------------------------------------------------------*/
 /* sterei confugration file path */
-/*deprecated*/ immutable DEF_FW_FILENAME       = "../../src/rcv/stereo/conf/stereo_fx2fw.ihx";
-/*deprecated*/ immutable DEF_FPGA_FILENAME     = "../../src/rcv/stereo/conf/stereo_fpga0125_intClk.bin";
-/*deprecated*/ immutable DEF_SYNTH_FILENAME    = "../../src/rcv/stereo/conf/stereo_clksynth.cfg";
-/*deprecated*/ immutable DEF_ADC_FILENAME      = "../../src/rcv/stereo/conf/stereo_adc.cfg";
-/*deprecated*/ immutable DEF_MAX2769_FILENAME  = "../../src/rcv/stereo/conf/max2769.cfg";
-/*deprecated*/ immutable DEF_MAX2112_FILENAME  = "../../src/rcv/stereo/conf/max2112_l2.cfg";
+version(EnableNSLStereo) deprecated
+immutable DEF_FW_FILENAME       = "../../src/rcv/stereo/conf/stereo_fx2fw.ihx",
+          DEF_FPGA_FILENAME     = "../../src/rcv/stereo/conf/stereo_fpga0125_intClk.bin",
+          DEF_SYNTH_FILENAME    = "../../src/rcv/stereo/conf/stereo_clksynth.cfg",
+          DEF_ADC_FILENAME      = "../../src/rcv/stereo/conf/stereo_adc.cfg",
+          DEF_MAX2769_FILENAME  = "../../src/rcv/stereo/conf/max2769.cfg",
+          DEF_MAX2112_FILENAME  = "../../src/rcv/stereo/conf/max2112_l2.cfg";
 //immutable MAX_FILENAME_LEN = 256;
 
 /* global variables -----------------------------------------------------------*/
-string fx2lpFileName;
-string fpgaFileName;
-string max2769FileName;
-string max2112FileName;
-string synthFileName;
-string adcFileName;
-string dataFileName;
+version(EnableNSLStereo) deprecated
+string fx2lpFileName,
+       fpgaFileName,
+       max2769FileName,
+       max2112FileName,
+       synthFileName,
+       adcFileName,
+       dataFileName;
 
 /* type definition -----------------------------------------------------------*/
 /* max2769 struct */
-struct max2769Conf_t {
+struct max2769Conf_t
+{
     uint confOne;
     uint confTwo;
     uint confThree;
@@ -73,6 +75,7 @@ struct adcConf_t {
 * args   : none
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
+version(EnableNSLStereo)
 void stereo_init()
 {
     /* initiarize option strings */
@@ -89,6 +92,7 @@ void stereo_init()
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
+version(EnableNSLStereo)
 void stereo_quit() 
 {
     STEREO_GrabStop(); /* stop and clean the grabber */
@@ -100,6 +104,7 @@ void stereo_quit()
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
+version(EnableNSLStereo)
 void stereo_initoptions() 
 {
     fx2lpFileName = DEF_FW_FILENAME;
@@ -114,6 +119,7 @@ void stereo_initoptions()
 * args   : none
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
+version(EnableNSLStereo)
 int stereo_initconf() 
 {
     writeln("STEREO configuration start...");
@@ -253,6 +259,8 @@ body{
             break;
     }
 }
+
+
 /* get current data buffer (stereo) ---------------------------------------------
 * get current data buffer from memory buffer
 * args   : ulong buffloc I   buffer location
@@ -275,11 +283,14 @@ void stereo_getbuff(size_t buffloc, size_t n, DType dtype, byte[] expbuf)
     }
     //ReleaseMutex(hbuffmtx);
 }
+
+
 /* push data to memory buffer ---------------------------------------------------
 * push data to memory buffer from front end
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
+version(EnableNSLStereo)
 void stereo_pushtomembuf() 
 {
     //WaitForSingleObject(hbuffmtx,INFINITE);
@@ -290,6 +301,8 @@ void stereo_pushtomembuf()
     sdrstat.buffloccnt++;
     //ReleaseMutex(hreadmtx);
 }
+
+
 /* push data to memory buffer ---------------------------------------------------
 * push data to memory buffer from stereo binary IF file
 * args   : none
@@ -312,6 +325,14 @@ void filestereo_pushtomembuf()
     sdrstat.buffloccnt++;
     //ReleaseMutex(hreadmtx);
 }
+
+version(EnableNSLStereo){}
+else
+{
+    enum STEREO_DATABUFF_SIZE = FILE_BUFFSIZE;
+}
+
+version(EnableNSLStereo):
 
 /* STEREO library functions --------------------------------------------------*/
 extern(C):

@@ -23,6 +23,8 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
     final switch (ini.fend) {
       /* NSL stereo */
+    version(EnableNSLStereo)
+    {
       case Fend.STEREO:
         stereo_init();                                          // stereo initialization
         if(ini.confini) enforce(stereo_initconf() <! 0);        // stereo initialize configurations
@@ -34,6 +36,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         sdrstat.buff = cast(byte*)malloc(ini.buffsize)
                        .enforce("error: failed to allocate memory for the buffer");
         break;
+    }
 
       /* STEREO Binary File */
       case Fend.FILESTEREO: 
@@ -41,7 +44,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         ini.fp1 = File(ini.file1, "rb");
 
         ini.fendbuffsize = STEREO_DATABUFF_SIZE;                    // frontend buffer size
-        ini.buffsize = to!int(STEREO_DATABUFF_SIZE * MEMBUFLEN);    // total buffer size 
+        ini.buffsize = to!int(ini.fendbuffsize * MEMBUFLEN);    // total buffer size 
 
         sdrstat.buff = cast(byte*)malloc(ini.buffsize)
                        .enforce("error: failed to allocate memory for the buffer");
@@ -116,9 +119,12 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
     traceln("called");
     final switch (ini.fend) {
       /* NSL stereo */
-      case Fend.STEREO: 
+    version(EnableNSLStereo)
+    {
+      case Fend.STEREO:
          stereo_quit();
         break;
+    }
 
       /* STEREO Binary File */
       case Fend.FILESTEREO: 
@@ -126,7 +132,8 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
             ini.fp1.close();
         break;
 
-    version(none){
+    version(none)
+    {
       /* SiGe GN3S v2/v3 */
       case Fend.GN3SV2, Fend.GN3SV3:
         gn3s_quit();
@@ -145,10 +152,11 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
     }
     traceln();
     /* free memory */
-    if (null!=sdrstat.buff) { free(sdrstat.buff);  sdrstat.buff=null; }
-    if (null!=sdrstat.buff1) { free(sdrstat.buff1); sdrstat.buff1=null; }
-    if (null!=sdrstat.buff2) { free(sdrstat.buff2); sdrstat.buff2=null; }
+    if (sdrstat.buff !is null) { free(sdrstat.buff);  sdrstat.buff = null; }
+    if (sdrstat.buff1 !is null) { free(sdrstat.buff1); sdrstat.buff1 = null; }
+    if (sdrstat.buff2 !is null) { free(sdrstat.buff2); sdrstat.buff2 = null; }
     traceln();
+    
     return 0;
 }
 
@@ -163,12 +171,15 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     traceln("called");
     final switch (ini.fend){
       /* NSL stereo */
+    version(EnableNSLStereo)
+    {
       case Fend.STEREO: 
         if(STEREO_GrabStart() < 0){
             writeln("error: STEREO_GrabStart\n");
             return -1;
         }
         break;
+    }
 
       /* STEREO Binary File */
       case Fend.FILESTEREO: 
@@ -201,6 +212,8 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
     traceln("called");
     final switch (ini.fend){
       /* NSL stereo */
+    version(EnableNSLStereo)
+    {
       case Fend.STEREO:
         if(STEREO_RefillDataBuffer() < 0){
             writeln("error: STEREO Buffer overrun...");
@@ -209,6 +222,7 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
         stereo_pushtomembuf(); /* copy to membuffer */
         break;
+    }
 
       /* STEREO Binary File */
       case Fend.FILESTEREO:
@@ -245,10 +259,12 @@ int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *i
 {
     traceln("called");
     final switch (ini.fend) {
-
+    version(EnableNSLStereo)
+    {
       case Fend.STEREO:
         enforce(0);
         return -1;
+    }
 
       /* STEREO Binary File */
       case Fend.FILESTEREO: 
@@ -298,9 +314,12 @@ int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype
 
         final switch (ini.fend) {
           /* NSL stereo */
+        version(EnableNSLStereo)
+        {
           case Fend.STEREO: 
             stereo_getbuff(buffloc,n,dtype,expbuf);
             break;
+        }
 
           /* STEREO Binary File */
           case Fend.FILESTEREO: 

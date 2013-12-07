@@ -84,8 +84,11 @@ version(UseFFTW)
     pragma(lib, "libfftw3f-3.lib");
 }
 
-pragma(lib, "rcv/stereo/lib/libnslstereo.a");
-pragma(lib, "lib/usb/libusb.lib");
+version(EnableNSLStereo)
+{
+    pragma(lib, "rcv/stereo/lib/libnslstereo.a");
+    pragma(lib, "lib/usb/libusb.lib");
+}
 
 
 /**
@@ -115,13 +118,27 @@ immutable CSCALE = 1.0 /16.0;
 
 
 /* front end setting */
-enum Fend
+version(EnableNSLStereo)
 {
-    STEREO = 0,
-    //GN3SV2 = -1,
-    //GN3SV3 = 1,
-    FILESTEREO,
-    FILE
+    enum Fend
+    {
+        STEREO = 0,
+        //GN3SV2 = -1,
+        //GN3SV3 = 1,
+        FILESTEREO,
+        FILE
+    }
+}
+else
+{
+    enum Fend
+    {
+        //STEREO = 0,
+        //GN3SV2 = -1,
+        //GN3SV3 = 1,
+        FILESTEREO,
+        FILE
+    }
 }
 
 
