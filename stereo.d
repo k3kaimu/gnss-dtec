@@ -134,16 +134,15 @@ int stereo_initconf()
         auto fpgaFileId = File(fpgaFileName, "rb")
                          .tryExpr({writeln("error: Could not open FPGA configuration file: ", fpgaFileName);});
 
-        auto binaryStream = new ubyte[1 << 20];
+        scope binaryStream = new ubyte[1 << 20];
 
-        fpgaFileId.rawRead(binaryStream).length
-        .ifExpr!"a > 0"((size_t size){
+        if(auto size = fpgaFileId.rawRead(binaryStream).length){
             STEREO_SendFpga(binaryStream.ptr ,size.to!int())
             .ifExpr!"a < 0"({
                 writeln("error: programming FPGA");
                 writeln("error: ", STEREO_Perror().to!string());
             });
-        });
+        }
     }
 
     /* LMK03033C CONFIGURATION SECTION */
@@ -317,7 +316,7 @@ void filestereo_pushtomembuf()
 /* STEREO library functions --------------------------------------------------*/
 extern(C):
 
-extern __gshared const uint STEREO_DATABUFF_SIZE;
+extern __gshared uint STEREO_DATABUFF_SIZE;
 extern __gshared ubyte* STEREO_dataBuffer;
 
 int STEREO_InitLibrary();

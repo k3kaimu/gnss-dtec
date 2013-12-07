@@ -300,7 +300,8 @@ void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrfl
     trk.remcodeout[0]=trk.oldremcode*sdr.f_sf/trk.codefreq;
 
     /* doppler */
-    trk.D[0]=trk.carrfreq-sdr.f_if;
+    immutable fc = (sdr.ctype == CType.L1CA) ? 10.23e6 * 77 * 2 : 10.23e6 * 60 * 2;
+    trk.D[0] = (trk.carrfreq - sdr.f_if) + (sdr.trk.codefreq / sdr.crate) * (fc - sdr.f_if);
 
     /* carrier phase */
     //if (!trk.flagremcarradd) {
@@ -318,7 +319,8 @@ void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrfl
     //}
 
     //immutable tmpL = trk.L[0];
-    trk.L[0]+=trk.D[0]*trk.prm2.dt; 
+
+    trk.L[0]+=trk.D[0]*trk.prm2.dt;
     //(sdr.ctype == CType.L1CA) && writefln("(%s - %s)[Hz] * %s[s] == %s[cyc], sum : %s [cyc] -> %s [cyc]", trk.carrfreq, sdr.f_if, trk.prm2.dt, trk.D[0]* trk.prm2.dt, tmpL, trk.L[0]);
     
     trk.Isum+=fabs(trk.sumI[0]);

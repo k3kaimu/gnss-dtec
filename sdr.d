@@ -1036,7 +1036,6 @@ bool isValidPRN(int prn, NavSystem sys) pure nothrow @safe
       case NavSystem.BeiDou:    return prn.isInInterval!"[]"(Constant.BeiDou.PRN.min, Constant.BeiDou.PRN.max);
       case NavSystem.SBAS:      return prn.isInInterval!"[]"(Constant.SBAS.PRN.min, Constant.SBAS.PRN.max);
     }
-    assert(0);
 }
 
 

@@ -122,17 +122,17 @@ void startsdr()
 void sdrthread(size_t index)
 {
     sdrch_t* sdr = &(sdrch[index]);
-    sdrplt_t pltacq,plttrk;
-    size_t buffloc = 0, cnt = 0,loopcnt = 0;
-    int cntsw = 0, swsync, swreset;
-    double *acqpower = null;
+    sdrplt_t pltacq, plttrk;
+    size_t buffloc, cnt,loopcnt;
+    int cntsw, swsync, swreset;
+    double* acqpower;
 
     immutable resultLFileName = `Result\` ~ sdr.ctype.to!string() ~ "_" ~ sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
-    File resultLFile = File(resultLFileName, "w");
+    auto resultLFile = File(resultLFileName, "w");
     resultLFile.writeln("buffloc, remcode[chip], carrierPhase[cycle], pll_carrErr, pll_carNco, pll_carrfreq, dll_codeErr, dll_codeNco, dll_codefreq, IP, QP, IE, QE, IL, QL,");
 
     /* plot setting */
-    initpltstruct(&pltacq,&plttrk,sdr);
+    initpltstruct(&pltacq, &plttrk, sdr);
     //enforce(initpltstruct(&pltacq,&plttrk,sdr) !< 0);
 
     writefln("**** %s sdr thread start! ****", sdr.satstr);
@@ -237,7 +237,7 @@ void sdrthread(size_t index)
         sdr.trk.buffloc = buffloc;
     }
     /* plot termination */
-    quitpltstruct(&pltacq,&plttrk);
+    quitpltstruct(&pltacq, &plttrk);
 
     writefln("SDR channel %s thread finished!", sdr.satstr);
 }

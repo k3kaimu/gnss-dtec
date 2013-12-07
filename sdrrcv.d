@@ -9,6 +9,7 @@ import std.stdio,
        std.c.string;
 
 import core.thread;
+import std.functional;
 
 /* sdr receiver initialization --------------------------------------------------
 * receiver initialization, memory allocation, file open
@@ -22,60 +23,44 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
     final switch (ini.fend) {
       /* NSL stereo */
-      case Fend.STEREO: 
-        if (stereo_init()<0) return -1; /* stereo initialization */
-        if (ini.confini)
-            if (stereo_initconf()<0) return -1; /* stereo initialize configurations */
-        if (STEREO_GrabInit()<0) {
-            SDRPRINTF("error: STEREO_GrabInit\n");
-            return -1; /* signal glab initialization */
-        }
-        /* frontend buffer size */
-        ini.fendbuffsize = STEREO_DATABUFF_SIZE;
-        /* total buffer size */
-        ini.buffsize = to!int(STEREO_DATABUFF_SIZE*MEMBUFLEN);
-        
-        /* memory allocation */
-        sdrstat.buff = cast(byte*)malloc(ini.buffsize);
-        if (sdrstat.buff is null){
-            SDRPRINTF("error: failed to allocate memory for the buffer\n");
-            return -1;
-        }
+      case Fend.STEREO:
+        stereo_init();                                          // stereo initialization
+        if(ini.confini) enforce(stereo_initconf() <! 0);        // stereo initialize configurations
+        enforce(STEREO_GrabInit() <! 0);                        // signal glab initialization
+
+        ini.fendbuffsize = STEREO_DATABUFF_SIZE;                // frontend buffer size
+        ini.buffsize = to!int(STEREO_DATABUFF_SIZE*MEMBUFLEN);  // total buffer size
+
+        sdrstat.buff = cast(byte*)malloc(ini.buffsize)
+                       .enforce("error: failed to allocate memory for the buffer");
         break;
 
       /* STEREO Binary File */
       case Fend.FILESTEREO: 
         /* IF file open */
         ini.fp1 = File(ini.file1, "rb");
-        enforce(ini.fp1.isOpen);
 
-        /* frontend buffer size */
-        ini.fendbuffsize = STEREO_DATABUFF_SIZE;
-        // total buffer size 
-        ini.buffsize = to!int(STEREO_DATABUFF_SIZE * MEMBUFLEN);
-                
-        /* memory allocation */
-        sdrstat.buff = cast(byte*)malloc(ini.buffsize).enforce();
+        ini.fendbuffsize = STEREO_DATABUFF_SIZE;                    // frontend buffer size
+        ini.buffsize = to!int(STEREO_DATABUFF_SIZE * MEMBUFLEN);    // total buffer size 
+
+        sdrstat.buff = cast(byte*)malloc(ini.buffsize)
+                       .enforce("error: failed to allocate memory for the buffer");
         scope(failure) free(sdrstat.buff);
         break;
 
-      /+
+    version(none)
+    {
       /* SiGe GN3S v2/v3 */
       case Fend.GN3SV2, Fend.GN3SV3:
-        if (gn3s_init()<0) return -1; /* GN3S initialization */
+        if (gn3s_init() < 0) return -1; /* GN3S initialization */
 
-        /* frontend buffer size */
-        ini.fendbuffsize=GN3S_BUFFSIZE;
-        /* total buffer size */
-        ini.buffsize=GN3S_BUFFSIZE*MEMBUFLEN;
+        ini.fendbuffsize = GN3S_BUFFSIZE;                           // frontend buffer size
+        ini.buffsize = GN3S_BUFFSIZE * MEMBUFLEN;                   // total buffer size
 
-        /* memory allocation */
-        sdrstat.buff=(unsigned char*)malloc(ini.buffsize);
-        if (null==sdrstat.buff) {
-            SDRPRINTF("error: failed to allocate memory for the buffer\n");
-            return -1;
-        }
-        break;+/
+        sdrstat.buff = cast(byte*)malloc(ini.buffsize)
+                       .enforce("error: failed to allocate memory for the buffer");
+        break;
+    }
 
       /* File */
       case Fend.FILE:
@@ -95,7 +80,8 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
         /* memory allocation */
         if (ini.fp1.isOpen)
-            sdrstat.buff1 = cast(byte*)malloc(ini.dtype[0]*ini.buffsize).enforce();
+            sdrstat.buff1 = cast(byte*)malloc(ini.dtype[0]*ini.buffsize)
+                            .enforce("error: failed to allocate memory for the buffer");
         
         scope(failure) 
             if(sdrstat.buff1 !is null)
@@ -103,7 +89,8 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
 
         if (ini.fp2.isOpen)
-            sdrstat.buff2 = cast(byte*)malloc(ini.dtype[1]*ini.buffsize).enforce();
+            sdrstat.buff2 = cast(byte*)malloc(ini.dtype[1]*ini.buffsize)
+                            .enforce("error: failed to allocate memory for the buffer");
 
         scope(failure)
             if(sdrstat.buff2 !is null)
@@ -138,11 +125,13 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
         if (ini.fp1.isOpen)
             ini.fp1.close();
         break;
-      
+
+    version(none){
       /* SiGe GN3S v2/v3 */
-      //case Fend.GN3SV2, Fend.GN3SV3:
-      //  gn3s_quit();
-      //  break;
+      case Fend.GN3SV2, Fend.GN3SV3:
+        gn3s_quit();
+        break;
+    }
 
       /* File */
       case Fend.FILE:
@@ -172,7 +161,7 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
 int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 {
     traceln("called");
-    final switch (ini.fend) {
+    final switch (ini.fend){
       /* NSL stereo */
       case Fend.STEREO: 
         if(STEREO_GrabStart() < 0){
@@ -185,11 +174,13 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
       case Fend.FILESTEREO: 
         break;
 
+    version(none)
+    {
       /* SiGe GN3S v2/v3 */
-      /+
       case Fend.GN3SV2:
       case Fend.GN3SV3:
-        break;+/
+        break;
+    }
 
       /* File */
       case Fend.FILE: 
@@ -208,34 +199,37 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 {
     traceln("called");
-    final switch (ini.fend) {
-    /* NSL stereo */
-    case Fend.STEREO: 
+    final switch (ini.fend){
+      /* NSL stereo */
+      case Fend.STEREO:
         if(STEREO_RefillDataBuffer() < 0){
             writeln("error: STEREO Buffer overrun...");
             return -1;
         }
+
         stereo_pushtomembuf(); /* copy to membuffer */
         break;
 
-    /* STEREO Binary File */
-    case Fend.FILESTEREO: 
+      /* STEREO Binary File */
+      case Fend.FILESTEREO:
         filestereo_pushtomembuf();  //copy to membuffer 
         break;
 
-    /* SiGe GN3S v2/v3 */
-/+    case Fend.GN3SV2:
-    case Fend.GN3SV3:
+    version(none)
+    {
+      /* SiGe GN3S v2/v3 */
+      case Fend.GN3SV2:
+      case Fend.GN3SV3:
         if (gn3s_pushtomembuf()<0) {
             writeln("error: GN3S Buffer overrun...");
             return -1;
         }
-        break;+/
-    /* File */
-    case Fend.FILE:
+        break;
+    }
+
+      /* File */
+      case Fend.FILE:
         file_pushtomembuf(); /* copy to membuffer */
-        //Thread.sleep(dur!"usecs"(2000));
-        //Sleep(1);
         break;
     }
     return 0;
@@ -251,16 +245,28 @@ int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *i
 {
     traceln("called");
     final switch (ini.fend) {
-    /* STEREO Binary File */
-    case Fend.FILESTEREO: 
+
+      case Fend.STEREO:
+        enforce(0);
+        return -1;
+
+      /* STEREO Binary File */
+      case Fend.FILESTEREO: 
         filestereo_pushtomembuf(); /* copy to membuffer */
         break;
-    /* File */
-    case Fend.FILE:
+
+    version(none)
+    {
+      case Fend.GN3SV2:
+      case Fend.GN3SV3:
+        enforce(0);
+        return -1;
+    }
+      
+      /* File */
+      case Fend.FILE:
         file_pushtomembuf(); /* copy to membuffer */
         break;
-    default:
-        return -1;
     }
     return 0;
 }
@@ -301,14 +307,18 @@ int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype
             stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
             break;
 
+        version(none)
+        {
           /* SiGe GN3S v2 */
-      /+    case Fend.GN3SV2:
+          case Fend.GN3SV2:
             gn3s_getbuff_v2(buffloc,n,dtype,expbuf);
             break;
           /* SiGe GN3S v3 */
           case Fend.GN3SV3:
             gn3s_getbuff_v3(buffloc,n,dtype,expbuf);
-            break;+/
+            break;
+        }
+
           /* File */
           case Fend.FILE:
             file_getbuff(buffloc, n, ftype, dtype, expbuf);
@@ -336,22 +346,15 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
     traceln("called");
     size_t nread1,nread2;
 
-    //WaitForSingleObject(hbuffmtx,INFINITE);
-    //synchronized(hbuffmtx){
-        if(sdrini.fp1.isOpen) nread1=fread(&sdrstat.buff1[(sdrstat.buffloccnt%MEMBUFLEN)*sdrini.dtype[0]*FILE_BUFFSIZE],1,sdrini.dtype[0]*FILE_BUFFSIZE,sdrini.fp1.getFP);
-        if(sdrini.fp2.isOpen) nread2=fread(&sdrstat.buff2[(sdrstat.buffloccnt%MEMBUFLEN)*sdrini.dtype[1]*FILE_BUFFSIZE],1,sdrini.dtype[1]*FILE_BUFFSIZE,sdrini.fp2.getFP);
-    //}
-    //ReleaseMutex(hbuffmtx);
+    if(sdrini.fp1.isOpen) nread1=fread(&sdrstat.buff1[(sdrstat.buffloccnt%MEMBUFLEN)*sdrini.dtype[0]*FILE_BUFFSIZE],1,sdrini.dtype[0]*FILE_BUFFSIZE,sdrini.fp1.getFP);
+    if(sdrini.fp2.isOpen) nread2=fread(&sdrstat.buff2[(sdrstat.buffloccnt%MEMBUFLEN)*sdrini.dtype[1]*FILE_BUFFSIZE],1,sdrini.dtype[1]*FILE_BUFFSIZE,sdrini.fp2.getFP);
 
     if ((sdrini.fp1.isOpen && nread1 < sdrini.dtype[0] * FILE_BUFFSIZE)||(sdrini.fp2.isOpen && nread2 < sdrini.dtype[1] * FILE_BUFFSIZE)) {
         sdrstat.stopflag = true;
         writeln("end of file!");
     }
 
-    //WaitForSingleObject(hreadmtx,INFINITE);
-    //synchronized(hreadmtx)
-        sdrstat.buffloccnt++;
-    //ReleaseMutex(hreadmtx);
+    sdrstat.buffloccnt++;
 }
 
 
@@ -372,32 +375,19 @@ void file_getbuff(string file = __FILE__, size_t line = __LINE__)(size_t buffloc
     n *= dtype;
     immutable ptrdiff_t nout = membuffloc + n - MEMBUFLEN * dtype * FILE_BUFFSIZE;
     
-    if (ftype==FType.Type1) {
-        if (nout>0) {
-            //memcpy(expbuf,&sdrstat.buff1[membuffloc],n-nout);
+    if(ftype == FType.Type1){
+        if(nout > 0){
             expbuf[0 .. n-nout] = sdrstat.buff1[membuffloc .. membuffloc + n-nout];
-            
-            //memcpy(&expbuf[(n-nout)],&sdrstat.buff1[0],nout);
             expbuf[n-nout .. n] = sdrstat.buff1[0 .. nout];
-            
-        } else {
-            //memcpy(expbuf,&sdrstat.buff1[membuffloc],n);
+        }else
             expbuf[0 .. n] = sdrstat.buff1[membuffloc  .. membuffloc + n];
-        }
     }
     
-    if (ftype==FType.Type2) {
-        //writefln("getSize : %s, buffloc : %s", n, buffloc);
-
-        if (nout>0) {
-            //memcpy(expbuf,&sdrstat.buff2[membuffloc],n-nout);
+    if(ftype==FType.Type2){
+        if (nout>0){
             expbuf[0 .. n-nout] = sdrstat.buff2[membuffloc .. membuffloc + n-nout];
-            //memcpy(&expbuf[(n-nout)],&sdrstat.buff2[0],nout);
             expbuf[n-nout .. n] = sdrstat.buff2[0 .. nout];
-        } else {
-            //memcpy(expbuf,&sdrstat.buff2[membuffloc],n);
+        }else
             expbuf[0 .. n] = sdrstat.buff2[membuffloc  .. membuffloc + n];
-        }
     }
-    
 }

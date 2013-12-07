@@ -104,7 +104,6 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
 {
     traceln("called");
     int maxi, codei, freqi;
-    static size_t n = 0;
     
     //immutable maxP = maxvd(P, sdr.acq.nfft * sdr.acq.nfreq, -1, -1, &maxi);
     //ind2sub(maxi, sdr.acq.nfft, sdr.acq.nfreq, &codei, &freqi);
@@ -130,6 +129,8 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
 
     //if(sdr.ctype == CType.L2RCCM){
     {
+        static size_t n = 0;
+        
         auto temp = P[freqi * sdr.acq.nfft .. (freqi + 1) * sdr.acq.nfft].zip(iota(size_t.max)).array().dup;
         temp.sort!"a[0] > b[0]"();
         ++n;
@@ -239,32 +240,32 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
     }
 
     final switch(dtype){
-        case DType.I:       // real
-            rdataI[0 .. n] = data[0 .. n];
-            
-            mulvcs(rdataI, rcode, rcodeI);
-            cpxcpx(rcodeI, null, 1.0, datax);       // to frequency domain
-            cpxpspec(datax, 0, fftxc);              // compute power spectrum
+      case DType.I:       // real
+        rdataI[0 .. n] = data[0 .. n];
+        
+        mulvcs(rdataI, rcode, rcodeI);
+        cpxcpx(rcodeI, null, 1.0, datax);       // to frequency domain
+        cpxpspec(datax, 0, fftxc);              // compute power spectrum
 
-            int ind = void;
-            maxvd(fftxc[0 .. m/2], -1, -1, ind);
+        int ind = void;
+        maxvd(fftxc[0 .. m/2], -1, -1, ind);
 
-            return (cast(double)ind) / (m * ti);
+        return (cast(double)ind) / (m * ti);
 
-        case DType.IQ:      // complex
-            foreach(i; 0 .. n){
-                rdataI[i] = data[i*2];
-                rdataQ[i] = data[i*2 + 1];
-            }
+      case DType.IQ:      // complex
+        foreach(i; 0 .. n){
+            rdataI[i] = data[i*2];
+            rdataQ[i] = data[i*2 + 1];
+        }
 
-            mulvcs(rdataI, rcode, rcodeI);
-            mulvcs(rdataQ, rcode, rcodeQ);
-            cpxcpx(rcodeI, rcodeQ, 1.0, datax);     // to frequency domain
-            cpxpspec(datax, 0, fftxc);              // compute power spectrum
+        mulvcs(rdataI, rcode, rcodeI);
+        mulvcs(rdataQ, rcode, rcodeQ);
+        cpxcpx(rcodeI, rcodeQ, 1.0, datax);     // to frequency domain
+        cpxpspec(datax, 0, fftxc);              // compute power spectrum
 
-            int ind = void;
-            maxvd(fftxc[m/2 .. $], -1, -1, ind);
+        int ind = void;
+        maxvd(fftxc[m/2 .. $], -1, -1, ind);
 
-            return (m / 2.0 - ind) / (m * ti);
+        return (m / 2.0 - ind) / (m * ti);
     }
 }
