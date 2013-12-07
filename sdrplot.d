@@ -119,8 +119,8 @@ void initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
             break;
     }
     /* figure position */
-    xi = (plt.pltno-1) % PLT_WN;
-    yi = (plt.pltno-1-xi) / PLT_WN;
+    xi = (plt.pltno-1) % Constant.Plot.WN;
+    yi = (plt.pltno-1-xi) / Constant.Plot.WN;
     posx = plt.pltmw + xi * plt.pltw;
     posy = plt.pltmh + yi * plt.plth;
 }

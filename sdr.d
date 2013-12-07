@@ -565,6 +565,50 @@ struct Constant
             return (fl1^^2 * fl2^^2) / (fl1^^2 - fl2^^2);
         }
     }
+
+
+    enum Plot
+    {
+        WN = 5,
+        HN = 3,
+        W = 180,
+        H = 250,
+        MW = 0,
+        MH = 0,
+        MS = 500,
+        MS_FILE = 2000,
+    }
+
+
+    enum Spectrum
+    {
+        MS = 200,
+        LEN = 7,
+        BITN = 8,
+        NLOOP = 100,
+        NFFT = 16384,
+        PLT_W = 400,
+        PLT_H = 500,
+        PLT_MW = 0,
+        PLT_MH = 0,
+    }
+
+
+    /**
+    QZSS LEX setting
+    */
+    enum LEXSetting
+    {
+        DSAMP = 7,
+        MS = 4,
+        LENPRE = 4,
+        LENMSG = 250,
+        LENRS = 255,
+        LENRSK = 223,
+        LENRSP = LENRS - LENRSK,
+        LENERR = LENRSP / 2,
+        LENRCV = 8 + LENMSG - LENRSP,
+    }
 }
 
 public import rtklib : eph_t, obsd_t, rnxopt_t, gtime_t;
@@ -611,37 +655,6 @@ enum PlotType
     Box,
 }
 
-
-immutable PLT_WN = 5;
-immutable PLT_HN = 3;
-immutable PLT_W = 180;
-immutable PLT_H = 250;
-immutable PLT_MW = 0;
-immutable PLT_MH = 0;
-immutable PLT_MS = 500;
-immutable PLT_MS_FILE = 2000;
-
-/* spectrum analysis */
-immutable SPEC_MS = 200;
-immutable SPEC_LEN = 7;
-immutable SPEC_BITN = 8;
-immutable SPEC_NLOOP = 100;
-immutable SPEC_NFFT = 16384;
-immutable SPEC_PLT_W = 400;
-immutable SPEC_PLT_H = 500;
-immutable SPEC_PLT_MW = 0;
-immutable SPEC_PLT_MH = 0;
-
-/* QZSS LEX setting */
-immutable DSAMPLEX = 7;
-immutable LEXMS = 4;
-immutable LENLEXPRE = 4;
-immutable LENLEXMSG = 250;
-immutable LENLEXRS = 255;
-immutable LENLEXRSK = 223;
-immutable LENLEXRSP = LENLEXRS - LENLEXRSK;
-immutable LENLEXERR = LENLEXRSP / 2;
-immutable LENLEXRCV = 8 + LENLEXMSG - LENLEXRSP;
 
 alias Complex!float cpx_t;
 alias size_t SOCKET;
