@@ -86,7 +86,7 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
 
 
     if(!sdr.flagacq)
-        buffloc += uniform(0, sdr.nsamp >> 7);
+        buffloc += uniform(0, sdr.nsamp >> 4);
 
     return buffloc;
 }
