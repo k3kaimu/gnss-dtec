@@ -52,23 +52,20 @@ double l1ca_doppler;
     ・Result\(L1 + 解析開始時刻の文字列表現).csv
         解析が完了した生データのサンプル数と, その時点での搬送波位相[cycle]
 */
-version(MAIN_IS_SDRMAIN_MAIN){
-    void main(string[] args)
-    {
-        //util.trace.tracing = false;
+version(MAIN_IS_SDRMAIN_MAIN)
+void main(string[] args)
+{
+    import std.datetime : StopWatch;
+    StopWatch sw;
+    sw.start();
 
-        import std.datetime : StopWatch;
-        StopWatch sw;
-        sw.start();
+    sdrini.readIniFile(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
+    checkInitValue(sdrini);
 
-        sdrini.readIniFile(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
-        checkInitValue(sdrini);
+    startsdr();
 
-        startsdr();
-
-        sw.stop();
-        writefln("total time = %s[ms]", sw.peek.msecs);
-    }
+    sw.stop();
+    writefln("total time = %s[ms]", sw.peek.msecs);
 }
 
 
