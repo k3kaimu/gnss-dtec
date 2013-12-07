@@ -5,6 +5,7 @@
 * Copyright (C) 2013 T. Takasu <http://www.rtklib.com>
 *------------------------------------------------------------------------------*/
 import sdr;
+import util.trace;
 
 import core.memory;
 import std.math;
@@ -15,6 +16,7 @@ import core.bitop;
 import std.traits;
 import std.range;
 import std.algorithm;
+import std.complex;
 
 version(unittest) import std.stdio;
 

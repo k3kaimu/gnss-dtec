@@ -5,6 +5,9 @@
 *------------------------------------------------------------------------------*/
 
 import sdr;
+import sdrcmn;
+
+import util.trace;
 
 import std.exception : enforce;
 import std.math : abs;

@@ -4,6 +4,13 @@
 * Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
 *-----------------------------------------------------------------------------*/
 import sdr;
+import sdrinit;
+import sdrrcv;
+import sdracq;
+import sdrtrk;
+import sdrplot;
+
+import util.trace;
 
 import std.c.string : memcpy;
 import std.stdio;
@@ -13,6 +20,8 @@ import core.thread;
 import std.algorithm;
 import std.datetime;
 import std.math;
+import std.exception;
+import std.conv;
 
 /* global variables -----------------------------------------------------------*/
 /* thread handle and mutex */

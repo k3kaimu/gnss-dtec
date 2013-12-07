@@ -5,6 +5,9 @@
 *------------------------------------------------------------------------------*/
 import sdr;
 import sdrcmn;
+import util.trace;
+import sdrrcv;
+import sdrmain;
 
 import std.math;
 import std.stdio;

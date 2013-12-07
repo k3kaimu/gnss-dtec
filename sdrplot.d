@@ -4,6 +4,8 @@
 * Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
 *------------------------------------------------------------------------------*/
 import sdr;
+import util.trace;
+import util.serialize;
 
 import core.thread;
 
@@ -14,6 +16,7 @@ import std.datetime;
 import std.process;
 import std.stdio;
 import std.typecons;
+import std.exception;
 
 /* modify gnuplot ini file ------------------------------------------------------
 * modify gnuplot ini file to set window size and position

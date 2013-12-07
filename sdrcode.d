@@ -5,6 +5,8 @@
 *------------------------------------------------------------------------------*/
 import sdr;
 
+import util.trace;
+
 import std.c.string;
 import std.range, std.algorithm, std.traits;
 import core.bitop;

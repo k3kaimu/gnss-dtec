@@ -6,6 +6,8 @@
 *-----------------------------------------------------------------------------*/
 
 import sdr;
+import sdrmain;
+
 import std.stdio;
 
 import std.conv : to;
