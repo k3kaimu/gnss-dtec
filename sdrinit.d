@@ -539,9 +539,9 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
 
         /* other code generation */
         rcode[] = 0;       // zero padding
-        rescode(sdr.code.ptr, sdr.clen, 0, 0, sdr.ci, sdr.acq.nfft, rcode.ptr); /* resampled code */
-        cpxcpx(rcode.ptr, null, 1.0, sdr.acq.nfft, dst.ptr); /* FFT code */
-        cpxfft(dst.ptr, sdr.acq.nfft);
+        rescode(sdr.code.ptr, sdr.clen, 0, 0, sdr.ci, sdr.acq.nfft, rcode); /* resampled code */
+        cpxcpx(rcode, null, 1.0, dst); /* FFT code */
+        cpxfft(dst);
         return dst.idup;
     }();
     

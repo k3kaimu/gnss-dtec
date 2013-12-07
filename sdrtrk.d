@@ -127,21 +127,17 @@ in{
 }
 body{
     traceln("called");
-    short* dataI, dataQ, code_e, code;
+    //short* dataI, dataQ, code_e, code;
     //int i;
     size_t smax = s[ns-1];
 
-    dataI = cast(short*)sdrmalloc(short.sizeof * n+32);
-    scope(exit) sdrfree(dataI);
-    dataQ = cast(short*)sdrmalloc(short.sizeof * n+32);
-    scope(exit) sdrfree(dataQ);
-    code_e = cast(short*)sdrmalloc(short.sizeof * (n+2*smax));
-    scope(exit) sdrfree(code_e);
-
-    code = code_e + smax;
+    short[] dataI = new short[n];
+    short[] dataQ = new short[n];
+    short[] code_e = new short[n + 2*smax];
+    short* code = code_e.ptr + smax;
 
     /* mix local carrier */
-    *remp = mixcarr(data,dtype,ti,n,freq,phi0,dataI,dataQ);
+    *remp = mixcarr(data, dtype, ti, freq, phi0, dataI, dataQ);
 
     /* resampling code */
     traceln("coff:= ", coff);
@@ -150,9 +146,9 @@ body{
     *remc = rescode(codein.ptr, coden, coff, smax, ti*crate, n, code_e);
 
     /* multiply code and integrate */
-    dot_23(dataI, dataQ, code, code-s[0], code+s[0], n, I.ptr, Q.ptr);
+    dot_23(dataI.ptr, dataQ.ptr, code, code-s[0], code+s[0], n, I.ptr, Q.ptr);
     foreach(i; 1 .. ns)
-        dot_22(dataI, dataQ, code-s[i], code+s[i], n, I.ptr + 1 + i*2, Q.ptr + 1 + i*2);
+        dot_22(dataI.ptr, dataQ.ptr, code-s[i], code+s[i], n, I.ptr + 1 + i*2, Q.ptr + 1 + i*2);
 
     I[0 .. 1 + 2 * ns] *= CSCALE;
     Q[0 .. 1 + 2 * ns] *= CSCALE;

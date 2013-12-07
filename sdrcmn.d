@@ -155,106 +155,14 @@ size_t calcfftnumreso(real reso, real ti) pure nothrow @safe
 }
 
 
-/* sdr malloc -------------------------------------------------------------------
-* memorry allocation
-* args   : int    size      I   sizee of allocation
-* return : void*                allocated pointer
-*------------------------------------------------------------------------------*/
-void* sdrmalloc(size_t size) pure nothrow
-{
-    return GC.malloc(size);
-}
-
-
-/* sdr free ---------------------------------------------------------------------
-* free data
-* args   : void   *p        I/O input/output complex data
-* return : none
-*------------------------------------------------------------------------------*/
-void sdrfree(void *p) pure nothrow
-{
-    GC.free(p);
-}
-
-
-/* complex malloc ---------------------------------------------------------------
-* memorry allocation of complex data
-* args   : int    n         I   number of allocation
-* return : cpx_t*               allocated pointer
-*------------------------------------------------------------------------------*/
-/**/
-cpx_t *cpxmalloc(size_t n) pure nothrow
-{
-    return cast(cpx_t*)GC.malloc(cpx_t.sizeof * n + 32);
-}
-
-
-/* complex free -----------------------------------------------------------------
-* free complex data
-* args   : cpx_t  *cpx      I/O input/output complex data
-* return : none
-*------------------------------------------------------------------------------*/
-void cpxfree(cpx_t *cpx) pure nothrow
-{
-    GC.free(cpx);
-}
-
-
 /* complex FFT -----------------------------------------------------------------
 * cpx=fft(cpx)
 * args   : cpx_t  *cpx      I/O input/output complex data
 *          size_t    n         I   number of input/output data
 * return : none
 *------------------------------------------------------------------------------*/
-/**/
-void cpxfft(cpx_t *cpx, int n)
-{
-/+
-    traceln("called");
-    fftwf_plan p;
-
-    fftwf_plan_with_nthreads(NFFTTHREAD);  //fft execute in multi threads 
-    p = fftwf_plan_dft_1d(n, cpx, cpx, FFTW_FORWARD, FFTW_ESTIMATE);
-    fftwf_execute(p); /* fft */
-    fftwf_destroy_plan(p);
-+/
-    cpxfft(cpx[0 .. n]);
-}
-
-
-void cpxfft(cpx_t *cpx, size_t n)
-in{
-    foreach(e; cpx[0 .. n]){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-out{
-    foreach(e; cpx[0 .. n]){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-body{
-    //cpxfft(cpx, n.to!int());
-    cpxfft(cpx[0 .. n]);
-}
-
-
 void cpxfft(cpx_t[] cpx)
-in{
-    foreach(e; cpx){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-out{
-    foreach(e; cpx){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-body{
+{
     traceln("called");
 
   static if(!isVersion!"UseFFTW"){
@@ -285,67 +193,8 @@ body{
 *          int    n         I   number of input/output data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxifft(cpx_t *cpx, int n)
-in{
-    foreach(e; cpx[0 .. n]){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-out{
-    foreach(e; cpx[0 .. n]){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-body{
-/+
-    traceln("called");
-    fftwf_plan p;
-    
-    fftwf_plan_with_nthreads(NFFTTHREAD); /* ifft execute in multi threads */
-    p=fftwf_plan_dft_1d(n,cpx,cpx,FFTW_BACKWARD,FFTW_ESTIMATE);
-    fftwf_execute(p); /* ifft */
-    fftwf_destroy_plan(p);
-+/
-    cpxifft(cpx[0 .. n]);
-}
-
-
-void cpxifft(cpx_t *cpx, size_t n)
-in{
-    foreach(e; cpx[0 .. n]){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-out{
-    foreach(e; cpx[0 .. n]){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-body{
-    //cpxifft(cpx, n.to!int());
-    cpxifft(cpx[0 .. n]);
-}
-
-
 void cpxifft(cpx_t[] cpx)
-in{
-    foreach(e; cpx){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-out{
-    foreach(e; cpx){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-body{
-    //cpxifft(cpx.ptr, cpx.length.to!int());
+{
     traceln("called");
 
   static if(!isVersion!"UseFFTW"){
@@ -379,67 +228,16 @@ body{
 *          cpx_t *cpx       O   output complex array
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxcpx(in short* I, in short* Q, double scale, size_t n, cpx_t *cpx)
-out{
-    foreach(e; cpx[0 .. n]){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
+void cpxcpx(T : float)(in T[] I, in T[] Q, double scale, cpx_t[] cpx)
+in{
+    assert(I is null || I.length == cpx.length);
+    assert(Q is null || Q.length == cpx.length);
 }
 body{
-    traceln("called");
-    float *p=cast(float *)cpx;
-    int i;
-    
-    for (i=0;i<n;i++,p+=2) {
-        p[0]=  I[i]*cast(float)scale;
-        p[1]=Q?Q[i]*cast(float)scale:0.0f;
+    foreach(i, ref e; cpx){
+        cpx[i].re = (I !is null ? I[i] : 0.0f) * scale;
+        cpx[i].im = (Q !is null ? Q[i] : 0.0f) * scale;
     }
-}
-
-
-void cpxcpx(in short[] I, in short[] Q, double scale, cpx_t[] cpx)
-{
-    cpxcpx(I.ptr, Q.ptr, scale, I.length, cpx.ptr);
-}
-
-
-/* convert float vector to complex vector ---------------------------------------
-* cpx=complex(I,Q)
-* args   : float  *I        I   input data array (real)
-*          float  *Q        I   input data array (imaginary)
-*          double scale     I   scale factor
-*          int    n         I   number of input data
-*          cpx_t *cpx       O   output complex array
-* return : none
-*------------------------------------------------------------------------------*/
-void cpxcpxf(in float* I, in float* Q, double scale, size_t n, cpx_t* cpx)
-out{
-    foreach(e; cpx[0 .. n]){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-body{
-    traceln("called");
-    float *p=cast(float *)cpx;
-    int i;
-    
-    for (i=0;i<n;i++,p+=2) {
-        p[0]=  I[i]*cast(float)scale;
-        p[1]=Q?Q[i]*cast(float)scale:0.0f;
-    }
-}
-
-void cpxcpxf(in float[] I, in float[] Q, double scale, cpx_t[] cpx)
-out{
-    foreach(e; cpx){
-        assert(!isNaN(e.re));
-        assert(!isNaN(e.im));
-    }
-}
-body{
-    cpxcpxf(I.ptr, Q.ptr, scale, I.length, cpx.ptr);
 }
 
 
@@ -481,33 +279,22 @@ body{
 
 /* power spectrum calculation ---------------------------------------------------
 * power spectrum: pspec=abs(fft(cpx)).^2
-* args   : cpx_t  *cpx      I   input complex data array
+* args   : cpx_t*  cpx      I   input complex data array
 *          int    n         I   number of input data
 *          int    flagsum   I   cumulative sum flag (pspec+=pspec)
 *          double *pspec    O   output power spectrum data
 * return : none
 *------------------------------------------------------------------------------*/
-void cpxpspec(cpx_t *cpx, size_t n, bool flagsum, double *pspec)
-{
-    traceln("called");
-    float* p;
-    float n2=cast(float)n*n;
-    int i;
-    
-    cpxfft(cpx,n); /* fft */
-    
-    for (i=0,p=cast(float *)cpx;i<n;i++,p+=2) {
-        if (flagsum) /* cumulative sum */
-            pspec[i]+=(p[0]*p[0]+p[1]*p[1]);
-        else
-            pspec[i]=(p[0]*p[0]+p[1]*p[1]);
-    }
-}
-
-
 void cpxpspec(cpx_t[] cpx, bool flagsum, double[] pspec)
 {
-    cpxpspec(cpx.ptr, cpx.length, flagsum, pspec.ptr);
+    cpxfft(cpx); /* fft */
+    
+    foreach(i, e; cpx){
+        if (flagsum) /* cumulative sum */
+            pspec[i] += e.abs ^^ 2;
+        else
+            pspec[i] = e.abs ^^ 2;
+    }
 }
 
 
@@ -778,7 +565,7 @@ pure nothrow @safe unittest{
 * return : none
 *------------------------------------------------------------------------------*/
 
-void mulvcs(const(byte)* data1, const short *data2, size_t n, short *out_) pure nothrow
+deprecated void mulvcs(const(byte)* data1, const short *data2, size_t n, short *out_) pure nothrow
 {   
     int i;
     for (i=0;i<n;i++) out_[i]=cast(short)(data1[i]*data2[i]);
@@ -800,7 +587,7 @@ void mulvcs(in byte[] data1, in short[] data2, short[] out_) pure nothrow
 * return : none
 * note   : AVX command is used if "AVX" is defined
 *------------------------------------------------------------------------------*/
-void sumvf(const float *data1, const float *data2, int n, float *out_) pure nothrow
+deprecated void sumvf(const float *data1, const float *data2, int n, float *out_) pure nothrow
 {
     int i;
     for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
@@ -822,7 +609,7 @@ void sumvf(in float[] data1, in float[] data2, float[] out_) @safe
 * return : none
 * note   : AVX command is used if "AVX" is defined
 *------------------------------------------------------------------------------*/
-void sumvd(const double *data1, const double *data2, size_t n, double *out_) pure nothrow
+deprecated void sumvd(const double *data1, const double *data2, size_t n, double *out_) pure nothrow
 {
     int i;
     for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
@@ -845,7 +632,7 @@ void sumvd(in double[] data1, in double[] data2, double[] out_) @safe
 * note   : maximum value and index are calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-int maxvi(const int *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind) pure nothrow
+deprecated int maxvi(const int *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind) pure nothrow
 {
     int i;
     int max=data[0];
@@ -879,7 +666,7 @@ int maxvi(in int[] data, ptrdiff_t exinds, ptrdiff_t exinde, out int ind) pure n
 * note   : maximum value and index are calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-float maxvf(const float *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind) pure nothrow
+deprecated float maxvf(const float *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind) pure nothrow
 {
     int i;
     float max=data[0];
@@ -913,7 +700,7 @@ float maxvf(in float[] data, int exinds, int exinde, out int ind) pure nothrow
 * note   : maximum value and index are calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-double maxvd(const double *data, size_t n, int exinds, int exinde, int *ind) pure nothrow
+deprecated double maxvd(const double *data, size_t n, int exinds, int exinde, int *ind) pure nothrow
 in{
     assert(n <= int.max);
     foreach(e; data[0 .. n])
@@ -953,7 +740,7 @@ double maxvd(in double[] data, int exinds, int exinde, out int ind) pure nothrow
 * note   : mean value is calculated without exinds-exinde index
 *          exinds=exinde=-1: use all data
 *------------------------------------------------------------------------------*/
-double meanvd(const double *data, int n, int exinds, int exinde) /*pure nothrow*/
+deprecated double meanvd(const double *data, int n, int exinds, int exinde) /*pure nothrow*/
 in{
     foreach(e; data[0 .. n])
         assert(!isNaN(e));
@@ -982,7 +769,7 @@ body{
 *          double t         I   interpolation point on x data
 * return : double               interpolated y data at t
 *------------------------------------------------------------------------------*/
-double interp1()(double* x, double* y, int n, double t) pure nothrow
+deprecated double interp1()(double* x, double* y, int n, double t) pure nothrow
 {
     return interp1(x[0 .. n], y[0 .. n], t);
 }
@@ -1090,7 +877,7 @@ pure nothrow @safe unittest{
 *          double *out      O   output double array
 * return : none
 *------------------------------------------------------------------------------*/
-void uint64todouble(ulong *data, ulong base, int n, double *out_) pure nothrow
+deprecated void uint64todouble(ulong *data, ulong base, int n, double *out_) pure nothrow
 {
     int i;
     for (i=0;i<n;i++) out_[i]=cast(double)(data[i]-base);
@@ -1116,7 +903,7 @@ body{
 *          int    *suby     O   subscript index of y
 * return : none
 *------------------------------------------------------------------------------*/
-void ind2sub(int ind, int nx, int ny, int *subx, int *suby) pure nothrow @safe
+deprecated void ind2sub(int ind, int nx, int ny, int *subx, int *suby) pure nothrow @safe
 in{
     assert(ind >= 0);
     assert(nx >= 0);
@@ -1143,7 +930,7 @@ body{
 *          int    n         I   number of input data
 * return : none
 *------------------------------------------------------------------------------*/
-void shiftright(void *dst, void *src, size_t size, int n) pure nothrow
+deprecated void shiftright(void *dst, void *src, size_t size, int n) pure nothrow
 {
     scope tmp = new void[size * n];
     tmp[0 .. size*n] = src[0 .. size*n];
@@ -1160,7 +947,7 @@ void shiftright(void *dst, void *src, size_t size, int n) pure nothrow
 *          char   *rdata    O   resampled data
 * return : none
 *------------------------------------------------------------------------------*/
-void resdata(const char *data, int dtype, int n, int m, char *rdata) pure nothrow
+deprecated void resdata(const char *data, int dtype, int n, int m, char *rdata) pure nothrow
 {
     char *p;
 
@@ -1195,25 +982,27 @@ void resdata(const char *data, int dtype, int n, int m, char *rdata) pure nothro
 *          short  *rcode    O   resampling code
 * return : double               code remainder
 *------------------------------------------------------------------------------*/
-
-double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code, size_t len, double coff, size_t smax, double ci, size_t n, short *rcode)
+deprecated double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code, size_t len, double coff, size_t smax, double ci, size_t n, short[] rcode)
 {
     traceln("called");
     traceln("len: ", len);
     traceln("ci: ", ci);
-    short *p;
-    
-//#if !defined(SSE2)
-    coff-=smax*ci;
-    coff-=floor(coff/len)*len; /* 0<=coff<len */
+
+    coff -= smax*ci;
+    coff -= floor(coff / len) * len; /* 0<=coff<len */
     traceln("coff: ", coff);
-    for (p=rcode;p<rcode+n+2*smax;p++,coff+=ci) {
-        //while(coff>=len) coff-=len;
+
+    //for (p=rcode;p<rcode+n+2*smax;p++,coff+=ci) {
+    foreach(i; 0 .. n + 2 * smax){
         coff %= len;
-        *p = code[coff.to!size_t()];
+        rcode[i] = code[coff.to!size_t()];
+
+        coff += ci;
     }
+
     traceln("return");
-    return coff-smax*ci;
+
+    return coff - smax * ci;
 }
 
 
