@@ -216,6 +216,7 @@ struct Constant
 
         enum LOOP_MS = 10;
         enum freq = 10.23e6 * 2 * 77;
+        enum lambda = 3.0e8 / freq;
     }
 
 
@@ -288,6 +289,7 @@ struct Constant
 
         enum LOOP_MS = 10;
         enum freq = 10.23e6 * 2 * 77;
+        enum lambda = 3.0e8 / freq;
     }
 
 
@@ -361,6 +363,7 @@ struct Constant
 
         enum LOOP_MS = 10;
         enum freq = 10.23e6 * 2 * 60;
+        enum lambda = 3.0e8 / freq;
     }
 
 
@@ -414,6 +417,7 @@ struct Constant
     enum LOOP_MS_L1CA = 10;
     enum LOOP_MS_SBAS = 2;
     enum LOOP_MS_LEX = 4;
+    enum tecCoeff = 4.03e17;
 
 
     /* RTKLIB */
@@ -527,6 +531,20 @@ struct Constant
         }
 
         enum totalSatellites = NSATSBS;
+    }
+
+
+    struct TecCoeff
+    {
+        /// this struct is used as a name space
+        @disable this();
+
+        enum a = 4.03e17;
+
+        static real freqTerm(real fl1, real fl2) pure nothrow @safe
+        {
+            return (fl1^^2 * fl2^^2) / (fl1^^2 - fl2^^2);
+        }
     }
 }
 
