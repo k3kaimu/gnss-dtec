@@ -9,9 +9,10 @@ import std.traits;
 import std.getopt;
 import std.parallelism;
 import std.math;
+import std.traits;
 
 
-alias Elem = Tuple!(real, real, real);
+alias Elem = Tuple!(real, real, real, real);
 
 /**
 CSVの1行目にbuffloc,
@@ -63,9 +64,9 @@ void main(string[] args)
 
     foreach(e; gpsTEC){
         if(!e[1].isNaN)
-            fileTEC.writefln("%s, %.4f", cast(long)e[0], e[1]);
+            fileTEC.writefln("%s, %.4f, %.4f", cast(long)e[0], e[1], e[3]);
 
-        fileDTEC.writefln("%s, %.4f, %.4f", cast(long)e[0], e[2], e[2] - qzssAvgTECVel*e[0]);
+        fileDTEC.writefln("%s, %.4f, %.4f, %.4f", cast(long)e[0], e[2], e[2] - qzssAvgTECVel*e[0], e[3]);
     }
 }
 
@@ -83,26 +84,35 @@ Elem[] readData(string filename)
 
         immutable buffloc = ss[0].to!real,
                   remcode = ss[1].to!real,
-                  carrPhase = ss[2].to!real;
+                  carrPhase = ss[2].to!real,
+                  codeFreq = ss[8].to!real;
 
-        data ~= Elem(buffloc, remcode, carrPhase);
+        data ~= Elem(buffloc, remcode, carrPhase, codeFreq);
     }
 
     return data;
 }
 
 
-Elem[] calcTEC(in Elem[] l1data, in Elem[] l2data) pure nothrow @safe
+Elem[] calcTEC(in Elem[] l1data, in Elem[] l2data)
 {
     auto l2Buffloc =  l2data.map!"a[0]".array();
+    auto l2RawRemcode = l2data.map!"a[1]"().array();
     auto l2Remcode = l2data.map!(a => toNear(a[1], 1023))().array();
     auto l2CarrPhase = l2data.map!"a[2]".array();
+    auto l2CodeFreq = l2data.map!"a[3]".array();
 
-    auto l2RawRemcode = l2data.map!"a[1]"().array();
+
+    alias F = typeof(Elem.init.tupleof[0]);
+
+    auto codeFreqMeanCalculator = meanFILO!F(1024 * 2 * 10);
+    put(codeFreqMeanCalculator, 1.023e6.repeat(1024 * 2 * 10));
 
     Elem[] output;
-    foreach(e; l1data)
-    {
+    real clkComp = 0;
+    foreach(e; l1data){
+        codeFreqMeanCalculator.put(e[3]);
+
         immutable l1Idx = e[0],
                   l1P = e[1] * (3.0e8 / 1.023e6),
                   l1L = e[2];
@@ -110,13 +120,17 @@ Elem[] calcTEC(in Elem[] l1data, in Elem[] l2data) pure nothrow @safe
         immutable l2L = interp1(l2Buffloc, l2CarrPhase, l1Idx),
                   l2P = interp1(l2Buffloc, l2Remcode, l1Idx) * (3.0e8 / 1.023e6);
 
-        immutable dtec = calcTEC(l1L, l2L),
+        codeFreqMeanCalculator.put(interp1(l2Buffloc, l2CodeFreq, l1Idx));
+        auto codeFreqMean = codeFreqMeanCalculator.mean;
+
+        clkComp += (codeFreqMean / 1.023e6 - 1) * 0.001;
+        immutable dtec = calcTEC(l1L + clkComp * (2 * 77 * 10.23e6 - 6.5e6), l2L + clkComp * (2 * 60 * 10.23e6)),
                   tec = calcTEC!"m"(l1P - l2P);
 
         if(interp1(l2Buffloc, l2RawRemcode, l1Idx) > (1023/2))
-            output ~= Elem(l1Idx, real.nan, dtec);
+            output ~= Elem(l1Idx, real.nan, dtec, codeFreqMean);
         else
-            output ~= Elem(l1Idx, tec, dtec);
+            output ~= Elem(l1Idx, tec, dtec, codeFreqMean);
     }
 
     return output;
@@ -154,7 +168,7 @@ real calcTEC(string unit : "s")(real sec) pure nothrow @safe
 
 
 /**
-t付近の最大3点について、ラグランジュ補完を行った結果を返します。
+t付近の最大3点について、ラグランジュ補間を行った結果を返します。
 
 Params:
     x =     xのデータ列
@@ -268,4 +282,31 @@ unittest
     assert(toNear(1.99, 1).approxEqual(-0.01));
     assert(toNear(-1.99, 1).approxEqual(0.01));
     assert(toNear(-0.01, 1).approxEqual(-0.01));
+}
+
+
+auto meanFILO(E)(size_t n)
+{
+    static struct FIRFilter()
+    {
+        auto mean() @property { return _sum / _size; }
+        void put(E e) {
+            _sum -= _data[0];
+            _sum += e;
+            _data[0] = e;
+            _data.popFront();
+        }
+
+      private:
+        Cycle!(E[]) _data;
+        E _sum;
+        size_t _size;
+    }
+
+    auto arr = new E[n];
+
+    foreach(ref e; arr)
+        e = 0;
+
+    return FIRFilter!()(cycle(arr), 0.0, n);
 }
