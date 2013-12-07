@@ -759,10 +759,10 @@ struct sdrtrkprm_t
 {
     double cspace = 0;
     int cspaces;
-    int* corrp;
-    double* corrx;
-    int ne;
-    int nl;
+    size_t[] corrp;
+    double[] corrx;
+    size_t ne;
+    size_t nl;
     double pllb = 0;
     double dllb = 0;
     double fllb = 0;

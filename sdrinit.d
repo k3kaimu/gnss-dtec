@@ -330,12 +330,13 @@ void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(CType ctyp
 
 
         /* correlation point */
-        prm.corrp = cast(int*)malloc(int.sizeof * Constant.TRKCN).enforce();
-        foreach(i; 0 .. Constant.TRKCN){
+        //prm.corrp = cast(int*)malloc(int.sizeof * Constant.TRKCN).enforce();
+        prm.corrp = new size_t[Constant.TRKCN];
+        foreach(i, ref e; prm.corrp){
 
-            prm.corrp[i] = trkcdn * (i + 1);
+            e = trkcdn * (i + 1);
 
-            if (prm.corrp[i] == trkcp){
+            if (e == trkcp){
                 prm.ne = (i + 1) * 2 - 1; /* Early */
                 prm.nl = (i + 1) * 2;   /* Late */
             }
@@ -343,7 +344,8 @@ void inittrkprmstruct(string file = __FILE__, size_t line = __LINE__)(CType ctyp
 
 
         /* correlation point for plot */
-        prm.corrx = cast(double*)calloc(Constant.TRKCN *2 + 1, double.sizeof).enforce();
+        //prm.corrx = cast(double*)calloc(Constant.TRKCN *2 + 1, double.sizeof).enforce();
+        prm.corrx = new double[Constant.TRKCN *2 + 1];
         foreach(i; 1 .. Constant.TRKCN){
             prm.corrx[i*2 - 1] = -trkcdn * i;
             prm.corrx[i*2    ] = +trkcdn * i;
@@ -497,8 +499,9 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
 
 
     /* memory allocation */
-    sdr.acq.freq = cast(double*)malloc(double.sizeof * sdr.acq.nfreq).enforce();
-    scope(failure) free(sdr.acq.freq);
+    //sdr.acq.freq = cast(double*)malloc(double.sizeof * sdr.acq.nfreq).enforce();
+    //scope(failure) free(sdr.acq.freq);
+    sdr.acq.freq = new double[sdr.acq.nfreq];
 
 
     /* doppler search frequency */

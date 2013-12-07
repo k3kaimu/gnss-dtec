@@ -103,7 +103,7 @@ size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
 * notes  : see above for data
 *------------------------------------------------------------------------------*/
 void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, 
-                       double crate, double coff, int* s, int ns, double *I, double *Q,
+                       double crate, double coff, in size_t[] s, int ns, double *I, double *Q,
                        double *remc, double *remp, short* codein, int coden)
 in{
     bool b0 = (ti.isValidNum),
@@ -121,7 +121,7 @@ body{
     traceln("called");
     short* dataI, dataQ, code_e, code;
     //int i;
-    int smax=s[ns-1];
+    size_t smax = s[ns-1];
 
     dataI = cast(short*)sdrmalloc(short.sizeof * n+32);
     scope(exit) sdrfree(dataI);
