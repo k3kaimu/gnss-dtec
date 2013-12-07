@@ -65,7 +65,7 @@ void main(string[] args)
         if(!e[1].isNaN)
             fileTEC.writefln("%s, %.4f", cast(long)e[0], e[1]);
 
-        fileDTEC.writefln("%s, %.4f", cast(long)e[0], e[2] - qzssAvgTECVel*e[0]);
+        fileDTEC.writefln("%s, %.4f, %.4f", cast(long)e[0], e[2], e[2] - qzssAvgTECVel*e[0]);
     }
 }
 
