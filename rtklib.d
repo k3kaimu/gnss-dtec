@@ -56,130 +56,130 @@ import std.c.stdio;
 //C     #define R2D         (180.0/PI)          /* rad to deg */
 //C     #define CLIGHT      299792458.0         /* speed of light (m/s) */
 //C     #define SC2RAD      3.1415926535898     /* semi-circle to radian (IS-GPS) */
-const CLIGHT = 299792458.0;
+enum CLIGHT = 299792458.0;
 //C     #define AU          149597870691.0      /* 1 AU (m) */
-const SC2RAD = 3.1415926535898;
+enum SC2RAD = 3.1415926535898;
 //C     #define AS2R        (D2R/3600.0)        /* arc sec to radian */
-const AU = 149597870691.0;
+enum AU = 149597870691.0;
 
 //C     #define OMGE        7.2921151467E-5     /* earth angular velocity (IS-GPS) (rad/s) */
 
-const OMGE = 7.2921151467E-5;
+enum OMGE = 7.2921151467E-5;
 //C     #define RE_WGS84    6378137.0           /* earth semimajor axis (WGS84) (m) */
 //C     #define FE_WGS84    (1.0/298.257223563) /* earth flattening (WGS84) */
-const RE_WGS84 = 6378137.0;
+enum RE_WGS84 = 6378137.0;
 
 //C     #define HION        350000.0            /* ionosphere height (m) */
 
-const HION = 350000.0;
+enum HION = 350000.0;
 //C     #define MAXFREQ     7                   /* max NFREQ */
 
-const MAXFREQ = 7;
+enum MAXFREQ = 7;
 //C     #define FREQ1       1.57542E9           /* L1/E1  frequency (Hz) */
 //C     #define FREQ2       1.22760E9           /* L2     frequency (Hz) */
-const FREQ1 = 1.57542E9;
+enum FREQ1 = 1.57542E9;
 //C     #define FREQ5       1.17645E9           /* L5/E5a frequency (Hz) */
-const FREQ2 = 1.22760E9;
+enum FREQ2 = 1.22760E9;
 //C     #define FREQ6       1.27875E9           /* E6/LEX frequency (Hz) */
-const FREQ5 = 1.17645E9;
+enum FREQ5 = 1.17645E9;
 //C     #define FREQ7       1.20714E9           /* E5b    frequency (Hz) */
-const FREQ6 = 1.27875E9;
+enum FREQ6 = 1.27875E9;
 //C     #define FREQ8       1.191795E9          /* E5a+b  frequency (Hz) */
-const FREQ7 = 1.20714E9;
+enum FREQ7 = 1.20714E9;
 //C     #define FREQ1_GLO   1.60200E9           /* GLONASS G1 base frequency (Hz) */
-const FREQ8 = 1.191795E9;
+enum FREQ8 = 1.191795E9;
 //C     #define DFRQ1_GLO   0.56250E6           /* GLONASS G1 bias frequency (Hz/n) */
-const FREQ1_GLO = 1.60200E9;
+enum FREQ1_GLO = 1.60200E9;
 //C     #define FREQ2_GLO   1.24600E9           /* GLONASS G2 base frequency (Hz) */
-const DFRQ1_GLO = 0.56250E6;
+enum DFRQ1_GLO = 0.56250E6;
 //C     #define DFRQ2_GLO   0.43750E6           /* GLONASS G2 bias frequency (Hz/n) */
-const FREQ2_GLO = 1.24600E9;
+enum FREQ2_GLO = 1.24600E9;
 //C     #define FREQ3_GLO   1.202025E9          /* GLONASS G3 frequency (Hz) */
-const DFRQ2_GLO = 0.43750E6;
+enum DFRQ2_GLO = 0.43750E6;
 //C     #define FREQ2_CMP   1.561098E9          /* BeiDou B1 frequency (Hz) */
-const FREQ3_GLO = 1.202025E9;
+enum FREQ3_GLO = 1.202025E9;
 //C     #define FREQ7_CMP   1.20714E9           /* BeiDou B2 frequency (Hz) */
-const FREQ2_CMP = 1.561098E9;
+enum FREQ2_CMP = 1.561098E9;
 //C     #define FREQ6_CMP   1.26852E9           /* BeiDou B3 frequency (Hz) */
-const FREQ7_CMP = 1.20714E9;
+enum FREQ7_CMP = 1.20714E9;
 
-const FREQ6_CMP = 1.26852E9;
+enum FREQ6_CMP = 1.26852E9;
 //C     #define EFACT_GPS   1.0                 /* error factor: GPS */
 //C     #define EFACT_GLO   1.5                 /* error factor: GLONASS */
-const EFACT_GPS = 1.0;
+enum EFACT_GPS = 1.0;
 //C     #define EFACT_GAL   1.0                 /* error factor: Galileo */
-const EFACT_GLO = 1.5;
+enum EFACT_GLO = 1.5;
 //C     #define EFACT_QZS   1.0                 /* error factor: QZSS */
-const EFACT_GAL = 1.0;
+enum EFACT_GAL = 1.0;
 //C     #define EFACT_CMP   1.0                 /* error factor: BeiDou */
-const EFACT_QZS = 1.0;
+enum EFACT_QZS = 1.0;
 //C     #define EFACT_SBS   3.0                 /* error factor: SBAS */
-const EFACT_CMP = 1.0;
+enum EFACT_CMP = 1.0;
 
-const EFACT_SBS = 3.0;
+enum EFACT_SBS = 3.0;
 //C     #define SYS_NONE    0x00                /* navigation system: none */
 //C     #define SYS_GPS     0x01                /* navigation system: GPS */
-const SYS_NONE = 0x00;
+enum SYS_NONE = 0x00;
 //C     #define SYS_SBS     0x02                /* navigation system: SBAS */
-const SYS_GPS = 0x01;
+enum SYS_GPS = 0x01;
 //C     #define SYS_GLO     0x04                /* navigation system: GLONASS */
-const SYS_SBS = 0x02;
+enum SYS_SBS = 0x02;
 //C     #define SYS_GAL     0x08                /* navigation system: Galileo */
-const SYS_GLO = 0x04;
+enum SYS_GLO = 0x04;
 //C     #define SYS_QZS     0x10                /* navigation system: QZSS */
-const SYS_GAL = 0x08;
+enum SYS_GAL = 0x08;
 //C     #define SYS_CMP     0x20                /* navigation system: BeiDou */
-const SYS_QZS = 0x10;
+enum SYS_QZS = 0x10;
 //C     #define SYS_ALL     0xFF                /* navigation system: all */
-const SYS_CMP = 0x20;
+enum SYS_CMP = 0x20;
 
-const SYS_ALL = 0xFF;
+enum SYS_ALL = 0xFF;
 
 
 //C     #define TSYS_GPS    0                   /* time system: GPS time */
 //C     #define TSYS_UTC    1                   /* time system: UTC */
-const TSYS_GPS = 0;
+enum TSYS_GPS = 0;
 //C     #define TSYS_GLO    2                   /* time system: GLONASS time */
-const TSYS_UTC = 1;
+enum TSYS_UTC = 1;
 //C     #define TSYS_GAL    3                   /* time system: Galileo time */
-const TSYS_GLO = 2;
+enum TSYS_GLO = 2;
 //C     #define TSYS_QZS    4                   /* time system: QZSS time */
-const TSYS_GAL = 3;
+enum TSYS_GAL = 3;
 //C     #define TSYS_CMP    5                   /* time system: BeiDou time */
-const TSYS_QZS = 4;
+enum TSYS_QZS = 4;
 
-const TSYS_CMP = 5;
+enum TSYS_CMP = 5;
 //C     #ifndef NFREQ
 //C     #define NFREQ       3                   /* number of carrier frequencies */
 //C     #endif
-const NFREQ = 3;
+enum NFREQ = 3;
 //C     #define NFREQGLO    2                   /* number of carrier frequencies of GLONASS */
 
-const NFREQGLO = 2;
+enum NFREQGLO = 2;
 //C     #ifndef NEXOBS
 //C     #define NEXOBS      0                   /* number of extended obs codes */
 //C     #endif
-const NEXOBS = 0;
+enum NEXOBS = 0;
 
 //C     #define MINPRNGPS   1                   /* min satellite PRN number of GPS */
 //C     #define MAXPRNGPS   32                  /* max satellite PRN number of GPS */
-const MINPRNGPS = 1;
+enum MINPRNGPS = 1;
 //C     #define NSATGPS     (MAXPRNGPS-MINPRNGPS+1) /* number of GPS satellites */
-const MAXPRNGPS = 32;
-const NSATGPS = (MAXPRNGPS-MINPRNGPS+1);
+enum MAXPRNGPS = 32;
+enum NSATGPS = (MAXPRNGPS-MINPRNGPS+1);
 //C     #define NSYSGPS     1
 
-const NSYSGPS = 1;
+enum NSYSGPS = 1;
 //C     #ifdef ENAGLO
 //C     #define MINPRNGLO   1                   /* min satellite slot number of GLONASS */
 //C     #define MAXPRNGLO   24                  /* max satellite slot number of GLONASS */
-const MINPRNGLO = 1;
+enum MINPRNGLO = 1;
 //C     #define NSATGLO     (MAXPRNGLO-MINPRNGLO+1) /* number of GLONASS satellites */
-const MAXPRNGLO = 24;
-const NSATGLO = (MAXPRNGLO-MINPRNGLO+1);
+enum MAXPRNGLO = 24;
+enum NSATGLO = (MAXPRNGLO-MINPRNGLO+1);
 //C     #define NSYSGLO     1
 //C     #else
-const NSYSGLO = 1;
+enum NSYSGLO = 1;
 //C     #define MINPRNGLO   0
 //C     #define MAXPRNGLO   0
 //C     #define NSATGLO     0
@@ -188,13 +188,13 @@ const NSYSGLO = 1;
 //C     #ifdef ENAGAL
 //C     #define MINPRNGAL   1                   /* min satellite PRN number of Galileo */
 //C     #define MAXPRNGAL   27                  /* max satellite PRN number of Galileo */
-const MINPRNGAL = 1;
+enum MINPRNGAL = 1;
 //C     #define NSATGAL    (MAXPRNGAL-MINPRNGAL+1) /* number of Galileo satellites */
-const MAXPRNGAL = 27;
-const NSATGAL = (MAXPRNGAL-MINPRNGAL+1);
+enum MAXPRNGAL = 27;
+enum NSATGAL = (MAXPRNGAL-MINPRNGAL+1);
 //C     #define NSYSGAL     1
 //C     #else
-const NSYSGAL = 1;
+enum NSYSGAL = 1;
 //C     #define MINPRNGAL   0
 //C     #define MAXPRNGAL   0
 //C     #define NSATGAL     0
@@ -203,17 +203,17 @@ const NSYSGAL = 1;
 //C     #ifdef ENAQZS
 //C     #define MINPRNQZS   193                 /* min satellite PRN number of QZSS */
 //C     #define MAXPRNQZS   195                 /* max satellite PRN number of QZSS */
-const MINPRNQZS = 193;
+enum MINPRNQZS = 193;
 //C     #define MINPRNQZS_S 183                 /* min satellite PRN number of QZSS SAIF */
-const MAXPRNQZS = 195;
+enum MAXPRNQZS = 195;
 //C     #define MAXPRNQZS_S 185                 /* max satellite PRN number of QZSS SAIF */
-const MINPRNQZS_S = 183;
+enum MINPRNQZS_S = 183;
 //C     #define NSATQZS     (MAXPRNQZS-MINPRNQZS+1) /* number of QZSS satellites */
-const MAXPRNQZS_S = 185;
-const NSATQZS = (MAXPRNQZS-MINPRNQZS+1);
+enum MAXPRNQZS_S = 185;
+enum NSATQZS = (MAXPRNQZS-MINPRNQZS+1);
 //C     #define NSYSQZS     1
 //C     #else
-const NSYSQZS = 1;
+enum NSYSQZS = 1;
 //C     #define MINPRNQZS   0
 //C     #define MAXPRNQZS   0
 //C     #define NSATQZS     0
@@ -227,492 +227,492 @@ const NSYSQZS = 1;
 //C     #else
 //C     #define MINPRNCMP   0
 //C     #define MAXPRNCMP   0
-const MINPRNCMP = 0;
+enum MINPRNCMP = 0;
 //C     #define NSATCMP     0
-const MAXPRNCMP = 0;
+enum MAXPRNCMP = 0;
 //C     #define NSYSCMP     0
-const NSATCMP = 0;
+enum NSATCMP = 0;
 //C     #endif
-const NSYSCMP = 0;
+enum NSYSCMP = 0;
 //C     #define NSYS        (NSYSGPS+NSYSGLO+NSYSGAL+NSYSQZS+NSYSCMP) /* number of systems */
-const NSYS = (NSYSGPS+NSYSGLO+NSYSGAL+NSYSQZS+NSYSCMP);
+enum NSYS = (NSYSGPS+NSYSGLO+NSYSGAL+NSYSQZS+NSYSCMP);
 
 //C     #define MINPRNSBS   120                 /* min satellite PRN number of SBAS */
 //C     #define MAXPRNSBS   142                 /* max satellite PRN number of SBAS */
-const MINPRNSBS = 120;
+enum MINPRNSBS = 120;
 //C     #define NSATSBS     (MAXPRNSBS-MINPRNSBS+1) /* number of SBAS satellites */
-const MAXPRNSBS = 142;
-const NSATSBS = (MAXPRNSBS-MINPRNSBS+1);
+enum MAXPRNSBS = 142;
+enum NSATSBS = (MAXPRNSBS-MINPRNSBS+1);
 
 //C     #define MAXSAT      (NSATGPS+NSATGLO+NSATGAL+NSATQZS+NSATCMP+NSATSBS)
                                         /* max satellite number (1 to MAXSAT) */
-const MAXSAT =  (NSATGPS+NSATGLO+NSATGAL+NSATQZS+NSATCMP+NSATSBS);
+enum MAXSAT =  (NSATGPS+NSATGLO+NSATGAL+NSATQZS+NSATCMP+NSATSBS);
 //C     #ifndef MAXOBS
 //C     #define MAXOBS      64                  /* max number of obs in an epoch */
 //C     #endif
-const MAXOBS = 64;
+enum MAXOBS = 64;
 //C     #define MAXRCV      64                  /* max receiver number (1 to MAXRCV) */
 //C     #define MAXOBSTYPE  64                  /* max number of obs type in RINEX */
-const MAXRCV = 64;
+enum MAXRCV = 64;
 //C     #define DTTOL       0.005               /* tolerance of time difference (s) */
-const MAXOBSTYPE = 64;
+enum MAXOBSTYPE = 64;
 //C     #if 0
-const DTTOL = 0.005;
+enum DTTOL = 0.005;
 //C     #define MAXDTOE     10800.0             /* max time difference to ephem Toe (s) for GPS */
 //C     #else
 //C     #define MAXDTOE     7200.0              /* max time difference to ephem Toe (s) for GPS */
 //C     #endif
-const MAXDTOE = 7200.0;
+enum MAXDTOE = 7200.0;
 //C     #define MAXDTOE_GLO 1800.0              /* max time difference to GLONASS Toe (s) */
 //C     #define MAXDTOE_SBS 360.0               /* max time difference to SBAS Toe (s) */
-const MAXDTOE_GLO = 1800.0;
+enum MAXDTOE_GLO = 1800.0;
 //C     #define MAXDTOE_S   86400.0             /* max time difference to ephem toe (s) for other */
-const MAXDTOE_SBS = 360.0;
+enum MAXDTOE_SBS = 360.0;
 //C     #define MAXGDOP     300.0               /* max GDOP */
-const MAXDTOE_S = 86400.0;
+enum MAXDTOE_S = 86400.0;
 
-const MAXGDOP = 300.0;
+enum MAXGDOP = 300.0;
 //C     #define MAXEXFILE   100                 /* max number of expanded files */
 //C     #define MAXSBSAGEF  30.0                /* max age of SBAS fast correction (s) */
-const MAXEXFILE = 100;
+enum MAXEXFILE = 100;
 //C     #define MAXSBSAGEL  1800.0              /* max age of SBAS long term corr (s) */
-const MAXSBSAGEF = 30.0;
+enum MAXSBSAGEF = 30.0;
 //C     #define MAXSBSURA   8                   /* max URA of SBAS satellite */
-const MAXSBSAGEL = 1800.0;
+enum MAXSBSAGEL = 1800.0;
 //C     #define MAXBAND     10                  /* max SBAS band of IGP */
-const MAXSBSURA = 8;
+enum MAXSBSURA = 8;
 //C     #define MAXNIGP     201                 /* max number of IGP in SBAS band */
-const MAXBAND = 10;
+enum MAXBAND = 10;
 //C     #define MAXNGEO     4                   /* max number of GEO satellites */
-const MAXNIGP = 201;
+enum MAXNIGP = 201;
 //C     #define MAXCOMMENT  10                  /* max number of RINEX comments */
-const MAXNGEO = 4;
+enum MAXNGEO = 4;
 //C     #define MAXSTRPATH  1024                /* max length of stream path */
-const MAXCOMMENT = 10;
+enum MAXCOMMENT = 10;
 //C     #define MAXSTRMSG   1024                /* max length of stream message */
-const MAXSTRPATH = 1024;
+enum MAXSTRPATH = 1024;
 //C     #define MAXSTRRTK   8                   /* max number of stream in RTK server */
-const MAXSTRMSG = 1024;
+enum MAXSTRMSG = 1024;
 //C     #define MAXSBSMSG   32                  /* max number of SBAS msg in RTK server */
-const MAXSTRRTK = 8;
+enum MAXSTRRTK = 8;
 //C     #define MAXSOLMSG   4096                /* max length of solution message */
-const MAXSBSMSG = 32;
+enum MAXSBSMSG = 32;
 //C     #define MAXRAWLEN   4096                /* max length of receiver raw message */
-const MAXSOLMSG = 4096;
+enum MAXSOLMSG = 4096;
 //C     #define MAXERRMSG   4096                /* max length of error/warning message */
-const MAXRAWLEN = 4096;
+enum MAXRAWLEN = 4096;
 //C     #define MAXANT      64                  /* max length of station name/antenna type */
-const MAXERRMSG = 4096;
+enum MAXERRMSG = 4096;
 //C     #define MAXSOLBUF   256                 /* max number of solution buffer */
-const MAXANT = 64;
+enum MAXANT = 64;
 //C     #define MAXOBSBUF   128                 /* max number of observation data buffer */
-const MAXSOLBUF = 256;
+enum MAXSOLBUF = 256;
 //C     #define MAXNRPOS    16                  /* max number of reference positions */
-const MAXOBSBUF = 128;
+enum MAXOBSBUF = 128;
 
-const MAXNRPOS = 16;
+enum MAXNRPOS = 16;
 //C     #define RNX2VER     2.10                /* RINEX ver.2 default output version */
 //C     #define RNX3VER     3.00                /* RINEX ver.3 default output version */
-const RNX2VER = 2.10;
+enum RNX2VER = 2.10;
 
-const RNX3VER = 3.00;
+enum RNX3VER = 3.00;
 //C     #define OBSTYPE_PR  0x01                /* observation type: pseudorange */
 //C     #define OBSTYPE_CP  0x02                /* observation type: carrier-phase */
-const OBSTYPE_PR = 0x01;
+enum OBSTYPE_PR = 0x01;
 //C     #define OBSTYPE_DOP 0x04                /* observation type: doppler-freq */
-const OBSTYPE_CP = 0x02;
+enum OBSTYPE_CP = 0x02;
 //C     #define OBSTYPE_SNR 0x08                /* observation type: SNR */
-const OBSTYPE_DOP = 0x04;
+enum OBSTYPE_DOP = 0x04;
 //C     #define OBSTYPE_ALL 0xFF                /* observation type: all */
-const OBSTYPE_SNR = 0x08;
+enum OBSTYPE_SNR = 0x08;
 
-const OBSTYPE_ALL = 0xFF;
+enum OBSTYPE_ALL = 0xFF;
 //C     #define FREQTYPE_L1 0x01                /* frequency type: L1/E1 */
 //C     #define FREQTYPE_L2 0x02                /* frequency type: L2/B1 */
-const FREQTYPE_L1 = 0x01;
+enum FREQTYPE_L1 = 0x01;
 //C     #define FREQTYPE_L5 0x04                /* frequency type: L5/E5a/L3 */
-const FREQTYPE_L2 = 0x02;
+enum FREQTYPE_L2 = 0x02;
 //C     #define FREQTYPE_L6 0x08                /* frequency type: E6/LEX/B3 */
-const FREQTYPE_L5 = 0x04;
+enum FREQTYPE_L5 = 0x04;
 //C     #define FREQTYPE_L7 0x10                /* frequency type: E5b/B2 */
-const FREQTYPE_L6 = 0x08;
+enum FREQTYPE_L6 = 0x08;
 //C     #define FREQTYPE_L8 0x20                /* frequency type: E5(a+b) */
-const FREQTYPE_L7 = 0x10;
+enum FREQTYPE_L7 = 0x10;
 //C     #define FREQTYPE_ALL 0xFF               /* frequency type: all */
-const FREQTYPE_L8 = 0x20;
+enum FREQTYPE_L8 = 0x20;
 
-const FREQTYPE_ALL = 0xFF;
+enum FREQTYPE_ALL = 0xFF;
 //C     #define CODE_NONE   0                   /* obs code: none or unknown */
 //C     #define CODE_L1C    1                   /* obs code: L1C/A,G1C/A,E1C (GPS,GLO,GAL,QZS,SBS) */
-const CODE_NONE = 0;
+enum CODE_NONE = 0;
 //C     #define CODE_L1P    2                   /* obs code: L1P,G1P    (GPS,GLO) */
-const CODE_L1C = 1;
+enum CODE_L1C = 1;
 //C     #define CODE_L1W    3                   /* obs code: L1 Z-track (GPS) */
-const CODE_L1P = 2;
+enum CODE_L1P = 2;
 //C     #define CODE_L1Y    4                   /* obs code: L1Y        (GPS) */
-const CODE_L1W = 3;
+enum CODE_L1W = 3;
 //C     #define CODE_L1M    5                   /* obs code: L1M        (GPS) */
-const CODE_L1Y = 4;
+enum CODE_L1Y = 4;
 //C     #define CODE_L1N    6                   /* obs code: L1codeless (GPS) */
-const CODE_L1M = 5;
+enum CODE_L1M = 5;
 //C     #define CODE_L1S    7                   /* obs code: L1C(D)     (GPS,QZS) */
-const CODE_L1N = 6;
+enum CODE_L1N = 6;
 //C     #define CODE_L1L    8                   /* obs code: L1C(P)     (GPS,QZS) */
-const CODE_L1S = 7;
+enum CODE_L1S = 7;
 //C     #define CODE_L1E    9                   /* obs code: L1-SAIF    (QZS) */
-const CODE_L1L = 8;
+enum CODE_L1L = 8;
 //C     #define CODE_L1A    10                  /* obs code: E1A        (GAL) */
-const CODE_L1E = 9;
+enum CODE_L1E = 9;
 //C     #define CODE_L1B    11                  /* obs code: E1B        (GAL) */
-const CODE_L1A = 10;
+enum CODE_L1A = 10;
 //C     #define CODE_L1X    12                  /* obs code: E1B+C,L1C(D+P) (GAL,QZS) */
-const CODE_L1B = 11;
+enum CODE_L1B = 11;
 //C     #define CODE_L1Z    13                  /* obs code: E1A+B+C,L1SAIF (GAL,QZS) */
-const CODE_L1X = 12;
+enum CODE_L1X = 12;
 //C     #define CODE_L2C    14                  /* obs code: L2C/A,G1C/A (GPS,GLO) */
-const CODE_L1Z = 13;
+enum CODE_L1Z = 13;
 //C     #define CODE_L2D    15                  /* obs code: L2 L1C/A-(P2-P1) (GPS) */
-const CODE_L2C = 14;
+enum CODE_L2C = 14;
 //C     #define CODE_L2S    16                  /* obs code: L2C(M)     (GPS,QZS) */
-const CODE_L2D = 15;
+enum CODE_L2D = 15;
 //C     #define CODE_L2L    17                  /* obs code: L2C(L)     (GPS,QZS) */
-const CODE_L2S = 16;
+enum CODE_L2S = 16;
 //C     #define CODE_L2X    18                  /* obs code: L2C(M+L),B1I+Q (GPS,QZS,CMP) */
-const CODE_L2L = 17;
+enum CODE_L2L = 17;
 //C     #define CODE_L2P    19                  /* obs code: L2P,G2P    (GPS,GLO) */
-const CODE_L2X = 18;
+enum CODE_L2X = 18;
 //C     #define CODE_L2W    20                  /* obs code: L2 Z-track (GPS) */
-const CODE_L2P = 19;
+enum CODE_L2P = 19;
 //C     #define CODE_L2Y    21                  /* obs code: L2Y        (GPS) */
-const CODE_L2W = 20;
+enum CODE_L2W = 20;
 //C     #define CODE_L2M    22                  /* obs code: L2M        (GPS) */
-const CODE_L2Y = 21;
+enum CODE_L2Y = 21;
 //C     #define CODE_L2N    23                  /* obs code: L2codeless (GPS) */
-const CODE_L2M = 22;
+enum CODE_L2M = 22;
 //C     #define CODE_L5I    24                  /* obs code: L5/E5aI    (GPS,GAL,QZS,SBS) */
-const CODE_L2N = 23;
+enum CODE_L2N = 23;
 //C     #define CODE_L5Q    25                  /* obs code: L5/E5aQ    (GPS,GAL,QZS,SBS) */
-const CODE_L5I = 24;
+enum CODE_L5I = 24;
 //C     #define CODE_L5X    26                  /* obs code: L5/E5aI+Q  (GPS,GAL,QZS,SBS) */
-const CODE_L5Q = 25;
+enum CODE_L5Q = 25;
 //C     #define CODE_L7I    27                  /* obs code: E5bI,B2I   (GAL,CMP) */
-const CODE_L5X = 26;
+enum CODE_L5X = 26;
 //C     #define CODE_L7Q    28                  /* obs code: E5bQ,B2Q   (GAL,CMP) */
-const CODE_L7I = 27;
+enum CODE_L7I = 27;
 //C     #define CODE_L7X    29                  /* obs code: E5bI+Q,B2I+Q (GAL,CMP) */
-const CODE_L7Q = 28;
+enum CODE_L7Q = 28;
 //C     #define CODE_L6A    30                  /* obs code: E6A        (GAL) */
-const CODE_L7X = 29;
+enum CODE_L7X = 29;
 //C     #define CODE_L6B    31                  /* obs code: E6B        (GAL) */
-const CODE_L6A = 30;
+enum CODE_L6A = 30;
 //C     #define CODE_L6C    32                  /* obs code: E6C        (GAL) */
-const CODE_L6B = 31;
+enum CODE_L6B = 31;
 //C     #define CODE_L6X    33                  /* obs code: E6B+C,LEXS+L,B3I+Q (GAL,QZS,CMP) */
-const CODE_L6C = 32;
+enum CODE_L6C = 32;
 //C     #define CODE_L6Z    34                  /* obs code: E6A+B+C    (GAL) */
-const CODE_L6X = 33;
+enum CODE_L6X = 33;
 //C     #define CODE_L6S    35                  /* obs code: LEXS       (QZS) */
-const CODE_L6Z = 34;
+enum CODE_L6Z = 34;
 //C     #define CODE_L6L    36                  /* obs code: LEXL       (QZS) */
-const CODE_L6S = 35;
+enum CODE_L6S = 35;
 //C     #define CODE_L8I    37                  /* obs code: E5(a+b)I   (GAL) */
-const CODE_L6L = 36;
+enum CODE_L6L = 36;
 //C     #define CODE_L8Q    38                  /* obs code: E5(a+b)Q   (GAL) */
-const CODE_L8I = 37;
+enum CODE_L8I = 37;
 //C     #define CODE_L8X    39                  /* obs code: E5(a+b)I+Q (GAL) */
-const CODE_L8Q = 38;
+enum CODE_L8Q = 38;
 //C     #define CODE_L2I    40                  /* obs code: B1I        (CMP) */
-const CODE_L8X = 39;
+enum CODE_L8X = 39;
 //C     #define CODE_L2Q    41                  /* obs code: B1Q        (CMP) */
-const CODE_L2I = 40;
+enum CODE_L2I = 40;
 //C     #define CODE_L6I    42                  /* obs code: B3I        (CMP) */
-const CODE_L2Q = 41;
+enum CODE_L2Q = 41;
 //C     #define CODE_L6Q    43                  /* obs code: B3Q        (CMP) */
-const CODE_L6I = 42;
+enum CODE_L6I = 42;
 //C     #define CODE_L3I    44                  /* obs code: G3I        (GLO) */
-const CODE_L6Q = 43;
+enum CODE_L6Q = 43;
 //C     #define CODE_L3Q    45                  /* obs code: G3Q        (GLO) */
-const CODE_L3I = 44;
+enum CODE_L3I = 44;
 //C     #define CODE_L3X    46                  /* obs code: G3I+Q      (GLO) */
-const CODE_L3Q = 45;
+enum CODE_L3Q = 45;
 //C     #define MAXCODE     46                  /* max number of obs code */
-const CODE_L3X = 46;
+enum CODE_L3X = 46;
 
-const MAXCODE = 46;
+enum MAXCODE = 46;
 //C     #define PMODE_SINGLE 0                  /* positioning mode: single */
 //C     #define PMODE_DGPS   1                  /* positioning mode: DGPS/DGNSS */
-const PMODE_SINGLE = 0;
+enum PMODE_SINGLE = 0;
 //C     #define PMODE_KINEMA 2                  /* positioning mode: kinematic */
-const PMODE_DGPS = 1;
+enum PMODE_DGPS = 1;
 //C     #define PMODE_STATIC 3                  /* positioning mode: static */
-const PMODE_KINEMA = 2;
+enum PMODE_KINEMA = 2;
 //C     #define PMODE_MOVEB  4                  /* positioning mode: moving-base */
-const PMODE_STATIC = 3;
+enum PMODE_STATIC = 3;
 //C     #define PMODE_FIXED  5                  /* positioning mode: fixed */
-const PMODE_MOVEB = 4;
+enum PMODE_MOVEB = 4;
 //C     #define PMODE_PPP_KINEMA 6              /* positioning mode: PPP-kinemaric */
-const PMODE_FIXED = 5;
+enum PMODE_FIXED = 5;
 //C     #define PMODE_PPP_STATIC 7              /* positioning mode: PPP-static */
-const PMODE_PPP_KINEMA = 6;
+enum PMODE_PPP_KINEMA = 6;
 //C     #define PMODE_PPP_FIXED 8               /* positioning mode: PPP-fixed */
-const PMODE_PPP_STATIC = 7;
+enum PMODE_PPP_STATIC = 7;
 
-const PMODE_PPP_FIXED = 8;
+enum PMODE_PPP_FIXED = 8;
 //C     #define SOLF_LLH    0                   /* solution format: lat/lon/height */
 //C     #define SOLF_XYZ    1                   /* solution format: x/y/z-ecef */
-const SOLF_LLH = 0;
+enum SOLF_LLH = 0;
 //C     #define SOLF_ENU    2                   /* solution format: e/n/u-baseline */
-const SOLF_XYZ = 1;
+enum SOLF_XYZ = 1;
 //C     #define SOLF_NMEA   3                   /* solution format: NMEA-183 */
-const SOLF_ENU = 2;
+enum SOLF_ENU = 2;
 //C     #define SOLF_GSIF   4                   /* solution format: GSI-F1/2/3 */
-const SOLF_NMEA = 3;
+enum SOLF_NMEA = 3;
 
-const SOLF_GSIF = 4;
+enum SOLF_GSIF = 4;
 //C     #define SOLQ_NONE   0                   /* solution status: no solution */
 //C     #define SOLQ_FIX    1                   /* solution status: fix */
-const SOLQ_NONE = 0;
+enum SOLQ_NONE = 0;
 //C     #define SOLQ_FLOAT  2                   /* solution status: float */
-const SOLQ_FIX = 1;
+enum SOLQ_FIX = 1;
 //C     #define SOLQ_SBAS   3                   /* solution status: SBAS */
-const SOLQ_FLOAT = 2;
+enum SOLQ_FLOAT = 2;
 //C     #define SOLQ_DGPS   4                   /* solution status: DGPS/DGNSS */
-const SOLQ_SBAS = 3;
+enum SOLQ_SBAS = 3;
 //C     #define SOLQ_SINGLE 5                   /* solution status: single */
-const SOLQ_DGPS = 4;
+enum SOLQ_DGPS = 4;
 //C     #define SOLQ_PPP    6                   /* solution status: PPP */
-const SOLQ_SINGLE = 5;
+enum SOLQ_SINGLE = 5;
 //C     #define SOLQ_DR     7                   /* solution status: dead reconing */
-const SOLQ_PPP = 6;
+enum SOLQ_PPP = 6;
 //C     #define MAXSOLQ     7                   /* max number of solution status */
-const SOLQ_DR = 7;
+enum SOLQ_DR = 7;
 
-const MAXSOLQ = 7;
+enum MAXSOLQ = 7;
 //C     #define TIMES_GPST  0                   /* time system: gps time */
 //C     #define TIMES_UTC   1                   /* time system: utc */
-const TIMES_GPST = 0;
+enum TIMES_GPST = 0;
 //C     #define TIMES_JST   2                   /* time system: jst */
-const TIMES_UTC = 1;
+enum TIMES_UTC = 1;
 
-const TIMES_JST = 2;
+enum TIMES_JST = 2;
 //C     #define IONOOPT_OFF 0                   /* ionosphere option: correction off */
 //C     #define IONOOPT_BRDC 1                  /* ionosphere option: broadcast model */
-const IONOOPT_OFF = 0;
+enum IONOOPT_OFF = 0;
 //C     #define IONOOPT_SBAS 2                  /* ionosphere option: SBAS model */
-const IONOOPT_BRDC = 1;
+enum IONOOPT_BRDC = 1;
 //C     #define IONOOPT_IFLC 3                  /* ionosphere option: L1/L2 or L1/L5 iono-free LC */
-const IONOOPT_SBAS = 2;
+enum IONOOPT_SBAS = 2;
 //C     #define IONOOPT_EST 4                   /* ionosphere option: estimation */
-const IONOOPT_IFLC = 3;
+enum IONOOPT_IFLC = 3;
 //C     #define IONOOPT_TEC 5                   /* ionosphere option: IONEX TEC model */
-const IONOOPT_EST = 4;
+enum IONOOPT_EST = 4;
 //C     #define IONOOPT_QZS 6                   /* ionosphere option: QZSS broadcast model */
-const IONOOPT_TEC = 5;
+enum IONOOPT_TEC = 5;
 //C     #define IONOOPT_LEX 7                   /* ionosphere option: QZSS LEX ionospehre */
-const IONOOPT_QZS = 6;
+enum IONOOPT_QZS = 6;
 //C     #define IONOOPT_STEC 8                  /* ionosphere option: SLANT TEC model */
-const IONOOPT_LEX = 7;
+enum IONOOPT_LEX = 7;
 
-const IONOOPT_STEC = 8;
+enum IONOOPT_STEC = 8;
 //C     #define TROPOPT_OFF 0                   /* troposphere option: correction off */
 //C     #define TROPOPT_SAAS 1                  /* troposphere option: Saastamoinen model */
-const TROPOPT_OFF = 0;
+enum TROPOPT_OFF = 0;
 //C     #define TROPOPT_SBAS 2                  /* troposphere option: SBAS model */
-const TROPOPT_SAAS = 1;
+enum TROPOPT_SAAS = 1;
 //C     #define TROPOPT_EST 3                   /* troposphere option: ZTD estimation */
-const TROPOPT_SBAS = 2;
+enum TROPOPT_SBAS = 2;
 //C     #define TROPOPT_ESTG 4                  /* troposphere option: ZTD+grad estimation */
-const TROPOPT_EST = 3;
+enum TROPOPT_EST = 3;
 //C     #define TROPOPT_COR 5                   /* troposphere option: ZTD correction */
-const TROPOPT_ESTG = 4;
+enum TROPOPT_ESTG = 4;
 //C     #define TROPOPT_CORG 6                  /* troposphere option: ZTD+grad correction */
-const TROPOPT_COR = 5;
+enum TROPOPT_COR = 5;
 
-const TROPOPT_CORG = 6;
+enum TROPOPT_CORG = 6;
 //C     #define EPHOPT_BRDC 0                   /* ephemeris option: broadcast ephemeris */
 //C     #define EPHOPT_PREC 1                   /* ephemeris option: precise ephemeris */
-const EPHOPT_BRDC = 0;
+enum EPHOPT_BRDC = 0;
 //C     #define EPHOPT_SBAS 2                   /* ephemeris option: broadcast + SBAS */
-const EPHOPT_PREC = 1;
+enum EPHOPT_PREC = 1;
 //C     #define EPHOPT_SSRAPC 3                 /* ephemeris option: broadcast + SSR_APC */
-const EPHOPT_SBAS = 2;
+enum EPHOPT_SBAS = 2;
 //C     #define EPHOPT_SSRCOM 4                 /* ephemeris option: broadcast + SSR_COM */
-const EPHOPT_SSRAPC = 3;
+enum EPHOPT_SSRAPC = 3;
 //C     #define EPHOPT_LEX  5                   /* ephemeris option: QZSS LEX ephemeris */
-const EPHOPT_SSRCOM = 4;
+enum EPHOPT_SSRCOM = 4;
 
-const EPHOPT_LEX = 5;
+enum EPHOPT_LEX = 5;
 //C     #define ARMODE_OFF  0                   /* AR mode: off */
 //C     #define ARMODE_CONT 1                   /* AR mode: continuous */
-const ARMODE_OFF = 0;
+enum ARMODE_OFF = 0;
 //C     #define ARMODE_INST 2                   /* AR mode: instantaneous */
-const ARMODE_CONT = 1;
+enum ARMODE_CONT = 1;
 //C     #define ARMODE_FIXHOLD 3                /* AR mode: fix and hold */
-const ARMODE_INST = 2;
+enum ARMODE_INST = 2;
 //C     #define ARMODE_PPPAR 4                  /* AR mode: PPP-AR */
-const ARMODE_FIXHOLD = 3;
+enum ARMODE_FIXHOLD = 3;
 //C     #define ARMODE_PPPAR_ILS 5              /* AR mode: PPP-AR ILS */
-const ARMODE_PPPAR = 4;
+enum ARMODE_PPPAR = 4;
 //C     #define ARMODE_WLNL 6                   /* AR mode: wide lane/narrow lane */
-const ARMODE_PPPAR_ILS = 5;
+enum ARMODE_PPPAR_ILS = 5;
 //C     #define ARMODE_TCAR 7                   /* AR mode: triple carrier ar */
-const ARMODE_WLNL = 6;
+enum ARMODE_WLNL = 6;
 
-const ARMODE_TCAR = 7;
+enum ARMODE_TCAR = 7;
 //C     #define SBSOPT_LCORR 1                  /* SBAS option: long term correction */
 //C     #define SBSOPT_FCORR 2                  /* SBAS option: fast correction */
-const SBSOPT_LCORR = 1;
+enum SBSOPT_LCORR = 1;
 //C     #define SBSOPT_ICORR 4                  /* SBAS option: ionosphere correction */
-const SBSOPT_FCORR = 2;
+enum SBSOPT_FCORR = 2;
 //C     #define SBSOPT_RANGE 8                  /* SBAS option: ranging */
-const SBSOPT_ICORR = 4;
+enum SBSOPT_ICORR = 4;
 
-const SBSOPT_RANGE = 8;
+enum SBSOPT_RANGE = 8;
 //C     #define STR_NONE     0                  /* stream type: none */
 //C     #define STR_SERIAL   1                  /* stream type: serial */
-const STR_NONE = 0;
+enum STR_NONE = 0;
 //C     #define STR_FILE     2                  /* stream type: file */
-const STR_SERIAL = 1;
+enum STR_SERIAL = 1;
 //C     #define STR_TCPSVR   3                  /* stream type: TCP server */
-const STR_FILE = 2;
+enum STR_FILE = 2;
 //C     #define STR_TCPCLI   4                  /* stream type: TCP client */
-const STR_TCPSVR = 3;
+enum STR_TCPSVR = 3;
 //C     #define STR_UDP      5                  /* stream type: UDP stream */
-const STR_TCPCLI = 4;
+enum STR_TCPCLI = 4;
 //C     #define STR_NTRIPSVR 6                  /* stream type: NTRIP server */
-const STR_UDP = 5;
+enum STR_UDP = 5;
 //C     #define STR_NTRIPCLI 7                  /* stream type: NTRIP client */
-const STR_NTRIPSVR = 6;
+enum STR_NTRIPSVR = 6;
 //C     #define STR_FTP      8                  /* stream type: ftp */
-const STR_NTRIPCLI = 7;
+enum STR_NTRIPCLI = 7;
 //C     #define STR_HTTP     9                  /* stream type: http */
-const STR_FTP = 8;
+enum STR_FTP = 8;
 
-const STR_HTTP = 9;
+enum STR_HTTP = 9;
 //C     #define STRFMT_RTCM2 0                  /* stream format: RTCM 2 */
 //C     #define STRFMT_RTCM3 1                  /* stream format: RTCM 3 */
-const STRFMT_RTCM2 = 0;
+enum STRFMT_RTCM2 = 0;
 //C     #define STRFMT_OEM4  2                  /* stream format: NovAtel OEMV/4 */
-const STRFMT_RTCM3 = 1;
+enum STRFMT_RTCM3 = 1;
 //C     #define STRFMT_OEM3  3                  /* stream format: NovAtel OEM3 */
-const STRFMT_OEM4 = 2;
+enum STRFMT_OEM4 = 2;
 //C     #define STRFMT_UBX   4                  /* stream format: u-blox LEA-*T */
-const STRFMT_OEM3 = 3;
+enum STRFMT_OEM3 = 3;
 //C     #define STRFMT_SS2   5                  /* stream format: NovAtel Superstar II */
-const STRFMT_UBX = 4;
+enum STRFMT_UBX = 4;
 //C     #define STRFMT_CRES  6                  /* stream format: Hemisphere */
-const STRFMT_SS2 = 5;
+enum STRFMT_SS2 = 5;
 //C     #define STRFMT_STQ   7                  /* stream format: SkyTraq S1315F */
-const STRFMT_CRES = 6;
+enum STRFMT_CRES = 6;
 //C     #define STRFMT_GW10  8                  /* stream format: Furuno GW10 */
-const STRFMT_STQ = 7;
+enum STRFMT_STQ = 7;
 //C     #define STRFMT_JAVAD 9                  /* stream format: JAVAD GRIL/GREIS */
-const STRFMT_GW10 = 8;
+enum STRFMT_GW10 = 8;
 //C     #define STRFMT_NVS   10                 /* stream format: NVS NVC08C */
-const STRFMT_JAVAD = 9;
+enum STRFMT_JAVAD = 9;
 //C     #define STRFMT_BINEX 11                 /* stream format: BINEX */
-const STRFMT_NVS = 10;
+enum STRFMT_NVS = 10;
 //C     #define STRFMT_LEXR  12                 /* stream format: Furuno LPY-10000 */
-const STRFMT_BINEX = 11;
+enum STRFMT_BINEX = 11;
 //C     #define STRFMT_SIRF  13                 /* stream format: SiRF    (reserved) */
-const STRFMT_LEXR = 12;
+enum STRFMT_LEXR = 12;
 //C     #define STRFMT_RINEX 14                 /* stream format: RINEX */
-const STRFMT_SIRF = 13;
+enum STRFMT_SIRF = 13;
 //C     #define STRFMT_SP3   15                 /* stream format: SP3 */
-const STRFMT_RINEX = 14;
+enum STRFMT_RINEX = 14;
 //C     #define STRFMT_RNXCLK 16                /* stream format: RINEX CLK */
-const STRFMT_SP3 = 15;
+enum STRFMT_SP3 = 15;
 //C     #define STRFMT_SBAS  17                 /* stream format: SBAS messages */
-const STRFMT_RNXCLK = 16;
+enum STRFMT_RNXCLK = 16;
 //C     #define STRFMT_NMEA  18                 /* stream format: NMEA 0183 */
-const STRFMT_SBAS = 17;
+enum STRFMT_SBAS = 17;
 //C     #ifndef EXTLEX
-const STRFMT_NMEA = 18;
+enum STRFMT_NMEA = 18;
 //C     #define MAXRCVFMT    11                 /* max number of receiver format */
 //C     #else
-const MAXRCVFMT = 11;
+enum MAXRCVFMT = 11;
 //C     #define MAXRCVFMT    12
 //C     #endif
 
 //C     #define STR_MODE_R  0x1                 /* stream mode: read */
 //C     #define STR_MODE_W  0x2                 /* stream mode: write */
-const STR_MODE_R = 0x1;
+enum STR_MODE_R = 0x1;
 //C     #define STR_MODE_RW 0x3                 /* stream mode: read/write */
-const STR_MODE_W = 0x2;
+enum STR_MODE_W = 0x2;
 
-const STR_MODE_RW = 0x3;
+enum STR_MODE_RW = 0x3;
 //C     #define GEOID_EMBEDDED    0             /* geoid model: embedded geoid */
 //C     #define GEOID_EGM96_M150  1             /* geoid model: EGM96 15x15" */
-const GEOID_EMBEDDED = 0;
+enum GEOID_EMBEDDED = 0;
 //C     #define GEOID_EGM2008_M25 2             /* geoid model: EGM2008 2.5x2.5" */
-const GEOID_EGM96_M150 = 1;
+enum GEOID_EGM96_M150 = 1;
 //C     #define GEOID_EGM2008_M10 3             /* geoid model: EGM2008 1.0x1.0" */
-const GEOID_EGM2008_M25 = 2;
+enum GEOID_EGM2008_M25 = 2;
 //C     #define GEOID_GSI2000_M15 4             /* geoid model: GSI geoid 2000 1.0x1.5" */
-const GEOID_EGM2008_M10 = 3;
+enum GEOID_EGM2008_M10 = 3;
 
-const GEOID_GSI2000_M15 = 4;
+enum GEOID_GSI2000_M15 = 4;
 //C     #define COMMENTH    "%"                 /* comment line indicator for solution */
 //C     #define MSG_DISCONN "$_DISCONNECT\r\n"  /* disconnect message */
 
 //C     #define DLOPT_FORCE   0x01              /* download option: force download existing */
 //C     #define DLOPT_KEEPCMP 0x02              /* download option: keep compressed file */
-const DLOPT_FORCE = 0x01;
+enum DLOPT_FORCE = 0x01;
 //C     #define DLOPT_HOLDERR 0x04              /* download option: hold on error file */
-const DLOPT_KEEPCMP = 0x02;
+enum DLOPT_KEEPCMP = 0x02;
 //C     #define DLOPT_HOLDLST 0x08              /* download option: hold on listing file */
-const DLOPT_HOLDERR = 0x04;
+enum DLOPT_HOLDERR = 0x04;
 
-const DLOPT_HOLDLST = 0x08;
+enum DLOPT_HOLDLST = 0x08;
 //C     #define P2_5        0.03125             /* 2^-5 */
 //C     #define P2_6        0.015625            /* 2^-6 */
-const P2_5 = 0.03125;
+enum P2_5 = 0.03125;
 //C     #define P2_11       4.882812500000000E-04 /* 2^-11 */
-const P2_6 = 0.015625;
+enum P2_6 = 0.015625;
 //C     #define P2_15       3.051757812500000E-05 /* 2^-15 */
-const P2_11 = 4.882812500000000E-04;
+enum P2_11 = 4.882812500000000E-04;
 //C     #define P2_17       7.629394531250000E-06 /* 2^-17 */
-const P2_15 = 3.051757812500000E-05;
+enum P2_15 = 3.051757812500000E-05;
 //C     #define P2_19       1.907348632812500E-06 /* 2^-19 */
-const P2_17 = 7.629394531250000E-06;
+enum P2_17 = 7.629394531250000E-06;
 //C     #define P2_20       9.536743164062500E-07 /* 2^-20 */
-const P2_19 = 1.907348632812500E-06;
+enum P2_19 = 1.907348632812500E-06;
 //C     #define P2_21       4.768371582031250E-07 /* 2^-21 */
-const P2_20 = 9.536743164062500E-07;
+enum P2_20 = 9.536743164062500E-07;
 //C     #define P2_23       1.192092895507810E-07 /* 2^-23 */
-const P2_21 = 4.768371582031250E-07;
+enum P2_21 = 4.768371582031250E-07;
 //C     #define P2_24       5.960464477539063E-08 /* 2^-24 */
-const P2_23 = 1.192092895507810E-07;
+enum P2_23 = 1.192092895507810E-07;
 //C     #define P2_27       7.450580596923828E-09 /* 2^-27 */
-const P2_24 = 5.960464477539063E-08;
+enum P2_24 = 5.960464477539063E-08;
 //C     #define P2_29       1.862645149230957E-09 /* 2^-29 */
-const P2_27 = 7.450580596923828E-09;
+enum P2_27 = 7.450580596923828E-09;
 //C     #define P2_30       9.313225746154785E-10 /* 2^-30 */
-const P2_29 = 1.862645149230957E-09;
+enum P2_29 = 1.862645149230957E-09;
 //C     #define P2_31       4.656612873077393E-10 /* 2^-31 */
-const P2_30 = 9.313225746154785E-10;
+enum P2_30 = 9.313225746154785E-10;
 //C     #define P2_32       2.328306436538696E-10 /* 2^-32 */
-const P2_31 = 4.656612873077393E-10;
+enum P2_31 = 4.656612873077393E-10;
 //C     #define P2_33       1.164153218269348E-10 /* 2^-33 */
-const P2_32 = 2.328306436538696E-10;
+enum P2_32 = 2.328306436538696E-10;
 //C     #define P2_35       2.910383045673370E-11 /* 2^-35 */
-const P2_33 = 1.164153218269348E-10;
+enum P2_33 = 1.164153218269348E-10;
 //C     #define P2_38       3.637978807091710E-12 /* 2^-38 */
-const P2_35 = 2.910383045673370E-11;
+enum P2_35 = 2.910383045673370E-11;
 //C     #define P2_39       1.818989403545856E-12 /* 2^-39 */
-const P2_38 = 3.637978807091710E-12;
+enum P2_38 = 3.637978807091710E-12;
 //C     #define P2_40       9.094947017729280E-13 /* 2^-40 */
-const P2_39 = 1.818989403545856E-12;
+enum P2_39 = 1.818989403545856E-12;
 //C     #define P2_43       1.136868377216160E-13 /* 2^-43 */
-const P2_40 = 9.094947017729280E-13;
+enum P2_40 = 9.094947017729280E-13;
 //C     #define P2_48       3.552713678800501E-15 /* 2^-48 */
-const P2_43 = 1.136868377216160E-13;
+enum P2_43 = 1.136868377216160E-13;
 //C     #define P2_50       8.881784197001252E-16 /* 2^-50 */
-const P2_48 = 3.552713678800501E-15;
+enum P2_48 = 3.552713678800501E-15;
 //C     #define P2_55       2.775557561562891E-17 /* 2^-55 */
-const P2_50 = 8.881784197001252E-16;
+enum P2_50 = 8.881784197001252E-16;
 
-const P2_55 = 2.775557561562891E-17;
+enum P2_55 = 2.775557561562891E-17;
 //C     #ifdef WIN32
 //C     #define thread_t    HANDLE
 //C     #define lock_t      CRITICAL_SECTION
