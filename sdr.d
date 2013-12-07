@@ -660,9 +660,9 @@ struct sdrstat_t
 {
     bool stopflag;
     bool specflag;
-    byte *buff;
-    byte *buff1;
-    byte *buff2;
+    byte* buff;
+    byte* buff1;
+    byte* buff2;
     size_t buffloccnt;
 }
 
@@ -708,8 +708,8 @@ struct sdrtrkprm_t
 {
     double cspace = 0;
     int cspaces;
-    int *corrp;
-    double *corrx;
+    int* corrp;
+    double* corrx;
     int ne;
     int nl;
     double pllb = 0;
@@ -744,22 +744,22 @@ struct sdrtrk_t
     double carrNco = 0;
     double carrErr = 0;
     size_t buffloc;
-    double [8]tow = 0;
-    ulong [8]codei;
-    ulong [8]codeisum;
-    ulong [8]cntout;
-    double [8]remcodeout = 0;
-    double [8]L = 0;
-    double [8]D = 0;
-    double [8]S = 0;
-    double *I;
-    double *Q;
-    double *oldI;
-    double *oldQ;
-    double *sumI;
-    double *sumQ;
-    double *oldsumI;
-    double *oldsumQ;
+    double[8] tow = 0;
+    ulong[8] codei;
+    ulong[8] codeisum;
+    ulong[8] cntout;
+    double[8] remcodeout = 0;
+    double[8] L = 0;
+    double[8] D = 0;
+    double[8] S = 0;
+    double* I;
+    double* Q;
+    double* oldI;
+    double* oldQ;
+    double* sumI;
+    double* sumQ;
+    double* oldsumI;
+    double* oldsumQ;
     double Isum = 0;
     int ncorrp;
     int loopms;
@@ -778,20 +778,20 @@ struct sdrnav_t
     int flen;
     int addflen;
     int addplen;
-    int *prebits;
+    int* prebits;
     int prelen;
     int bit;
     double bitIP = 0;
-    int *fbits;
-    int *fbitsdec;
-    int *bitsync;
+    int* fbits;
+    int* fbitsdec;
+    int* bitsync;
     int bitind;
     int bitth;
     ulong firstsf;
     ulong firstsfcnt;
     double firstsftow = 0;
     int polarity;
-    void *fec;
+    void* fec;
     int swnavsync;
     int swnavreset;
     eph_t eph;
@@ -811,9 +811,9 @@ struct sdrch_t
     FType ftype;
     double f_sf = 0;
     double f_if = 0;
-    short *code;
-    short *lcode;
-    cpx_t *xcode;
+    short* code;
+    short* lcode;
+    cpx_t* xcode;
     int clen;
     double crate = 0;
     double ctime = 0;
@@ -838,9 +838,9 @@ struct sdrplt_t
 {
     int nx;
     int ny;
-    double *x;
-    double *y;
-    double *z;
+    double* x;
+    double* y;
+    double* z;
     PlotType type;
     int skip;
     bool flagabs;
@@ -875,8 +875,8 @@ struct sdrsoc_t
 struct sdrout_t
 {
     int nsat;
-    obsd_t *obsd;
-    eph_t *eph;
+    obsd_t* obsd;
+    eph_t* eph;
     rnxopt_t opt;
     sdrsoc_t soc;
     string rinexobs;
