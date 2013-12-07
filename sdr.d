@@ -736,7 +736,7 @@ struct sdracq_t
     double hband = 0;
     double step = 0;
     int nfreq;
-    double *freq;
+    double[] freq;
     int acqcodei;
     double acqfreq = 0;
     double acqfreqf = 0;

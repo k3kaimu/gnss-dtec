@@ -175,7 +175,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
 * return : none
 * notes  : P=abs(ifft(conj(fft(code)).*fft(data.*e^(2*pi*freq*t*i)))).^2
 *------------------------------------------------------------------------------*/
-void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double* freq,
+void pcorrelator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double[] freq,
                         int nfreq, double crate, int m, cpx_t* codex, double* P)
 {
     traceln("called");
