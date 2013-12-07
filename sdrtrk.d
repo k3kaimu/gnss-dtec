@@ -287,21 +287,20 @@ body{
 *------------------------------------------------------------------------------*/
 void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrflag)
 {
-    shiftright(&trk.tow[1],&trk.tow[0],double.sizeof,Constant.Observation.OBSINTERPN);
-    shiftright(&trk.L[1],&trk.L[0],double.sizeof,Constant.Observation.OBSINTERPN);
-    shiftright(&trk.D[1],&trk.D[0],double.sizeof,Constant.Observation.OBSINTERPN);
-    shiftright(&trk.codei[1],&trk.codei[0],ulong.sizeof,Constant.Observation.OBSINTERPN);
-    shiftright(&trk.cntout[1],&trk.cntout[0],ulong.sizeof,Constant.Observation.OBSINTERPN);
-    shiftright(&trk.remcodeout[1],&trk.remcodeout[0],double.sizeof,Constant.Observation.OBSINTERPN);
+    shiftright(&trk.tow[1],        &trk.tow[0],        double.sizeof, Constant.Observation.OBSINTERPN);
+    shiftright(&trk.L[1],          &trk.L[0],          double.sizeof, Constant.Observation.OBSINTERPN);
+    shiftright(&trk.D[1],          &trk.D[0],          double.sizeof, Constant.Observation.OBSINTERPN);
+    shiftright(&trk.codei[1],      &trk.codei[0],      ulong.sizeof,  Constant.Observation.OBSINTERPN);
+    shiftright(&trk.cntout[1],     &trk.cntout[0],     ulong.sizeof,  Constant.Observation.OBSINTERPN);
+    shiftright(&trk.remcodeout[1], &trk.remcodeout[0], double.sizeof, Constant.Observation.OBSINTERPN);
 
-    trk.tow[0]=sdr.nav.firstsftow+(cast(double)(cnt-sdr.nav.firstsfcnt))/1000;
-    trk.codei[0]=buffloc;
-    trk.cntout[0]=cnt;
-    trk.remcodeout[0]=trk.oldremcode*sdr.f_sf/trk.codefreq;
+    trk.tow[0] = sdr.nav.firstsftow + (cast(double)(cnt-sdr.nav.firstsfcnt)) / 1000;
+    trk.codei[0] = buffloc;
+    trk.cntout[0] = cnt;
+    trk.remcodeout[0] = trk.oldremcode * sdr.f_sf / trk.codefreq;
 
     /* doppler */
-    immutable fc = (sdr.ctype == CType.L1CA) ? 10.23e6 * 77 * 2 : 10.23e6 * 60 * 2;
-    trk.D[0] = (trk.carrfreq - sdr.f_if) + (sdr.trk.codefreq / sdr.crate) * (fc - sdr.f_if);
+    trk.D[0] = (trk.carrfreq - sdr.f_if) /*+ (sdr.trk.codefreq / sdr.crate -1) * Constant.get!"freq"(sdr.ctype)*/;
 
     /* carrier phase */
     //if (!trk.flagremcarradd) {
@@ -319,8 +318,8 @@ void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrfl
     //}
 
     //immutable tmpL = trk.L[0];
+    trk.L[0] += trk.D[0]*trk.prm2.dt;
 
-    trk.L[0]+=trk.D[0]*trk.prm2.dt;
     //(sdr.ctype == CType.L1CA) && writefln("(%s - %s)[Hz] * %s[s] == %s[cyc], sum : %s [cyc] -> %s [cyc]", trk.carrfreq, sdr.f_if, trk.prm2.dt, trk.D[0]* trk.prm2.dt, tmpL, trk.L[0]);
     
     trk.Isum+=fabs(trk.sumI[0]);
