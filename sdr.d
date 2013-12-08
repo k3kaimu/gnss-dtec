@@ -795,14 +795,14 @@ struct sdrtrk_t
     double carrNco = 0;
     double carrErr = 0;
     size_t buffloc;
-    double[8] tow = 0;
-    ulong[8] codei;
-    ulong[8] codeisum;
-    ulong[8] cntout;
-    double[8] remcodeout = 0;
-    double[8] L = 0;
-    double[8] D = 0;
-    double[8] S = 0;
+    deprecated double[8] tow = 0;
+    deprecated ulong[8] codei = 0;
+    deprecated ulong[8] codeisum = 0;
+    deprecated ulong[8] cntout = 0;
+    deprecated double[8] remcodeout = 0;
+    deprecated double[8] L = 0;
+    deprecated double[8] D = 0;
+    deprecated double[8] S = 0;
     double[] I;
     double[] Q;
     double[] oldI;
@@ -829,20 +829,20 @@ struct sdrnav_t
     int flen;
     int addflen;
     int addplen;
-    int* prebits;
+    deprecated int* prebits;
     int prelen;
     int bit;
     double bitIP = 0;
-    int* fbits;
-    int* fbitsdec;
-    int* bitsync;
-    int bitind;
+    deprecated int* fbits;
+    deprecated int* fbitsdec;
+    deprecated int* bitsync;
+    size_t bitind;
     int bitth;
     ulong firstsf;
     ulong firstsfcnt;
     double firstsftow = 0;
     int polarity;
-    void* fec;
+    deprecated void* fec;
     int swnavsync;
     int swnavreset;
     eph_t eph;
@@ -889,9 +889,9 @@ struct sdrplt_t
 {
     int nx;
     int ny;
-    double* x;
-    double* y;
-    double* z;
+    deprecated double* x;
+    deprecated double* y;
+    deprecated double* z;
     PlotType type;
     int skip;
     bool flagabs;
@@ -926,8 +926,8 @@ struct sdrsoc_t
 struct sdrout_t
 {
     int nsat;
-    obsd_t* obsd;
-    eph_t* eph;
+    deprecated obsd_t* obsd;
+    deprecated eph_t* eph;
     rnxopt_t opt;
     sdrsoc_t soc;
     string rinexobs;
@@ -1053,25 +1053,25 @@ unittest
 }
 
 
-auto malloc(size_t size) nothrow
+deprecated auto malloc(size_t size) nothrow
 {
     return GC.malloc(size);
 }
 
 
-void free(void* p) nothrow
+deprecated void free(void* p) nothrow
 {
     GC.free(p);
 }
 
 
-void* calloc(size_t n, size_t size) nothrow
+deprecated void* calloc(size_t n, size_t size) nothrow
 {
     return GC.calloc(n * size);
 }
 
 
-ushort MAKEWORD(ubyte bLow, ubyte bHigh) pure nothrow @safe
+deprecated ushort MAKEWORD(ubyte bLow, ubyte bHigh) pure nothrow @safe
 {
     return bLow | (bHigh << 8);
 }

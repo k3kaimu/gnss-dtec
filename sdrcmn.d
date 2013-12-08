@@ -308,7 +308,7 @@ void cpxpspec(cpx_t[] cpx, bool flagsum, double[] pspec)
 *          short  *d2       O   output short array
 * return : none
 *------------------------------------------------------------------------------*/
-void dot_21(const short *a1, const short *a2, const short *b, size_t n,
+deprecated void dot_21(const short *a1, const short *a2, const short *b, size_t n,
                    double *d1, double *d2) nothrow
 {
     version(none){
@@ -329,7 +329,7 @@ void dot_21(const short *a1, const short *a2, const short *b, size_t n,
 }
 
 
-void dot_21(in short[] a1, in short[] a2, in short[] b, double[] d1, double[] d2) nothrow
+deprecated void dot_21(in short[] a1, in short[] a2, in short[] b, double[] d1, double[] d2) nothrow
 {
     dot_21(a1.ptr, a2.ptr, b.ptr, a1.length, d1.ptr, d2.ptr);
 }
@@ -345,7 +345,7 @@ void dot_21(in short[] a1, in short[] a2, in short[] b, double[] d1, double[] d2
 *          short  *d2       O   output short array
 * return : none
 *------------------------------------------------------------------------------*/
-void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, size_t n,
+deprecated void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, size_t n,
             double *d1, double *d2) nothrow
 {
     version(none){
@@ -371,7 +371,7 @@ void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, size_t n,
     }
 }
 
-void dot_22(in short[] a1, in short[] a2, in short[] b1, in short[] b2, double[] d1, double[] d2) nothrow
+deprecated void dot_22(in short[] a1, in short[] a2, in short[] b1, in short[] b2, double[] d1, double[] d2) nothrow
 {
     dot_22(a1.ptr, a2.ptr, b1.ptr, b2.ptr, a1.length, d1.ptr, d2.ptr);
 }
@@ -388,7 +388,7 @@ void dot_22(in short[] a1, in short[] a2, in short[] b1, in short[] b2, double[]
 *          short  *d2       O   output short array
 * return : none
 *------------------------------------------------------------------------------*/
-void dot_23(const short *a1, const short *a2, const short *b1,
+deprecated void dot_23(const short *a1, const short *a2, const short *b1,
                    const short *b2, const short *b3, size_t n, double *d1,
                    double *d2) nothrow
 {
@@ -418,7 +418,7 @@ void dot_23(const short *a1, const short *a2, const short *b1,
 }
 
 
-void dot_23(in short[] a1, in short[] a2, in short[] b1, in short[] b2, in short[] b3, double[] d1, double[] d2) nothrow
+deprecated void dot_23(in short[] a1, in short[] a2, in short[] b1, in short[] b2, in short[] b3, double[] d1, double[] d2) nothrow
 {
     dot_23(a1.ptr, a2.ptr, b1.ptr, b2.ptr, b3.ptr, a1.length, d1.ptr, d2.ptr);
 }
@@ -572,9 +572,10 @@ deprecated void mulvcs(const(byte)* data1, const short *data2, size_t n, short *
 }
 
 
-void mulvcs(in byte[] data1, in short[] data2, short[] out_) pure nothrow
+deprecated void mulvcs(in byte[] data1, in short[] data2, short[] out_) pure nothrow
 {
-    mulvcs(data1.ptr, data2.ptr, data1.length, out_.ptr);
+    foreach(i; 0 .. data1.length)
+        out_[i] = cast(short)(data1[i] * data2[i]);
 }
 
 
@@ -649,7 +650,7 @@ deprecated int maxvi(const int *data, size_t n, ptrdiff_t exinds, ptrdiff_t exin
 }
 
 
-int maxvi(in int[] data, ptrdiff_t exinds, ptrdiff_t exinde, out int ind) pure nothrow
+deprecated int maxvi(in int[] data, ptrdiff_t exinds, ptrdiff_t exinde, out int ind) pure nothrow
 {
     return maxvi(data.ptr, data.length, exinds, exinde, &ind);
 }
@@ -683,7 +684,7 @@ deprecated float maxvf(const float *data, size_t n, ptrdiff_t exinds, ptrdiff_t 
 }
 
 
-float maxvf(in float[] data, int exinds, int exinde, out int ind) pure nothrow
+deprecated float maxvf(in float[] data, int exinds, int exinde, out int ind) pure nothrow
 {
     return maxvf(data.ptr, data.length, exinds, exinde, &ind);
 }
@@ -724,7 +725,7 @@ body{
 }
 
 
-double maxvd(in double[] data, int exinds, int exinde, out int ind) pure nothrow
+deprecated double maxvd(in double[] data, int exinds, int exinde, out int ind) pure nothrow
 {
     return maxvd(data.ptr, data.length, exinds, exinde, &ind);
 }
