@@ -228,54 +228,190 @@ unittest{
 }
 
 
-/+
 /**
-区間をとります
+slice[a .. b]がb >= aでしか使用できないのに対して、slice[b .. a] b >= aで使用できるようにしたもの
 */
-template intervalTake(string boundaries = "[)", pred...)
+auto slice(R)(R r, size_t startIndex, size_t endIndex)
+if(isInputRange!R)
 {
-  static if(boundaries.length == 1)
-  {
-    auto intervalTake(R, R...)(R range, E subArgs)
+    static struct Result()
     {
-      static if(boundaries[0] == '[')
-      {
-        while(!range.empty && !naryFun!(pred[0])(range.front, subArgs))
-            range.popFront();
-        return range;
-      }
-      else static if(boundaries[0] == '(')
-      {
-        while(!range.empty && !naryFun!(pred[0])(range.front, subArgs))
-            range.popFront();
+        auto ref front() @property in{ assert(!empty); } body { return _r.front; }
+        bool empty() @property { return _empty || _r.empty; }
+        void popFront()
+        in{ assert(!empty); }
+        body{
+            ++_i;
+            _r.popFront();
 
-        if(!range.empty)
-            range.popFront();
-        
-        return range;
-      }
-      else static if(boundaries[0] == ']')
-      {
-
-      }
-    }
-  }
-  else{
-    auto intervalTake(R, E...)(R range, E subArgs)
-    {
-
-        return IntervalTake(range, subArgs);
-    }
+            if(_s <= _e){
+                if(_i >= _e){
+                    _empty = true;
+                    return;
+                }
+            }else{
+                if(_e == _i) while(_e <= _i && _i < _s && !_r.empty){
+                    _r.popFront();
+                    ++_i;
+                }
+            }
+        }
 
 
-    struct IntervalTake(R, E...)
-    {
-
+      static if(isForwardRange!R)
+        auto save() @property
+        {
+            auto dst = this;
+            dst._r = dst._r.save;
+            return dst;
+        }
 
 
       private:
-        R _range;
-        E _subArgs;
+        bool _empty;
+        R _r;
+        size_t _i, _s, _e;
     }
-  }
-}+/
+
+
+    Result!() dst = {_empty : false, _r : r, _i : 0, _s : startIndex, _e : endIndex};
+
+
+    with(dst){
+        if(_s <= _e){
+            while(_i < _s && !_r.empty){
+                _r.popFront();
+                ++_i;
+            }
+
+            if(_i >= _e)
+                _empty = true;
+        }else
+            if(_e == 0){
+                while(_i < _s && !_r.empty){
+                    _r.popFront();
+                    ++_i;
+                }
+            }
+    }
+
+    return dst;
+}
+
+///
+unittest{
+    auto r = iota(100);
+
+    assert(equal(r.slice(0, 0), r[0 .. 0]));
+    assert(equal(r.slice(0, 1), r[0 .. 1]));
+    assert(equal(r.slice(1, 10), r[1 .. 10]));
+    assert(equal(r.slice(0, 100), r));
+    assert(equal(r.slice(0, 1000), r));
+
+    assert(equal(r.slice(10, 0), r[10 .. $]));
+    assert(equal(r.slice(10, 1), r[0 .. 1].chain(r[10 .. $])));
+    assert(equal(r.slice(20, 10), r[0 .. 10].chain(r[20 .. $])));
+    assert(equal(r.slice(1000, 10), r[0 .. 10]));
+}
+
+
+/**
+r.slice(a, b)の補集合を返す
+*/
+auto sliceEx(R)(R r, size_t exStartIndex, size_t exEndIndex)
+{
+    if(exStartIndex == exEndIndex && exStartIndex == 0)
+        return r.slice(0, size_t.max);
+    else
+        return r.slice(exEndIndex, exStartIndex);
+}
+
+///
+unittest{
+    auto r = iota(100);
+
+    assert(equal(r.sliceEx(0, 0), r[0 .. $]));
+    assert(equal(r.sliceEx(0, 1), r[1 .. $]));
+    assert(equal(r.sliceEx(1, 10), r[0 .. 1].chain(r[10 .. $])));
+    assert(equal(r.sliceEx(0, 100), r[$ .. $]));
+    assert(equal(r.sliceEx(0, 1000), r[$ .. $]));
+
+    assert(equal(r.sliceEx(10, 0), r[0 .. 10]));
+    assert(equal(r.sliceEx(10, 1), r[1 .. 10]));
+    assert(equal(r.sliceEx(20, 10), r[10 .. 20]));
+    assert(equal(r.sliceEx(1000, 10), r[10 .. $]));
+    assert(equal(r.sliceEx(1000, 0), r[0 .. $]));
+}
+
+
+
+///**
+//Cycleを逆転させた
+//*/
+//auto retroCycle(R)(R r)
+//if(isRandomAccessRange!R && hasLength!R)
+//{
+//    alias E = ElementType!R;
+
+//    static struct Result
+//    {
+//        enum empty = false;
+
+//        auto ref front() @property { return _r[_idx]; }
+
+//      static if(hasAssignableElements!R)
+//        void front(E e) @property { _r[_idx] = e; }
+
+//        void popFront()
+//        {
+//            if(_idx == 0) _idx = _r.length;
+//            --_idx;
+//        }
+
+//        auto save() @property
+//        {
+//            auto dst = this;
+//            dst._r = dst._r.save;
+//            return dst;
+//        }
+
+
+//        auto ref opIndex(size_t idx)
+//        {
+//            return _r[getPopFrontNIndex(idx)];
+//        }
+
+
+//      static if(hasAssignableElements!R)
+//        void opIndexAssign(E e, size_t idx)
+//        {
+//            _r[getPopFrontNIndex(idx)] = e;
+//        }
+
+
+//      private:
+//        R _r;
+//        size_t _idx;
+
+
+//        size_t getPopFrontNIndex(size_t idx)
+//        {
+//            ptrdiff_t idx = (cast(ptrdiff_t)_idx) - (cast(ptrdiff_t)idx);
+//            idx %= _r.length;
+
+//            if(idx < 0)
+//                idx += _r.length;
+
+//            return idx;
+//        }
+//    }
+
+
+//    return Result(cycle(r));
+//}
+
+/////
+//unittest{
+//    auto rc = retroCycle(new int[8]);
+//    rc.
+//}
