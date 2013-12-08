@@ -46,8 +46,6 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
 
             /* get new 1ms data */
             rcvgetbuff(&sdrini, buffloc, sdr.acq.nfft, sdr.ftype, sdr.dtype, data);
-            //buffloc += sdr.acq.nfft;
-            //buffloc += (sdr.nsamp - sdr.acq.nfft % sdr.nsamp) % sdr.acq.nfft;
             buffloc += (cast(size_t)((cast(real)sdr.acq.nfft)/sdr.nsamp + 1)) * sdr.nsamp;
 
             /* fft correlation */
