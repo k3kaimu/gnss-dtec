@@ -144,12 +144,12 @@ body{
     traceln("coff:= ", coff);
     traceln("ti:= ", ti);
     traceln("crate:=", crate);
-    *remc = rescode(codein.ptr, coden, coff, smax, ti*crate, n, code_e);
+    *remc = codein.resampling(coff, smax, ti*crate, n, code_e.save);
 
     /* multiply code and integrate */
-    dot_23(dataI.ptr, dataQ.ptr, code, code-s[0], code+s[0], n, I.ptr, Q.ptr);
+    dot!(2, 3)(dataI.ptr, dataQ.ptr, code, code-s[0], code+s[0], n, I.ptr, Q.ptr);
     foreach(i; 1 .. ns)
-        dot_22(dataI.ptr, dataQ.ptr, code-s[i], code+s[i], n, I.ptr + 1 + i*2, Q.ptr + 1 + i*2);
+        dot!(2, 2)(dataI.ptr, dataQ.ptr, code-s[i], code+s[i], n, I.ptr + 1 + i*2, Q.ptr + 1 + i*2);
 
     I[0 .. 1 + 2 * ns] *= CSCALE;
     Q[0 .. 1 + 2 * ns] *= CSCALE;
@@ -304,7 +304,7 @@ void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrfl
     trk.remcodeout[0] = trk.oldremcode * sdr.f_sf / trk.codefreq;
 
     /* doppler */
-    trk.D[0] = (trk.carrfreq - sdr.f_if) /*+ (sdr.trk.codefreq / sdr.crate -1) * Constant.get!"freq"(sdr.ctype)*/;
+    trk.D[0] = trk.carrfreq - sdr.f_if; /*+ (sdr.trk.codefreq / sdr.crate -1) * Constant.get!"freq"(sdr.ctype)*/;
 
     /* carrier phase */
     //if (!trk.flagremcarradd) {
@@ -322,7 +322,7 @@ void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrfl
     //}
 
     //immutable tmpL = trk.L[0];
-    trk.L[0] += trk.D[0]*trk.prm2.dt;
+    trk.L[0] = trk.L[1] + trk.D[0] * trk.prm2.dt;
 
     //(sdr.ctype == CType.L1CA) && writefln("(%s - %s)[Hz] * %s[s] == %s[cyc], sum : %s [cyc] -> %s [cyc]", trk.carrfreq, sdr.f_if, trk.prm2.dt, trk.D[0]* trk.prm2.dt, tmpL, trk.L[0]);
     

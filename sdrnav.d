@@ -314,7 +314,13 @@ bool nav_checksync(string file = __FILE__, size_t line = __LINE__)(int biti, dou
     int maxi;
     if (IPold*IP<0) {
         nav.bitsync[biti]+=1;
-        maxi=maxvi(nav.bitsync,nav.rate,-1,-1,&nav.bitind);
+
+        {
+            immutable tpl = nav.bitsync[0 .. nav.rate].findMaxWithIndex();
+            maxi = tpl[0];
+            nav.bitind = tpl[1];
+        }
+
         if (maxi>nav.bitth) {
             nav.bitind--; /* minus 1 index */
             if (nav.bitind<0) nav.bitind=nav.rate-1;

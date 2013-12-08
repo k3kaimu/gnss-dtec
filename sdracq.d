@@ -106,31 +106,23 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
 bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P, sdrch_t* sdr)
 {
     traceln("called");
-    int maxi, codei, freqi;
-    
-    //immutable maxP = maxvd(P, sdr.acq.nfft * sdr.acq.nfreq, -1, -1, &maxi);
-    //ind2sub(maxi, sdr.acq.nfft, sdr.acq.nfreq, &codei, &freqi);
-    
-    double maxP = 0.0;
-    foreach(i; 0 .. sdr.acq.nfreq){
-        int tmpi = void;
-        auto tmpP = maxvd(&P[i * sdr.acq.nfft], sdr.nsamp, -1, -1, &tmpi);
 
-        if(tmpP > maxP){
-            maxP = tmpP;
-            freqi = i;
-            codei = tmpi;
-        }
-    }
+    immutable max = iota(sdr.acq.nfreq)
+                   .map!(i => P[i*sdr.acq.nfft .. (i+1)*sdr.acq.nfft]
+                                  .findMaxWithIndex()
+                                  .tupleof.tuple(i)
+                    )()
+                   .reduce!((a, b) => b[0] > a[0] ? b : a)();
 
-    int submaxi = void;
-    //ind2sub(maxi, sdr.acq.nfft, sdr.acq.nfreq, &codei, &freqi);
+    immutable maxP = max[0],
+              codei = max[1],
+              freqi = max[2];
+
     immutable exinds = (a => (a < 0) ? (a + sdr.nsamp) : a)(codei - 4 * sdr.nsampchip),
               exinde = (a => (a >= sdr.nsamp) ? (a - sdr.nsamp) : a)(codei + 4 * sdr.nsampchip),
-              meanP = meanvd(&P[freqi*sdr.acq.nfft], sdr.nsamp, exinds, exinde),
-              maxP2 = maxvd(&P[freqi*sdr.acq.nfft], sdr.nsamp, exinds, exinde, &submaxi);
+              meanP = P[freqi*sdr.acq.nfft .. (freqi+1)*sdr.acq.nfft].sliceEx(exinds, exinde).mean(),
+              maxP2 = P[freqi*sdr.acq.nfft .. (freqi+1)*sdr.acq.nfft].sliceEx(exinds, exinde).minPos!"a > b"().front;
 
-    //if(sdr.ctype == CType.L2RCCM){
     {
         static size_t n = 0;
         
@@ -139,13 +131,10 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
         ++n;
         auto f = File("result_" ~ sdr.ctype.to!string ~ "_" ~ n.to!string() ~ "_" ~ Clock.currTime.toISOString() ~ ".csv", "w");
 
+        // 大きい値から1024個だけ出力
         foreach(e; temp[0 .. 1024].sort!"a[1] < b[1]"())
             f.writefln("%s, %s,", e[1], e[0]);
-
-        writefln("maxi = %s, submaxi = %s", maxi, submaxi);
-        //assert(0);
     }
-    //}
 
 
     sdr.ctype == CType.L2RCCM && writefln("codei = %s, %s[%s, %s]%s", codei, sdr.nsamp, exinds, exinde, sdr.acq.nfft);
@@ -156,7 +145,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
 
     /* peak ratio */
     sdr.acq.peakr = maxP / maxP2;
-    sdr.acq.acqcodei = codei;
+    sdr.acq.acqcodei = codei.to!int();
     sdr.acq.acqfreq = sdr.acq.freq[freqi];
 
     return sdr.acq.peakr > Constant.get!"Acquisition.TH"(sdr.ctype);
@@ -243,12 +232,11 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
       case DType.I:       // real
         rdataI[0 .. n] = data[0 .. n];
         
-        mulvcs(rdataI, rcode, rcodeI);
+        rdataI.zip(rcode).map!"cast(short)(a[0] * a[1])"().moveTo(rcodeI.save);
         cpxcpx(rcodeI, null, 1.0, datax);       // to frequency domain
         cpxpspec(datax, 0, fftxc);              // compute power spectrum
 
-        int ind = void;
-        maxvd(fftxc[0 .. m/2], -1, -1, ind);
+        immutable ind = fftxc[0 .. m/2].findMaxWithIndex()[1];
 
         return (cast(double)ind) / (m * ti);
 
@@ -258,13 +246,12 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
             rdataQ[i] = data[i*2 + 1];
         }
 
-        mulvcs(rdataI, rcode, rcodeI);
-        mulvcs(rdataQ, rcode, rcodeQ);
+        rdataI.zip(rcode).map!"cast(short)(a[0] * a[1])"().moveTo(rcodeI.save);
+        rdataQ.zip(rcode).map!"cast(short)(a[0] * a[1])"().moveTo(rcodeQ.save);
         cpxcpx(rcodeI, rcodeQ, 1.0, datax);     // to frequency domain
         cpxpspec(datax, 0, fftxc);              // compute power spectrum
 
-        int ind = void;
-        maxvd(fftxc[m/2 .. $], -1, -1, ind);
+        immutable ind = fftxc[m/2 .. $].findMaxWithIndex()[1];
 
         return (m / 2.0 - ind) / (m * ti);
     }
