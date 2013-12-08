@@ -80,7 +80,7 @@ size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
 
     /* correlation */
     correlator(data, sdr.dtype, sdr.ti, trkN, sdr.trk.carrfreq, sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
-               sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code,sdr.clen);
+               sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code);
     
     traceln();
 
@@ -113,7 +113,7 @@ size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
 *------------------------------------------------------------------------------*/
 void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, 
                        double crate, double coff, in size_t[] s, int ns, double[] I, double[] Q,
-                       double *remc, double *remp, in short[] codein, int coden)
+                       double *remc, double *remp, in short[] codein)
 in{
     bool b0 = (ti.isValidNum),
          b1 = (freq.isValidNum),
