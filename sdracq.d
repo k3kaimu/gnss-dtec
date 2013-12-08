@@ -237,10 +237,7 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
           fftxc = new double[m],
           datax = new cpx_t[m];
 
-    {
-        auto sink = rcode;
-        resamplingCode(code, 0, 0, ti * crate, n, sink);
-    }
+    code.resampling(0, 0, ti * crate, n, rcode.save);
 
     final switch(dtype){
       case DType.I:       // real

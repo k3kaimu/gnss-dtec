@@ -535,11 +535,11 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
     /* memory allocation */
     sdr.xcode = (){
         scope rcode = new short[sdr.acq.nfft];
-        scope dst = new Complex!float[sdr.acq.nfft];
+        scope dst = new cpx_t[sdr.acq.nfft];
 
         /* other code generation */
         rcode[] = 0;       // zero padding
-        rescode(sdr.code.ptr, sdr.clen, 0, 0, sdr.ci, sdr.acq.nfft, rcode); /* resampled code */
+        sdr.code.resampling(0, 0, sdr.ci, sdr.acq.nfft, rcode.save);
         cpxcpx(rcode, null, 1.0, dst); /* FFT code */
         cpxfft(dst);
         return dst.idup;

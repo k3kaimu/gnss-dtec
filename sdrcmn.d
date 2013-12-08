@@ -1011,21 +1011,23 @@ deprecated double rescode(string file = __FILE__, size_t line = __LINE__)(const 
 
 
 
-double resamplingCode(R, W)(R src, double coff, size_t smax, double ci, size_t n, ref W sink)
-if(isInputRange!R && hasLength!R && isOutputRange!(W, ElementType!R))
+double resampling(R, W)(R src, double coff, size_t smax, double ci, size_t n, auto ref W sink)
+if(isRandomAccessRange!R && hasLength!R && isOutputRange!(W, ElementType!R))
 {
     immutable len = src.length;
 
     traceln("called");
     traceln("len: ", len);
     traceln("ci: ", ci);
-    auto cyc = src.cycle();
     
     coff -= smax*ci;
     coff -= floor(coff/len)*len; /* 0<=coff<len */
     traceln("coff: ", coff);
+
     foreach(e; 0 .. n + 2 * smax){
-        sink.put(cyc[coff.to!size_t()]);
+        coff %= len;
+        sink.put(src[coff.to!size_t()]);
+
         coff += ci;
     }
     traceln("return");
