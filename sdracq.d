@@ -6,6 +6,7 @@
 import sdr;
 import sdrcmn;
 import util.trace;
+import util.range;
 import sdrrcv;
 import sdrmain;
 
@@ -17,6 +18,7 @@ import std.range;
 import std.conv;
 import std.datetime;
 import std.random;
+import std.typecons;
 
 
 /* sdr acquisition function -----------------------------------------------------

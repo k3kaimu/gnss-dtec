@@ -17,6 +17,7 @@ import std.stdio;
 import std.traits;
 import std.parallelism;
 import std.exception;
+import std.array;
 
 private F atan(F)(F y, F x)
 if(isFloatingPoint!F)

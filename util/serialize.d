@@ -1,5 +1,7 @@
 module util.serialize;
 
+import util.trace;
+
 import sdr;
 import msgpack;
 import std.file;

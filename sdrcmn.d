@@ -17,6 +17,9 @@ import std.traits;
 import std.range;
 import std.algorithm;
 import std.complex;
+import std.functional;
+import std.typecons;
+import std.format;
 
 version(unittest) import std.stdio;
 
