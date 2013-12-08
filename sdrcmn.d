@@ -637,6 +637,31 @@ deprecated double maxvd(in double[] data, int exinds, int exinde, out int ind) p
 }
 
 
+Tuple!(ElementType!R, size_t) findMaxWithIndex(alias pred = "a > b", R)(R r)
+if(isForwardRange!R && hasLength!R && is(typeof(binaryFun!pred(r.front, r.front))))
+{
+    auto maxPos = r.save.minPos!pred;
+    immutable olen = r.length,
+              nlen = maxPos.length;
+
+    return typeof(return)(maxPos.front, olen - nlen);
+}
+
+
+//Tuple!(ElementType!R, size_t) findMaxWithIndex(alias pred = "a > b", R)(R r, ptrdiff_t excludeIndexStart, ptrdiff_t excludeIndexEnd)
+//if(isForwardRange!R && hasLength!R && is(typeof(binaryFun!pred(r.front, r.front))))
+//{
+//    if(excludeIndexStart <= excludeIndexEnd)
+//        return r.save.zip(iota(size_t.max))
+//                     .filter!(a => a[1].isIntervalIn!")("(excludeIndexStart, excludeIndexEnd))()
+//                     .minPos!((a, b) => binaryFun!pred(a[0], b[0]))().front;
+//    else
+//        return r.save.zip(iota(size_t.max))
+//                     .filter!(a => a[1].isIntervalIn!"()"(excludeIndexEnd, excludeIndexStart))()
+//                     .minPos!((a, b) => binaryFun!pred(a[0], b[0]))().front;
+//}
+
+
 /* mean value (double array) ----------------------------------------------------
 * calculate mean value
 * args   : double *data     I   input double array
