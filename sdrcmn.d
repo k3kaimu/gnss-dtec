@@ -427,135 +427,38 @@ deprecated void dot_23(in short[] a1, in short[] a2, in short[] b1, in short[] b
 }
 
 
-/**
-内積(dot-product)を計算します。
-引数は次のように2段階に分けて受け取ります。
-
-Example:
-----
-auto result = dot(v1, v2, v3)(w1, w2, w3);
-----
-
-引数v1, v2, ...とw1, w2, ...はすべてベクトル(配列)であり、
-返り値は、[dot(v, w) <- directProduct(V, W)]になります。
-ここでいう、VとWは、v1, v2, ...や、w1, w2, ...からなる集合で、directProductはそれらの直積集合(V × W)を表します。
-*/
-auto dot(T, size_t N)(const(T)[][N] a...)
-if(N > 1)
+template dot(size_t N, size_t M)
 {
-    return dotImpl!(T, T, N)(a);
-}
-
-
-auto dot(T)(const(T)[] a)
-{
-    return dotImpl!(T, T, 1)([a]);
-}
-
-
-auto dot(R, T, size_t N)(const(T)[][N] a...)
-{
-    return dotImpl!(R, T, N)(a);
-}
-
-
-auto dot(R, T)(const(T)[] a) nothrow
-{
-    return dotImpl!(R, T, 1)([a]);
-}
-
-
-private auto dotImpl(R, T, size_t N)(const(T)[][N] a)
-{
-    static struct Result
+    private string genDotFunction()
     {
-        auto opCall(U)(const(U)[] b)
-        if(is(typeof(T.init * U.init)  : R))
-        {
-            return opCallImpl([b]);
-        }
+        auto app = appender!string();
+        app ~= "void dot(A, B, C)(";
 
+        app.formattedWrite("%(in A* a%s, %|%)", iota(0, N));
+        app.formattedWrite("%(in B* b%s, %|%)", iota(0, M));
+        app.formattedWrite("size_t n, ");
+        app.formattedWrite("%(C* c%s, %)", iota(0, N));
 
-        auto opCall(U, size_t M)(const(U)[][M] b...)
-        if(M > 1 && is(typeof(T.init * U.init)  : R))
-        {
-            return opCallImpl(b);
-        }
+        app ~= ") @system pure nothrow\n{\n";
 
+        app ~= "    ";
+        foreach(i; 0 .. N)
+            foreach(j; 0 .. M)
+                app.formattedWrite("c%1$s[%2$s] = ", i, j);
+        app ~= "0;\n";
 
-      private:
-        const(T)[][N] _inputA;
+        app ~= "    foreach(i; 0 .. n){\n";
+        foreach(i; 0 .. N)
+            foreach(j; 0 .. M)
+                app.formattedWrite("        c%1$s[%2$s] += a%1$s[i] * b%2$s[i];\n", i, j);
 
-        R[M][N] opCallImpl(U, size_t M)(const(U)[][M] b)
-        if(is(typeof(T.init * U.init)  : R))
-        {
-            static string generateMinArgs()
-            {
-                string dst;
+        app ~= "    }\n";
+        app ~= "}\n";
 
-                foreach(i; 0 .. N){
-                    immutable idxStr = i.to!string();
-                    dst ~= "_inputA[" ~ idxStr ~ "].length, ";
-                }
-
-                foreach(i; 0 .. M){
-                    immutable idxStr = i.to!string();
-                    dst ~= "b[" ~ idxStr ~ "].length, ";
-                }
-
-                if(dst.length)
-                    return dst[0 .. $-2];
-                else
-                    return dst;
-            }
-
-
-            static string generateForeachBody()
-            {
-                string dst;
-
-                foreach(i; 0 .. N){
-                    immutable iStr = i.to!string(),
-                              resultStr = "result[" ~ iStr ~ "][",
-                              aStr = "] += _inputA[" ~ iStr ~ "][i] * b[";
-
-                    foreach(j; 0 .. M){
-                        immutable jStr = j.to!string();
-
-                        dst ~= resultStr ~ jStr ~ aStr ~ jStr ~ "][i];\n";
-                    }
-                }
-
-                return dst;
-            }
-
-
-            immutable size = mixin("min(" ~ generateMinArgs ~ ")");
-
-            R[M][N] result = 0;
-
-            foreach(i; 0 .. size)
-                mixin(generateForeachBody());
-
-            return result;
-        }
+        return app.data;
     }
 
-    Result dst = {_inputA : a};
-    return dst;
-}
-
-///
-pure nothrow @safe unittest{
-    // 返り値はint[2][2]
-    auto result22 = dot([0, 1, 2], [3, 4, 5])([6, 7, 8], [9, 10, 11]);
-    assert(result22[0][0] == dot([0, 1, 2])([6, 7, 8])[0][0]);
-    assert(result22[0][1] == dot([0, 1, 2])([9, 10, 11])[0][0]);
-    assert(result22[1][0] == dot([3, 4, 5])([6, 7, 8])[0][0]);
-    assert(result22[1][1] == dot([3, 4, 5])([9, 10, 11])[0][0]);
-
-    auto result11 = dot([0, 1, 2])([3, 4, 5, 6]);
-    assert(result11[0][0] == 0*3 + 1*4 + 2*5);
+    mixin(genDotFunction());
 }
 
 
