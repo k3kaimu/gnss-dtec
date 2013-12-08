@@ -694,6 +694,20 @@ body{
 }
 
 
+ElementType!R mean(R)(R r)
+if(isInputRange!R)
+{
+    size_t s;
+    ElementType!R sum = 0;
+    foreach(e; r){
+        sum += e;
+        ++s;
+    }
+
+    return sum / s;
+}
+
+
 /* 1D interpolation -------------------------------------------------------------
 * interpolation of 1D data
 * args   : double *x,*y     I   x and y data array
