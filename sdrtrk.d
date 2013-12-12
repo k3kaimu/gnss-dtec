@@ -3,6 +3,9 @@
 *
 * Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
 *------------------------------------------------------------------------------*/
+import core.simd;
+import core.bitop;
+
 import sdr;
 import sdrrcv;
 import sdrmain;
@@ -18,6 +21,7 @@ import std.traits;
 import std.parallelism;
 import std.exception;
 import std.array;
+import std.string;
 
 private F atan(F)(F y, F x)
 if(isFloatingPoint!F)
@@ -128,28 +132,78 @@ in{
 }
 body{
     traceln("called");
-    //short* dataI, dataQ, code_e, code;
-    //int i;
-    size_t smax = s[ns-1];
+    immutable smax = s[ns-1];
 
-    short[] dataI = new short[n];
-    short[] dataQ = new short[n];
-    short[] code_e = new short[n + 2*smax];
-    short* code = code_e.ptr + smax;
+    version(AVX)
+        enum VectorizedN = 16;          // AVX(256bit -> short * 16)
+    else
+        enum size_t VectorizedN = 8;           // SSE(128bit -> short * 8)
+
+    immutable packedLength = (n + (VectorizedN-1)) / VectorizedN;
+    scope dataI = uninitializedArray!(Vector!(short[VectorizedN])[])(packedLength),
+          dataQ = uninitializedArray!(Vector!(short[VectorizedN])[])(packedLength),
+          code_e = uninitializedArray!(Vector!(short[VectorizedN])[])(packedLength + 2*smax/VectorizedN);
+
+    // あまりの部分の初期化
+    dataI[$-1] = 0;
+    dataQ[$-1] = 0;
+    code_e[$-1] = 0;
+
+    const code = code_e.ptr + smax / VectorizedN;
 
     /* mix local carrier */
-    *remp = mixcarr(data, dtype, ti, freq, phi0, dataI, dataQ);
+    *remp = mixcarr(data, dtype, ti, freq, phi0, dataI.toArray[0 .. n], dataQ.toArray[0 .. n]);
 
     /* resampling code */
-    traceln("coff:= ", coff);
-    traceln("ti:= ", ti);
-    traceln("crate:=", crate);
-    *remc = codein.resampling(coff, smax, ti*crate, n, code_e.save);
+    *remc = codein.resampling(coff, smax, ti*crate, n, code_e.toArray[0 .. n + smax * 2]);
 
-    /* multiply code and integrate */
-    dot!(2, 3)(dataI.ptr, dataQ.ptr, code, code-s[0], code+s[0], n, I.ptr, Q.ptr);
-    foreach(i; 1 .. ns)
-        dot!(2, 2)(dataI.ptr, dataQ.ptr, code-s[i], code+s[i], n, I.ptr + 1 + i*2, Q.ptr + 1 + i*2);
+    // I[0] := IP, I[1] := IE, I[2] := IL, Q[0] := QP, Q[1] := QE, Q[2] := QL
+    I[0] = I[1] = I[2] = Q[0] = Q[1] = Q[2] = 0;
+
+    // Prompt, Early, LateとI-phase, Q-phaseのそれぞれの内積を計算するブロック
+    {
+        enum SubN = 32;     // accumulateする最大の数
+                            // これが大きければ飽和するが、高速化につながる
+
+        const(short8)* pI = dataI.ptr,              // I-phase
+                       pQ = dataQ.ptr,              // Q-phase
+                       pP = code,                   // Prompt
+                       pE = (code-s[0]/8),          // Early
+                       pL = (code+s[0]/8);          // Late
+
+        enum statement = q{
+            {
+                short8 sumIP, sumQP, sumIE, sumQE, sumIL, sumQL;
+
+                foreach(j; 0 .. %s){
+                    sumIP += *pI * *pP;
+                    sumQP += *pQ * *pP;
+                    sumIE += *pI * *pE;
+                    sumQE += *pQ * *pE;
+                    sumIL += *pI * *pL;
+                    sumQL += *pQ * *pL;
+
+                    ++pI; ++pQ; ++pP; ++pE; ++pL;
+                }
+
+                foreach(j; 0 .. VectorizedN){
+                    I[0] += sumIP.array[j];
+                    I[1] += sumIE.array[j];
+                    I[2] += sumIL.array[j];
+                    Q[0] += sumQP.array[j];
+                    Q[1] += sumQE.array[j];
+                    Q[2] += sumQL.array[j];
+                }
+            }
+        };
+
+        foreach(i; 0 .. packedLength / SubN){
+           mixin(statement.format("SubN"));
+        }
+
+        immutable LeftN = packedLength % SubN;
+        mixin(statement.format("LeftN"));
+    }
 
     I[0 .. 1 + 2 * ns] *= CSCALE;
     Q[0 .. 1 + 2 * ns] *= CSCALE;

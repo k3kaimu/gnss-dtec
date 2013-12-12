@@ -8,6 +8,7 @@ import sdr;
 import util.trace;
 
 import core.memory;
+import core.simd;
 import std.math;
 import std.c.windows.windows;
 import std.numeric;
@@ -20,6 +21,7 @@ import std.complex;
 import std.functional;
 import std.typecons;
 import std.format;
+import std.typetuple;
 
 version(unittest) import std.stdio;
 
@@ -988,7 +990,7 @@ if(isRandomAccessRange!R && hasLength!R && isOutputRange!(W, ElementType!R))
 *          short  *I,*Q     O   carrier mixed data I, Q component
 * return : double               phase remainder
 *------------------------------------------------------------------------------*/
-double mixcarr(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, double freq, double phi0, short[] I, short[] Q)
+double mixcarr(T, U, string file = __FILE__, size_t line = __LINE__)(const(T)[] data, DType dtype, double ti, double freq, double phi0, U[] I, U[] Q)
 in{
     final switch(dtype){
       case DType.I:
@@ -1010,8 +1012,8 @@ body{
     if (dtype==DType.IQ)        /* complex */
         foreach(i; 0 .. data.length / 2){
             immutable idx = (cast(int)phi)&CMASK;
-            I[i] = cast(short)(cost[idx]*data[0] - sint[idx]*data[1]);
-            Q[i] = cast(short)(cost[idx]*data[1] + sint[idx]*data[0]);
+            I[i] = cast(U)(cost[idx]*data[0] - sint[idx]*data[1]);
+            Q[i] = cast(U)(cost[idx]*data[1] + sint[idx]*data[0]);
 
             data.popFrontN(2);
             phi += ps;
@@ -1020,11 +1022,58 @@ body{
     else if (dtype==DType.I)    /* real */
         foreach(i, e; data){
             immutable idx=(cast(int)phi)&CMASK;
-            I[i] = cast(short)(cost[idx] * e);
-            Q[i] = cast(short)(sint[idx] * e);
+            I[i] = cast(U)(cost[idx] * e);
+            Q[i] = cast(U)(sint[idx] * e);
 
             phi += ps;
         }
 
     return (phi*DPI/CDIV) % DPI;
+}
+
+/**
+SSEで使用可能な型のリストです
+*/
+alias SSETypeList = TypeTuple!(void16,
+                               double2,
+                               float4,
+                               byte16,
+                               ubyte16,
+                               short8,
+                               ushort8,
+                               int4,
+                               uint4,
+                               long2,
+                               ulong4);
+
+
+/**
+AVXで使用可能な型のリストです
+*/
+alias AVXTypeList = TypeTuple!( void32,
+                                double4,
+                                float8,
+                                byte32,
+                                ubyte32,
+                                short16,
+                                ushort16,
+                                int8,
+                                uint8,
+                                long4,
+                                ulong4);
+
+
+/**
+SIMD-Extensionによって使用可能な型のリストです
+*/
+alias SIMDTypeList = TypeTuple!(SSETypeList, AVXTypeList);
+
+
+enum isSIMDType(T) = staticIndexOf!(T, SIMDTypeList) != -1;
+enum isSIMDArray(T) = isArray!T && isSIMDType!(ForeachType!T);
+
+auto toArray(T)(T aligned) pure nothrow @trusted
+if(isSIMDArray!T)
+{
+    return (cast(typeof(T.init[0].ptr))aligned.ptr)[0 .. aligned.length * ForeachType!T.array.length];
 }
