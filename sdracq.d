@@ -128,16 +128,16 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
               maxP2 = P[freqi*sdr.acq.nfft .. (freqi+1)*sdr.acq.nfft].sliceEx(exinds, exinde).minPos!"a > b"().front;
 
     {
-        static size_t n = 0;
+        //static size_t n = 0;
         
-        auto temp = P[freqi * sdr.acq.nfft .. (freqi + 1) * sdr.acq.nfft].zip(iota(size_t.max)).array().dup;
-        temp.sort!"a[0] > b[0]"();
-        ++n;
-        auto f = File("result_" ~ sdr.ctype.to!string ~ "_" ~ n.to!string() ~ "_" ~ Clock.currTime.toISOString() ~ ".csv", "w");
+        //auto temp = P[freqi * sdr.acq.nfft .. (freqi + 1) * sdr.acq.nfft].zip(iota(size_t.max)).array().dup;
+        //temp.sort!"a[0] > b[0]"();
+        //++n;
+        //auto f = File("result_" ~ sdr.ctype.to!string ~ "_" ~ n.to!string() ~ "_" ~ Clock.currTime.toISOString() ~ ".csv", "w");
 
-        // 大きい値から1024個だけ出力
-        foreach(e; temp[0 .. 1024].sort!"a[1] < b[1]"())
-            f.writefln("%s, %s,", e[1], e[0]);
+        //// 大きい値から1024個だけ出力
+        //foreach(e; temp[0 .. 1024].sort!"a[1] < b[1]"())
+        //    f.writefln("%s, %s,", e[1], e[0]);
     }
 
 
