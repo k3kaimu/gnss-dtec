@@ -89,29 +89,40 @@ void startsdr()
 {
     writeln("GNSS-SDRLIB start!");
     /* receiver initialization */
-    enforce(rcvinit(&sdrini) >= 0);
-    scope(exit) rcvquit(&sdrini);
+    //enforce(rcvinit(&sdrini) >= 0);
+    //scope(exit) rcvquit(&sdrini);
 
-    util.trace.tracing = false;
-    enforce(sdrini.nch >= 1);
-    enforce(initsdrch(1, sdrini.sys[0], sdrini.sat[0], sdrini.ctype[0], sdrini.dtype[sdrini.ftype[0]-1], sdrini.ftype[0], sdrini.f_sf[sdrini.ftype[0]-1], sdrini.f_if[sdrini.ftype[0]-1],&sdrch[0]) >= 0);
-    enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[0].ctype == CType.L1CA);
-    sdrthread(0);   // start SDR
+    //util.trace.tracing = false;
+    //enforce(sdrini.nch >= 1);
+    //enforce(initsdrch(1, sdrini.sys[0], sdrini.sat[0], sdrini.ctype[0], sdrini.dtype[sdrini.ftype[0]-1], sdrini.ftype[0], sdrini.f_sf[sdrini.ftype[0]-1], sdrini.f_if[sdrini.ftype[0]-1],&sdrch[0]) >= 0);
+    //enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[0].ctype == CType.L1CA);
+    //sdrthread(0);   // start SDR
 
-    if(sdrini.nch >= 2){
-        //if(sdrini.ctype[1] != sdrini.ctype[0])
-        //    l1ca_doppler = sdrini.f_if[0] + 1748;
-        //l1ca_doppler = sdrini.f_if[0];
+    //if(sdrini.nch >= 2){
+    //    //if(sdrini.ctype[1] != sdrini.ctype[0])
+    //    //    l1ca_doppler = sdrini.f_if[0] + 1748;
+    //    //l1ca_doppler = sdrini.f_if[0];
+
+    //    sdrstat.buffloccnt = 0;
+    //    sdrstat.stopflag = 0;
+    //    rcvquit(&sdrini);
+    //    enforce(rcvinit(&sdrini) >= 0);
+    //    enforce(initsdrch(2, sdrini.sys[1], sdrini.sat[1], sdrini.ctype[1], sdrini.dtype[sdrini.ftype[1]-1], sdrini.ftype[1], sdrini.f_sf[sdrini.ftype[1]-1], sdrini.f_if[sdrini.ftype[1]-1],&sdrch[1]) >= 0);
+    //    util.trace.tracing = true;
+    //    sdrthread(1);
+    //}
+    foreach(i; 0 .. sdrini.nch)
+    {
+        enforce(rcvinit(&sdrini) >= 0);
+        enforce(initsdrch(i+1, sdrini.sys[i], sdrini.sat[i], sdrini.ctype[i], sdrini.dtype[sdrini.ftype[i]-1], sdrini.ftype[i], sdrini.f_sf[sdrini.ftype[i]-1], sdrini.f_if[sdrini.ftype[i]-1],&sdrch[i]) >= 0);
+        sdrthread(i);   // start SDR
 
         sdrstat.buffloccnt = 0;
         sdrstat.stopflag = 0;
         rcvquit(&sdrini);
-        enforce(rcvinit(&sdrini) >= 0);
-        enforce(initsdrch(2, sdrini.sys[1], sdrini.sat[1], sdrini.ctype[1], sdrini.dtype[sdrini.ftype[1]-1], sdrini.ftype[1], sdrini.f_sf[sdrini.ftype[1]-1], sdrini.f_if[sdrini.ftype[1]-1],&sdrch[1]) >= 0);
-        //enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[1].ctype == CType.L2RCCM);
-        //sdrthread_l2cm(1);
-        util.trace.tracing = true;
-        sdrthread(1);
+
+        if(sdrini.ctype[i] == CType.L2RCCM)
+            l1ca_doppler = typeof(l1ca_doppler).nan;
     }
 
     writeln("GNSS-SDRLIB is finished!");
