@@ -202,7 +202,7 @@ void sdrthread(size_t index)
                     pll(sdr,&sdr.trk.prm1); /* PLL */
                     dll(sdr,&sdr.trk.prm1); /* DLL */
                 }
-                else/* if (swsync) */{
+                else /*if (swsync) */{
                     pll(sdr,&sdr.trk.prm2); /* PLL */
                     dll(sdr,&sdr.trk.prm2); /* DLL */
 
@@ -237,7 +237,7 @@ void sdrthread(size_t index)
                 (sdr.flagnavsync) && tracefln("sdr.flagnavsync is ON on %s", buffloc);
                 (swsync) && tracefln("swsync is ON on %s", buffloc);
 
-                //if(!sdr.flagnavsync || swsync)
+                if(swsync)
                     resultLFile.writefln("%s, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f,%.9f,%.9f,%.9f,%.9f,",
                                           buffloc, sdr.trk.remcode, sdr.trk.L[0], sdr.trk.carrErr, sdr.trk.carrNco, sdr.trk.carrfreq,
                                           sdr.trk.codeErr, sdr.trk.codeNco, sdr.trk.codefreq,
