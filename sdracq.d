@@ -88,8 +88,12 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
         writefln("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f", sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
 
 
-    if(!sdr.flagacq)
-        buffloc += uniform(0, sdr.nsamp >> 4);
+    if(!sdr.flagacq){
+        // 今までに何回連続で捕捉に失敗したかで、次のバッファの場所が決まる
+        ++sdr.acq.failCount;
+        buffloc += min(sdr.acq.failCount ^^ 2 * (sdr.nsamp >> 4), sdr.f_sf * 10 * sdr.dtype);
+    }else
+        sdr.acq.failCount = 0;
 
     return buffloc;
 }
