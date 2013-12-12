@@ -745,6 +745,7 @@ struct sdracq_t
     int nfftf;
     double cn0 = 0;
     double peakr = 0;
+    size_t failCount;               // 捕捉が連続で失敗した数
 
 
     /// コンストラクタ
