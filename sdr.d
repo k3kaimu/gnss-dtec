@@ -1,5 +1,5 @@
 //##& set waitTime 400000            // 10s
-//##$ dmd -O -inline -release -m64 -version=AVX -version=UseFFTW -unittest -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric util/server
+//##$ dmd -O -release -inline -m64 -version=UseFFTW -unittest -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric util/server
 
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
 /*
@@ -110,8 +110,6 @@ immutable DPI = 2 * PI;             /// 2π
 immutable D2R = PI / 180;           /// 1[degree] = D2R[radian]
 immutable R2D = 180 / PI;           /// 1[radian] = R2D[degree]
 immutable CLIGHT = 299792458.0;     /// 光速[m/s]。たしかに高速
-//immutable ON = true;
-//immutable OFF = false;
 immutable CDIV = 32;
 immutable CMASK = 0x1F;
 immutable CSCALE = 1.0 /16.0;
@@ -712,7 +710,7 @@ struct sdrini_t
     /// コンストラクタ
     this(string filename)
     {
-        readIniFile(this, filename);
+        this = readIniFile(filename);
         checkInitValue(this);
     }
 }
@@ -746,7 +744,7 @@ struct sdracq_t
     int intg;
     double hband = 0;
     double step = 0;
-    int nfreq;
+    size_t nfreq;
     immutable(double)[] freq;
     int acqcodei;
     double acqfreq = 0;
@@ -901,9 +899,16 @@ struct sdrnav_t
     double firstsftow = 0;
     int polarity;
     deprecated void* fec;
-    int swnavsync;
-    int swnavreset;
+    bool swnavsync;
+    bool swnavreset;
     eph_t eph;
+
+
+    void reInitialize()
+    {
+        swnavsync = false;
+        swnavreset = false;
+    }
 }
 
 
@@ -912,7 +917,7 @@ struct sdrch_t
     //Tid hsdr;
     int no;
     int sat;
-    int sys;
+    NavSystem sys;
     int prn;
     string satstr;
     CType ctype;
@@ -934,12 +939,21 @@ struct sdrch_t
     sdracq_t acq;
     sdrtrk_t trk;
     sdrnav_t nav;
-    int flagacq;
-    int flagtrk;
-    int flagnavsync;
-    int flagnavpre;
-    int flagfirstsf;
-    int flagnavdec;
+    bool flagacq;
+    bool flagtrk;
+    bool flagnavsync;
+    bool flagnavpre;
+    bool flagfirstsf;
+    bool flagnavdec;
+
+
+    this(in ref sdrini_t ini, size_t i)
+    {
+        this.initsdrch(ini, i);
+        //this.initsdrch(i+1, ini.sys[i], ini.sat[i], ini.ctype[i], ini.dtype[ini.ftype[i]-1], ini.ftype[i], ini.f_sf[ini.ftype[i]-1], ini.f_if[ini.ftype[i]-1]);
+    }
+
+
     void reInitialize()
     {
         acq.reInitialize();
@@ -1069,7 +1083,7 @@ template isDebugMode(string mode)
             mixin(q{
                 debug(%s)
                     b = true;
-            }.formattedString(mode));
+            }.format(mode));
         }
 
         return b;

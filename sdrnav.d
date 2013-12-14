@@ -19,7 +19,7 @@ import std.math : abs;
 *          ulong cnt      I   counter of sdr channel thread
 * return : none
 *------------------------------------------------------------------------------*/
-void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, ulong buffloc, ulong cnt)
+void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, ulong buffloc, ulong cnt)
 {
     traceln("called");
     scope(exit) traceln("return");

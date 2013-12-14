@@ -81,8 +81,10 @@ if(!is(T == string))
 * return : int                  0:okay -1:error
 * note : this function is only used in CLI application
 *------------------------------------------------------------------------------*/
-void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini, string iniFile)
+sdrini_t readIniFile(string file = __FILE__, size_t line = __LINE__)(string iniFile)
 {
+    sdrini_t ini;
+
     traceln("called");
 
     enforce(std.file.exists(iniFile), "error: gnss-sdrcli.ini doesn't exist");
@@ -146,16 +148,19 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
         ini.pltspec = iniLines.readIniValue!bool("SPECTRUM", "SPEC");
     }
     
-    foreach(i; 0 .. sdrini.nch){
-        if (sdrini.ctype[i] == CType.L1CA) {
-            sdrini.nchL1++;
-        }else if (sdrini.ctype[i] == CType.LEXS) {
-            sdrini.nchL6++;
-        }else if(sdrini.ctype[i] == CType.L2RCCM)
-            sdrini.nchL2++;
+    foreach(i; 0 .. ini.nch){
+        if (ini.ctype[i] == CType.L1CA) {
+            ini.nchL1++;
+        }else if (ini.ctype[i] == CType.LEXS) {
+            ini.nchL6++;
+        }else if(ini.ctype[i] == CType.L2RCCM)
+            ini.nchL2++;
         else
-            enforce(0, "ctype: %s is not supported.".format(sdrini.ctype[i]));
+            enforce(0, "ctype: %s is not supported.".format(ini.ctype[i]));
     }
+
+
+    return ini;
 }
 
 
@@ -197,13 +202,13 @@ void checkInitValue(string file = __FILE__, size_t line = __LINE__)(in ref sdrin
 *          sdrch_t  *sdr    I   sdr channel struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq, sdrplt_t *trk, sdrch_t *sdr)
+void initpltstruct(string file = __FILE__, size_t line = __LINE__)(in ref sdrch_t sdr, in ref sdrini_t ini, ref sdrplt_t acq, ref sdrplt_t trk)
 {
     traceln("called");
 
     /* acquisition */
-    if (sdrini.pltacq) {
-        setsdrplotprm(acq, PlotType.SurfZ, sdr.acq.nfreq, sdr.acq.nfft, sdr.nsampchip/3, Flag!"doAbs".no, 1, Constant.Plot.H, Constant.Plot.W, Constant.Plot.MH, Constant.Plot.MW, sdr.no);
+    if (ini.pltacq) {
+        setsdrplotprm(acq, PlotType.SurfZ, sdr.acq.nfreq.to!int, sdr.acq.nfft, sdr.nsampchip/3, Flag!"doAbs".no, 1, Constant.Plot.H, Constant.Plot.W, Constant.Plot.MH, Constant.Plot.MW, sdr.no);
         initsdrplot(acq);
         settitle(acq,sdr.satstr);
         setlabel(acq,"Frequency (Hz)","Code Offset (sample)");
@@ -215,7 +220,7 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
     }
 
     /* tracking */
-    if (sdrini.plttrk) {
+    if (ini.plttrk) {
         setsdrplotprm(trk, PlotType.XY, 1 + 2 * sdr.trk.ncorrp, 0, 0, Flag!"doAbs".yes, 0.001, Constant.Plot.H, Constant.Plot.W, Constant.Plot.MH, Constant.Plot.MW, sdr.no);
         initsdrplot(trk);
         settitle(trk, sdr.satstr);
@@ -225,7 +230,7 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
         trk.otherSetting = "set size 0.8,0.8\n";
     }
 
-    if (sdrini.fend == Fend.FILE||sdrini.fend == Fend.FILESTEREO)
+    if (ini.fend == Fend.FILE||ini.fend == Fend.FILESTEREO)
         trk.pltms = Constant.Plot.MS_FILE;
     else
         trk.pltms = Constant.Plot.MS;
@@ -238,13 +243,13 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq
 *          sdrplt_t *trk    I/0 plot struct for tracking
 * return : none
 *------------------------------------------------------------------------------*/
-void quitpltstruct(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *acq, sdrplt_t *trk)
+void quitpltstruct(in ref sdrini_t ini, ref sdrplt_t acq, ref sdrplt_t trk)
 {
     traceln("called");
-    if (sdrini.pltacq)
+    if (ini.pltacq)
         quitsdrplot(acq);
     
-    if (sdrini.plttrk)
+    if (ini.plttrk)
         quitsdrplot(trk);
 }
 
@@ -443,44 +448,44 @@ void initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
 *          sdrch_t *sdr     I/0 sdr channel struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSystem sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if, sdrch_t *sdr)
+void initsdrch(ref sdrch_t sdr, in ref sdrini_t ini, size_t chno,/*, size_t chno, NavSystem sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if*/)
 {
     traceln("called");
     
-    sdr.no      = chno;
-    sdr.sys     = sys;
-    sdr.prn     = prn;
-    sdr.sat     = satno(sys, prn);
-    sdr.ctype   = ctype;
-    sdr.dtype   = dtype;
-    sdr.ftype   = ftype;
-    sdr.f_sf    = f_sf;
-    sdr.f_if    = f_if;
-    sdr.ti      = f_sf ^^ -1;
+    sdr.no      = (chno+1).to!int();
+    sdr.sys     = ini.sys[chno];
+    sdr.prn     = ini.sat[chno];
+    sdr.sat     = satno(sdr.sys, sdr.prn);
+    sdr.ctype   = ini.ctype[chno];
+    sdr.dtype   = ini.dtype[chno];
+    sdr.ftype   = ini.ftype[chno];
+    sdr.f_sf    = ini.f_sf[sdr.ftype-1];
+    sdr.f_if    = ini.f_if[sdr.ftype-1];
+    sdr.ti      = sdr.f_sf ^^ -1;
 
 
     /* code generation */
     sdr.code = (){
-        auto ptr = gencode(prn,ctype, &sdr.clen, &sdr.crate);
+        auto ptr = gencode(sdr.prn, sdr.ctype, &sdr.clen, &sdr.crate);
         return ptr[0 .. sdr.clen].idup;
     }();
 
     sdr.ci        = sdr.ti*sdr.crate;
     sdr.ctime     = sdr.clen/sdr.crate;
-    sdr.nsamp     = cast(int)(f_sf * sdr.ctime);
+    sdr.nsamp     = cast(int)(sdr.f_sf * sdr.ctime);
     sdr.nsampchip = cast(int)(sdr.nsamp / sdr.clen);
     sdr.satstr    = satno2Id(sdr.sat);
 
     /* acqisition struct */
-    initacqstruct(sys, ctype, &sdr.acq);
+    initacqstruct(sdr.sys, sdr.ctype, &sdr.acq);
 
     sdr.acq.nfft = cast(int)nextPow2(sdr.nsamp); //sdr.nsamp;           // PRNコード1周期分
 
     sdr.acq.nfftf = (){
-        if(ctype == CType.L1CA)
-            return calcfftnumreso(Constant.get!"Acquisition.FFTFRESO"(ctype), sdr.ti).to!int();
-        else if(ctype == CType.L2RCCM)
-            return -1;
+        if(sdr.ctype == CType.L1CA)
+            return calcfftnumreso(Constant.get!"Acquisition.FFTFRESO"(sdr.ctype), sdr.ti).to!int();
+        else if(sdr.ctype == CType.L2RCCM)
+            return 0;
         else
             enforce(0);
 
@@ -493,13 +498,13 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
     sdr.acq.freq = {
         auto dst = new double[sdr.acq.nfreq];
 
-        if(ctype != CType.L2RCCM)
+        if(sdr.ctype != CType.L2RCCM)
             foreach(i; 0 .. sdr.acq.nfreq)
                 dst[i] = sdr.f_if + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
         else{
             immutable carrierRatio = 60.0 / 77.0;   // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
-            immutable inferenced = (sdrmain.l1ca_doppler - sdrini.f_if[0]) * carrierRatio + sdr.f_if;
-            writefln("l1ca_doppler=%s, inferenced=%s,",sdrmain.l1ca_doppler, inferenced);
+            immutable inferenced = (sdrmain.l1ca_doppler - ini.f_if[0]) * carrierRatio + sdr.f_if;
+            writefln("l1ca_doppler=%s, inferenced=%s,", sdrmain.l1ca_doppler, inferenced);
 
             foreach(i; 0 .. sdr.acq.nfreq)
                 dst[i] = inferenced + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
@@ -510,20 +515,14 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
 
 
     /* tracking struct */
-    inittrkstruct(sys, ctype, &sdr.trk);
+    inittrkstruct(sdr.sys, sdr.ctype, &sdr.trk);
 
-    //if(ctype != CType.L2RCCM){
-        /* navigation struct */
-        initnavstruct(sys, ctype, &sdr.nav);
-    if(ctype != CType.L2RCCM){
-        ///* memory allocation */
-        //sdr.lcode = cast(short*)malloc(short.sizeof * sdr.clen * sdr.acq.lenf).enforce();
-        //scope(failure) free(sdr.lcode);
+    /* navigation struct */
+    initnavstruct(sdr.sys, sdr.ctype, &sdr.nav);
 
-        //foreach(i; 0 .. sdr.clen * sdr.acq.lenf) /* long code for fine search */
-        //    sdr.lcode[i] = sdr.code[i % sdr.clen];
+
+    if(sdr.ctype != CType.L2RCCM)
         sdr.lcode = sdr.code.cycle.take(sdr.clen * sdr.acq.lenf).array.assumeUnique;
-    }
 
     /* memory allocation */
     sdr.xcode = (){
@@ -537,8 +536,6 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
         cpxfft(dst);
         return dst.idup;
     }();
-    
-    return 0;
 }
 
 

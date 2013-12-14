@@ -69,7 +69,7 @@ int updatepltini(string file = __FILE__, size_t line = __LINE__)(int nx, int ny,
 *          int    no        I   plot window number
 * return : none
 *------------------------------------------------------------------------------*/
-void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, PlotType type, int nx, int ny, int skip, Flag!"doAbs" abs, double s, int h, int w, int mh, int mw, int no)
+void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(ref sdrplt_t plt, PlotType type, int nx, int ny, int skip, Flag!"doAbs" abs, double s, int h, int w, int mh, int mw, int no)
 {
     traceln("called");
 
@@ -92,7 +92,7 @@ void setsdrplotprm(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt
 * args   : sdrplt_t *plt    I   sdr plot struct
 * return : none
 *------------------------------------------------------------------------------*/
-void initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
+void initsdrplot(string file = __FILE__, size_t line = __LINE__)(ref sdrplt_t plt)
 {
     traceln("called");
     int xi,yi;
@@ -129,7 +129,7 @@ void initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 * args   : sdrplt_t *plt    I   sdr plot struct
 * return : none
 *------------------------------------------------------------------------------*/
-void quitsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
+void quitsdrplot(ref sdrplt_t plt)
 {}
 
 
@@ -140,7 +140,7 @@ void quitsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 *          double *xmax     I   maximum value in x-axis
 * return : none
 *------------------------------------------------------------------------------*/
-void setxrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, double xmin, double xmax)
+void setxrange(string file = __FILE__, size_t line = __LINE__)(ref sdrplt_t plt, double xmin, double xmax)
 {
     //static assert(0);
     version(none){
@@ -159,7 +159,7 @@ void setxrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, do
 *          double *ymax     I   maximum value in y-axis
 * return : none
 *------------------------------------------------------------------------------*/
-void setyrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, double ymin, double ymax)
+void setyrange(string file = __FILE__, size_t line = __LINE__)(ref sdrplt_t plt, double ymin, double ymax)
 {
     //static assert(0);
     version(none){
@@ -178,7 +178,7 @@ void setyrange(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, do
 *          char   *ylabel   I   y-axis label string
 * return : none
 *------------------------------------------------------------------------------*/
-void setlabel(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string xlabel, string ylabel)
+void setlabel(string file = __FILE__, size_t line = __LINE__)(ref sdrplt_t plt, string xlabel, string ylabel)
 {
     //static assert(0);
     version(none){
@@ -201,7 +201,7 @@ void setlabel(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, str
 *          char   *title    I   title string
 * return : none
 *------------------------------------------------------------------------------*/
-void settitle(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt, string title)
+void settitle(string file = __FILE__, size_t line = __LINE__)(ref sdrplt_t plt, string title)
 {
     //static assert(0);
     version(none){

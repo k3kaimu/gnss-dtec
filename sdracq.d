@@ -27,9 +27,14 @@ import std.typecons;
 *          double *power    O   normalized correlation power vector (2D array)
 * return : uint64_t             current buffer location
 *------------------------------------------------------------------------------*/
-size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* sdr, double* power, size_t buffloc)
+double[][] sdracquisition(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, ref sdrini_t ini, ref sdrstat_t stat, ref size_t buffloc)
 {
     traceln("called");
+
+    auto power = new double[][](sdr.acq.nfreq, sdr.acq.nfft);
+
+    foreach(e; power)
+        e[] = 0;
 
     // FFTを使った、正確なコード位相と、曖昧な搬送波周波数(ドップラー周波数)の探索
     {
@@ -47,14 +52,14 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
         foreach(i; 0 .. sdr.acq.intg){
 
             /* get new 1ms data */
-            rcvgetbuff(&sdrini, buffloc, sdr.acq.nfft, sdr.ftype, sdr.dtype, data);
+            ini.rcvgetbuff(stat, buffloc, sdr.acq.nfft, sdr.ftype, sdr.dtype, data);
             buffloc += (cast(size_t)((cast(real)sdr.acq.nfft)/sdr.nsamp + 1)) * sdr.nsamp;
 
             /* fft correlation */
-            pcorrelator(data, sdr.dtype, sdr.ti, sdr.acq.nfft, sdr.acq.freq, sdr.acq.nfreq, sdr.crate, sdr.acq.nfft, sdr.xcode, power);
+            pcorrelator(data, sdr.dtype, sdr.ti, sdr.acq.nfft, sdr.acq.freq, sdr.crate, sdr.acq.nfft, sdr.xcode, power);
 
             /* check acquisition result */
-            if (checkacquisition(power, sdr)) {
+            if (sdr.checkacquisition(power)) {
                 sdr.flagacq = true;
                 break;
             }
@@ -66,7 +71,7 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
         scope datal = new byte[sdr.acq.nfft * sdr.dtype * sdr.acq.lenf];
 
         buffloc += sdr.acq.acqcodei; /* set buffer location at top of code */
-        rcvgetbuff(&sdrini,buffloc, sdr.nsamp * sdr.acq.lenf, sdr.ftype, sdr.dtype, datal);
+        ini.rcvgetbuff(stat, buffloc, sdr.nsamp * sdr.acq.lenf, sdr.ftype, sdr.dtype, datal);
 
         /* fine doppler search */
         sdr.acq.acqfreqf = carrfsearch(datal, sdr.dtype, sdr.ti, sdr.crate, sdr.nsamp * sdr.acq.lenf, sdr.acq.nfftf, sdr.lcode[0 .. sdr.clen * sdr.acq.lenf]);
@@ -95,7 +100,7 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
     }else
         sdr.acq.failCount = 0;
 
-    return buffloc;
+    return power;
 }
 
 
@@ -107,15 +112,11 @@ size_t sdracquisition(string file = __FILE__, size_t line = __LINE__)(sdrch_t* s
 * return : int                  acquisition flag (0: not acquired, 1: acquired) 
 * note : first/second peak ratio and c/n0 computation
 *------------------------------------------------------------------------------*/
-bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P, sdrch_t* sdr)
+bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, double[][] P)
 {
     traceln("called");
 
-    immutable max = iota(sdr.acq.nfreq)
-                   .map!(i => P[i*sdr.acq.nfft .. (i+1)*sdr.acq.nfft]
-                                  .findMaxWithIndex()
-                                  .tupleof.tuple(i)
-                    )()
+    immutable max = P.zip(iota(size_t.max)).map!(a => a[0].findMaxWithIndex().tupleof.tuple(a[1]))()
                    .reduce!((a, b) => b[0] > a[0] ? b : a)();
 
     immutable maxP = max[0],
@@ -124,25 +125,8 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
 
     immutable exinds = (a => (a < 0) ? (a + sdr.nsamp) : a)(codei - 4 * sdr.nsampchip),
               exinde = (a => (a >= sdr.nsamp) ? (a - sdr.nsamp) : a)(codei + 4 * sdr.nsampchip),
-              meanP = P[freqi*sdr.acq.nfft .. (freqi+1)*sdr.acq.nfft].sliceEx(exinds, exinde).mean(),
-              maxP2 = P[freqi*sdr.acq.nfft .. (freqi+1)*sdr.acq.nfft].sliceEx(exinds, exinde).minPos!"a > b"().front;
-
-    {
-        //static size_t n = 0;
-        
-        //auto temp = P[freqi * sdr.acq.nfft .. (freqi + 1) * sdr.acq.nfft].zip(iota(size_t.max)).array().dup;
-        //temp.sort!"a[0] > b[0]"();
-        //++n;
-        //auto f = File("result_" ~ sdr.ctype.to!string ~ "_" ~ n.to!string() ~ "_" ~ Clock.currTime.toISOString() ~ ".csv", "w");
-
-        //// 大きい値から1024個だけ出力
-        //foreach(e; temp[0 .. 1024].sort!"a[1] < b[1]"())
-        //    f.writefln("%s, %s,", e[1], e[0]);
-    }
-
-
-    sdr.ctype == CType.L2RCCM && writefln("codei = %s, %s[%s, %s]%s", codei, sdr.nsamp, exinds, exinde, sdr.acq.nfft);
-    debug(AcqDebug) writefln("exind: [%s, %s]", exinds, exinde);
+              meanP = P[freqi].sliceEx(exinds, exinde).mean(),
+              maxP2 = P[freqi].sliceEx(exinds, exinde).minPos!"a > b"().front;
 
     /* C/N0 calculation */
     sdr.acq.cn0 = 10 * log10(maxP / meanP / sdr.ctime);
@@ -172,7 +156,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(double* P,
 * notes  : P=abs(ifft(conj(fft(code)).*fft(data.*e^(2*pi*freq*t*i)))).^2
 *------------------------------------------------------------------------------*/
 void pcorrelator(string file = __FILE__, size_t line = __LINE__)(in byte[] data, DType dtype, double ti, int n, in double[] freq,
-                        int nfreq, double crate, int m, in cpx_t[] codex, double* P)
+                        double crate, int m, in cpx_t[] codex, double[][] P)
 {
     traceln("called");
 
@@ -185,23 +169,16 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(in byte[] data,
     dataR[] = 0;
     dataR[0 .. n * dtype] = data[0 .. n * dtype];
 
-    foreach(i; 0 .. nfreq){
-        // このtracingの2行をなくすと、最適化コンパイル(-O)時に正常に動作しなくなる。
-        // 外部のFFTWを使っているのが原因だと思われる。
-        // コンパイラのバグなので、FFTWを使っている限りは自分では修正不可
-        immutable tmp = tracing;
-        scope(exit) tracing = tmp;
-
+    foreach(i, f; freq){
         /* mix local carrier */
-        mixcarr(dataR, dtype, ti, freq[i], 0.0, dataI, dataQ);
-        dataI.zip(dataQ).csvOutput("mix_carr_" ~ freq[i].to!string() ~ ".csv");
-
+        mixcarr(dataR, dtype, ti, f, 0.0, dataI, dataQ);
+        dataI.zip(dataQ).csvOutput("mix_carr_" ~ f.to!string() ~ ".csv");
 
         /* to complex */
         cpxcpx(dataI, dataQ, CSCALE / m, datax);
-    
+
         /* convolution */
-        cpxconv(datax, codex, true, P[i*n .. (i+1)*n]);
+        cpxconv(datax, codex, true, P[i]);
     }
 }
 

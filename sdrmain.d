@@ -22,17 +22,11 @@ import std.datetime;
 import std.math;
 import std.exception;
 import std.conv;
+import std.range;
 
 /* global variables -----------------------------------------------------------*/
-/* thread handle and mutex */
-
 /* sdr structs */
-sdrini_t sdrini;
-sdrstat_t sdrstat;
-sdrch_t sdrch[Constant.totalSatellites];
-sdrspec_t sdrspec;
-
-double l1ca_doppler;
+deprecated double l1ca_doppler;
 
 
 /**
@@ -68,10 +62,8 @@ void main(string[] args)
     StopWatch sw;
     sw.start();
 
-    sdrini.readIniFile(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
-    checkInitValue(sdrini);
-
-    startsdr();
+    auto sdrini = sdrini_t(args.length > 1 ? args[1] : "gnss-sdrcli.ini");
+    sdrini.startsdr();
 
     sw.stop();
     writefln("total time = %s[ms]", sw.peek.msecs);
@@ -85,43 +77,24 @@ void main(string[] args)
 * note : This function is called as thread in GUI application and is called as
 *        function in CLI application
 *------------------------------------------------------------------------------*/
-void startsdr()
+void startsdr(ref sdrini_t ini)
 {
     writeln("GNSS-SDRLIB start!");
-    /* receiver initialization */
-    //enforce(rcvinit(&sdrini) >= 0);
-    //scope(exit) rcvquit(&sdrini);
+    sdrstat_t stat;
 
-    //util.trace.tracing = false;
-    //enforce(sdrini.nch >= 1);
-    //enforce(initsdrch(1, sdrini.sys[0], sdrini.sat[0], sdrini.ctype[0], sdrini.dtype[sdrini.ftype[0]-1], sdrini.ftype[0], sdrini.f_sf[sdrini.ftype[0]-1], sdrini.f_if[sdrini.ftype[0]-1],&sdrch[0]) >= 0);
-    //enforce(/*sdrch[0].sys == SYS_GPS && */sdrch[0].ctype == CType.L1CA);
-    //sdrthread(0);   // start SDR
-
-    //if(sdrini.nch >= 2){
-    //    //if(sdrini.ctype[1] != sdrini.ctype[0])
-    //    //    l1ca_doppler = sdrini.f_if[0] + 1748;
-    //    //l1ca_doppler = sdrini.f_if[0];
-
-    //    sdrstat.buffloccnt = 0;
-    //    sdrstat.stopflag = 0;
-    //    rcvquit(&sdrini);
-    //    enforce(rcvinit(&sdrini) >= 0);
-    //    enforce(initsdrch(2, sdrini.sys[1], sdrini.sat[1], sdrini.ctype[1], sdrini.dtype[sdrini.ftype[1]-1], sdrini.ftype[1], sdrini.f_sf[sdrini.ftype[1]-1], sdrini.f_if[sdrini.ftype[1]-1],&sdrch[1]) >= 0);
-    //    util.trace.tracing = true;
-    //    sdrthread(1);
-    //}
-    foreach(i; 0 .. sdrini.nch)
+    foreach(i; 0 .. ini.nch)
     {
-        enforce(rcvinit(&sdrini) >= 0);
-        enforce(initsdrch(i+1, sdrini.sys[i], sdrini.sat[i], sdrini.ctype[i], sdrini.dtype[sdrini.ftype[i]-1], sdrini.ftype[i], sdrini.f_sf[sdrini.ftype[i]-1], sdrini.f_if[sdrini.ftype[i]-1],&sdrch[i]) >= 0);
-        sdrthread(i);   // start SDR
+        enforce(ini.rcvinit(stat) >= 0);
+        auto sdrch = sdrch_t(ini, i);
+        sdrch.sdrthread(ini, stat);
+        //sdrch[i] = sdrch_t(ini, i);
+        //sdrch[i].sdrthread(ini, stat);   // start SDR
 
-        sdrstat.buffloccnt = 0;
-        sdrstat.stopflag = 0;
-        rcvquit(&sdrini);
+        stat.buffloccnt = 0;
+        stat.stopflag = 0;
+        ini.rcvquit();
 
-        if(sdrini.ctype[i] == CType.L2RCCM)
+        if(ini.ctype[i] == CType.L2RCCM)
             l1ca_doppler = typeof(l1ca_doppler).nan;
     }
 
@@ -136,20 +109,18 @@ void startsdr()
 * note : This thread handles the acquisition and tracking of one of the signals. 
 *        The thread is created at startsdr function.
 *------------------------------------------------------------------------------*/
-void sdrthread(size_t index)
+void sdrthread(ref sdrch_t sdr, ref sdrini_t ini, ref sdrstat_t stat)
 {
-    sdrch_t* sdr = &(sdrch[index]);
     sdrplt_t pltacq, plttrk;
-    size_t buffloc, cnt,loopcnt;
+    size_t buffloc, cnt, loopcnt;
     int cntsw, swsync, swreset;
-    double* acqpower;
 
     immutable resultLFileName = `Result\` ~ sdr.ctype.to!string() ~ "_" ~ sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
     auto resultLFile = File(resultLFileName, "w");
-    resultLFile.writeln("buffloc, remcode[chip], carrierPhase[cycle], pll_carrErr, pll_carNco, pll_carrfreq, dll_codeErr, dll_codeNco, dll_codefreq, IP, QP, IE, QE, IL, QL,");
+    resultLFile.writeln("buffloc, remcode[chip], carrierPhase[cycle], pll_carrErr, pll_carNco, pll_carrfreq, dll_codeErr, dll_codeNco, dll_codefreq, SNR, IP, QP, IE, QE, IL, QL,");
 
     /* plot setting */
-    initpltstruct(&pltacq, &plttrk, sdr);
+    sdr.initpltstruct(ini, pltacq, plttrk);
     //enforce(initpltstruct(&pltacq,&plttrk,sdr) !< 0);
 
     writefln("**** %s sdr thread start! ****", sdr.satstr);
@@ -157,28 +128,25 @@ void sdrthread(size_t index)
     /* check the exit flag */
     bool isStopped()
     {
-        return sdrstat.stopflag != 0;
+        return stat.stopflag != 0;
     }
 
     
     while (!isStopped()) {
         /* acquisition */
         if (!sdr.flagacq) {
-            StopWatch sw;
-            sw.start();
 
-            /* memory allocation */
-            if (acqpower != null) free(acqpower);
-            acqpower = cast(double*)calloc(double.sizeof, sdr.acq.nfft * sdr.acq.nfreq).enforce();
+            cnt = 0;
+            loopcnt = 0;
+            cntsw = 0;
+            swsync = 0;
+            swreset = 0;
             
             /* fft correlation */
-            buffloc = sdracquisition(sdr, acqpower, buffloc);
-            sw.stop();
-            writefln("AcqTime: %s[us]", sw.peek.usecs);
-
+            auto acqPower = sdr.sdracquisition(ini, stat, buffloc);
 
             /* plot aquisition result */
-            if (sdr.flagacq && sdrini.pltacq) {
+            if (sdr.flagacq && ini.pltacq) {
                 {
                     auto p = pltacq.z;
                     foreach(e; acqPower)
@@ -189,7 +157,7 @@ void sdrthread(size_t index)
         }
         /* tracking */
         if (sdr.flagacq) {
-            immutable bufflocnow = sdrtracking(sdr, buffloc, cnt);
+            immutable bufflocnow = sdr.sdrtracking(ini, stat, buffloc, cnt);
 
             if (sdr.flagtrk) {
                 if (sdr.nav.swnavsync) cntsw = 0;
@@ -200,31 +168,31 @@ void sdrthread(size_t index)
                 else swreset = false;
                 
                 /* correlation output accumulation */
-                cumsumcorr(sdr.trk.I, sdr.trk.Q, &sdr.trk, sdr.flagnavsync, swreset);
+                sdr.trk.cumsumcorr(sdr.flagnavsync, swreset);
                 
                 if (!sdr.flagnavsync) {
-                    pll(sdr,&sdr.trk.prm1); /* PLL */
-                    dll(sdr,&sdr.trk.prm1); /* DLL */
+                    sdr.pll(sdr.trk.prm1); /* PLL */
+                    sdr.dll(sdr.trk.prm1); /* DLL */
                 }
                 else /*if (swsync) */{
-                    pll(sdr,&sdr.trk.prm2); /* PLL */
-                    dll(sdr,&sdr.trk.prm2); /* DLL */
+                    sdr.pll(sdr.trk.prm2); /* PLL */
+                    sdr.dll(sdr.trk.prm2); /* DLL */
 
                     /* calculate observation data */
                     if (loopcnt%(Constant.Observation.SNSMOOTHMS/sdr.trk.loopms)==0)
-                        setobsdata(sdr, buffloc, cnt, &sdr.trk, 1); /* SN smoothing */
+                        sdr.setobsdata(buffloc, cnt, 1); /* SN smoothing */
                     else
-                        setobsdata(sdr, buffloc, cnt, &sdr.trk, 0);
+                        sdr.setobsdata(buffloc, cnt, 0);
 
                     /* plot correator output */
-                    if (loopcnt%(cast(int)(plttrk.pltms/sdr.trk.loopms))==0&&sdrini.plttrk&&loopcnt>200) {
+                    if (loopcnt%(cast(int)(plttrk.pltms/sdr.trk.loopms))==0&&ini.plttrk&&loopcnt>200) {
                         plttrk.x[] = sdr.trk.prm2.corrx[];
                         plttrk.y[0 .. sdr.trk.sumI.length] = sdr.trk.sumI[];
                         plotthread(&plttrk, "trk_" ~ sdr.satstr ~ "_");
                     }
                 }
 
-                loopcnt++;
+                ++loopcnt;
 
                 if(loopcnt > 1000 && isNaN(l1ca_doppler))
                 {
@@ -242,9 +210,10 @@ void sdrthread(size_t index)
                 (swsync) && tracefln("swsync is ON on %s", buffloc);
 
                 if(swsync)
-                    resultLFile.writefln("%s, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f,%.9f,%.9f,%.9f,%.9f,",
+                    resultLFile.writefln("%s, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f,",
                                           buffloc, sdr.trk.remcode, sdr.trk.L[0], sdr.trk.carrErr, sdr.trk.carrNco, sdr.trk.carrfreq,
                                           sdr.trk.codeErr, sdr.trk.codeNco, sdr.trk.codefreq,
+                                          sdr.trk.S[0],
                                           sdr.trk.sumI[0], sdr.trk.sumQ[0],
                                           sdr.trk.sumI[sdr.trk.prm1.ne], sdr.trk.sumQ[sdr.trk.prm1.ne],
                                           sdr.trk.sumI[sdr.trk.prm1.nl], sdr.trk.sumQ[sdr.trk.prm1.nl]);
@@ -258,7 +227,7 @@ void sdrthread(size_t index)
         sdr.trk.buffloc = buffloc;
     }
     /* plot termination */
-    quitpltstruct(&pltacq, &plttrk);
+    ini.quitpltstruct(pltacq, plttrk);
 
     writefln("SDR channel %s thread finished!", sdr.satstr);
 }

@@ -19,10 +19,10 @@ import std.functional;
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
+int rcvinit(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini, ref sdrstat_t stat)
 {
     traceln("called");
-    sdrstat.buff = sdrstat.buff1 = sdrstat.buff2 = null;
+    stat.buff = stat.buff1 = stat.buff2 = null;
 
     final switch (ini.fend) {
       /* NSL stereo */
@@ -36,19 +36,19 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         ini.fendbuffsize = STEREO_DATABUFF_SIZE;                // frontend buffer size
         ini.buffsize = to!int(STEREO_DATABUFF_SIZE*MEMBUFLEN);  // total buffer size
 
-        sdrstat.buff = new byte[ini.buffsize];
+        stat.buff = new byte[ini.buffsize];
         break;
     }
 
       /* STEREO Binary File */
-      case Fend.FILESTEREO: 
+      case Fend.FILESTEREO:
         /* IF file open */
         ini.fp1 = File(ini.file1, "rb");
 
         ini.fendbuffsize = STEREO_DATABUFF_SIZE;                    // frontend buffer size
         ini.buffsize = to!int(ini.fendbuffsize * MEMBUFLEN);    // total buffer size 
 
-        sdrstat.buff = new byte[ini.buffsize];
+        stat.buff = new byte[ini.buffsize];
         break;
 
     version(none)
@@ -60,7 +60,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
         ini.fendbuffsize = GN3S_BUFFSIZE;                           // frontend buffer size
         ini.buffsize = GN3S_BUFFSIZE * MEMBUFLEN;                   // total buffer size
 
-        sdrstat.buff = new  byte[ini.buffsize];
+        stat.buff = new  byte[ini.buffsize];
         break;
     }
 
@@ -68,12 +68,9 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
       case Fend.FILE:
         /* IF file open (FILE1) */
         ini.fp1 = File(ini.file1,"rb");
-        enforce(ini.fp1.isOpen);
 
-        if(ini.file2.length){
+        if(ini.file2.length)
             ini.fp2 = File(ini.file2, "rb");
-            enforce(ini.fp2.isOpen);
-        }
 
         /* frontend buffer size */
         ini.fendbuffsize = FILE_BUFFSIZE;
@@ -82,10 +79,10 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
         /* memory allocation */
         if (ini.fp1.isOpen)
-            sdrstat.buff1 = new byte[ini.dtype[0] * ini.buffsize];
+            stat.buff1 = new byte[ini.dtype[0] * ini.buffsize];
 
         if (ini.fp2.isOpen)
-            sdrstat.buff2 = new byte[ini.dtype[1] * ini.buffsize];
+            stat.buff2 = new byte[ini.dtype[1] * ini.buffsize];
         break;
     }
 
@@ -101,7 +98,7 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
+int rcvquit(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini)
 {
     traceln("called");
     final switch (ini.fend) {
@@ -145,7 +142,7 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(sdrini_t* ini)
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
+int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(in ref sdrini_t ini)
 {
     traceln("called");
     final switch (ini.fend){
@@ -186,7 +183,7 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
+int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini, ref sdrstat_t stat)
 {
     traceln("called");
     final switch (ini.fend){
@@ -205,7 +202,7 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
       /* STEREO Binary File */
       case Fend.FILESTEREO:
-        filestereo_pushtomembuf();  //copy to membuffer 
+        stat.filestereo_pushtomembuf(ini);  //copy to membuffer 
         break;
 
     version(none)
@@ -222,7 +219,7 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 
       /* File */
       case Fend.FILE:
-        file_pushtomembuf(); /* copy to membuffer */
+        stat.file_pushtomembuf(ini); /* copy to membuffer */
         break;
     }
     return 0;
@@ -234,7 +231,7 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *ini)
+int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini)
 {
     traceln("called");
     final switch (ini.fend) {
@@ -277,19 +274,19 @@ int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(sdrini_t *i
 *          char   *expbuff  O   extracted data buffer
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
+int rcvgetbuff(ref sdrini_t ini, ref sdrstat_t stat, size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
 {
     traceln("called");
 
     bool needNewBuffer()
     {
-        return sdrini.fendbuffsize * sdrstat.buffloccnt < n + buffloc;
+        return ini.fendbuffsize * stat.buffloccnt < n + buffloc;
     }
 
 
     if(expbuf !is null){
         while(needNewBuffer())
-            enforce(rcvgrabdata(&sdrini) >= 0);
+            enforce(ini.rcvgrabdata(stat) >= 0);
 
         final switch (ini.fend) {
           /* NSL stereo */
@@ -302,24 +299,24 @@ int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype
 
           /* STEREO Binary File */
           case Fend.FILESTEREO: 
-            stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
+            stat.stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
             break;
 
         version(none)
         {
           /* SiGe GN3S v2 */
           case Fend.GN3SV2:
-            gn3s_getbuff_v2(buffloc,n,dtype,expbuf);
+            gn3s_getbuff_v2(buffloc, n, dtype, expbuf);
             break;
           /* SiGe GN3S v3 */
           case Fend.GN3SV3:
-            gn3s_getbuff_v3(buffloc,n,dtype,expbuf);
+            gn3s_getbuff_v3(buffloc, n, dtype, expbuf);
             break;
         }
 
           /* File */
           case Fend.FILE:
-            file_getbuff(buffloc, n, ftype, dtype, expbuf);
+            stat.file_getbuff(buffloc, n, ftype, dtype, expbuf);
             break;
         }
     }
@@ -339,20 +336,20 @@ int rcvgetbuff(sdrini_t *ini, size_t buffloc, size_t n, FType ftype, DType dtype
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
-void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)() 
+void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat, ref sdrini_t ini) 
 {
     traceln("called");
     size_t nread1,nread2;
 
-    if(sdrini.fp1.isOpen) nread1=fread(&sdrstat.buff1[(sdrstat.buffloccnt%MEMBUFLEN)*sdrini.dtype[0]*FILE_BUFFSIZE],1,sdrini.dtype[0]*FILE_BUFFSIZE,sdrini.fp1.getFP);
-    if(sdrini.fp2.isOpen) nread2=fread(&sdrstat.buff2[(sdrstat.buffloccnt%MEMBUFLEN)*sdrini.dtype[1]*FILE_BUFFSIZE],1,sdrini.dtype[1]*FILE_BUFFSIZE,sdrini.fp2.getFP);
+    if(ini.fp1.isOpen) nread1=fread(&stat.buff1[(stat.buffloccnt%MEMBUFLEN)*ini.dtype[0]*FILE_BUFFSIZE],1,ini.dtype[0]*FILE_BUFFSIZE,ini.fp1.getFP);
+    if(ini.fp2.isOpen) nread2=fread(&stat.buff2[(stat.buffloccnt%MEMBUFLEN)*ini.dtype[1]*FILE_BUFFSIZE],1,ini.dtype[1]*FILE_BUFFSIZE,ini.fp2.getFP);
 
-    if ((sdrini.fp1.isOpen && nread1 < sdrini.dtype[0] * FILE_BUFFSIZE)||(sdrini.fp2.isOpen && nread2 < sdrini.dtype[1] * FILE_BUFFSIZE)) {
-        sdrstat.stopflag = true;
+    if ((ini.fp1.isOpen && nread1 < ini.dtype[0] * FILE_BUFFSIZE)||(ini.fp2.isOpen && nread2 < ini.dtype[1] * FILE_BUFFSIZE)) {
+        stat.stopflag = true;
         writeln("end of file!");
     }
 
-    sdrstat.buffloccnt++;
+    stat.buffloccnt++;
 }
 
 
@@ -365,7 +362,7 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)()
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void file_getbuff(string file = __FILE__, size_t line = __LINE__)(size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
+void file_getbuff(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat, size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
 {
     traceln("called");
     size_t membuffloc = (buffloc * dtype) % (MEMBUFLEN * dtype * FILE_BUFFSIZE);
@@ -375,17 +372,17 @@ void file_getbuff(string file = __FILE__, size_t line = __LINE__)(size_t buffloc
     
     if(ftype == FType.Type1){
         if(nout > 0){
-            expbuf[0 .. n-nout] = sdrstat.buff1[membuffloc .. membuffloc + n-nout];
-            expbuf[n-nout .. n] = sdrstat.buff1[0 .. nout];
+            expbuf[0 .. n-nout] = stat.buff1[membuffloc .. membuffloc + n-nout];
+            expbuf[n-nout .. n] = stat.buff1[0 .. nout];
         }else
-            expbuf[0 .. n] = sdrstat.buff1[membuffloc  .. membuffloc + n];
+            expbuf[0 .. n] = stat.buff1[membuffloc  .. membuffloc + n];
     }
     
     if(ftype==FType.Type2){
         if (nout>0){
-            expbuf[0 .. n-nout] = sdrstat.buff2[membuffloc .. membuffloc + n-nout];
-            expbuf[n-nout .. n] = sdrstat.buff2[0 .. nout];
+            expbuf[0 .. n-nout] = stat.buff2[membuffloc .. membuffloc + n-nout];
+            expbuf[n-nout .. n] = stat.buff2[0 .. nout];
         }else
-            expbuf[0 .. n] = sdrstat.buff2[membuffloc  .. membuffloc + n];
+            expbuf[0 .. n] = stat.buff2[membuffloc  .. membuffloc + n];
     }
 }

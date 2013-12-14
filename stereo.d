@@ -271,17 +271,17 @@ body{
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
-void stereo_getbuff(size_t buffloc, size_t n, DType dtype, byte[] expbuf)
+void stereo_getbuff(in ref sdrstat_t stat, size_t buffloc, size_t n, DType dtype, byte[] expbuf)
 {
     size_t membuffloc = buffloc%(MEMBUFLEN*STEREO_DATABUFF_SIZE);
     int nout = cast(int)((membuffloc+n)-(MEMBUFLEN*STEREO_DATABUFF_SIZE));
 
     //WaitForSingleObject(hbuffmtx,INFINITE);
     if (nout>0) {
-        stereo_exp(cast(ubyte*)(&sdrstat.buff[membuffloc]), n-nout, dtype, expbuf);
-        stereo_exp(cast(ubyte*)(&sdrstat.buff[0]), nout, dtype, expbuf[dtype*(n-nout) .. $]);
+        stereo_exp(cast(const(ubyte)*)stat.buff.ptr + membuffloc, n-nout, dtype, expbuf);
+        stereo_exp(cast(const(ubyte)*)stat.buff.ptr + 0, nout, dtype, expbuf[dtype*(n-nout) .. $]);
     } else {
-        stereo_exp(cast(ubyte*)(&sdrstat.buff[membuffloc]), n, dtype, expbuf);
+        stereo_exp(cast(const(ubyte)*)stat.buff.ptr + membuffloc, n, dtype, expbuf);
     }
     //ReleaseMutex(hbuffmtx);
 }
@@ -293,14 +293,14 @@ void stereo_getbuff(size_t buffloc, size_t n, DType dtype, byte[] expbuf)
 * return : none
 *------------------------------------------------------------------------------*/
 version(EnableNSLStereo)
-void stereo_pushtomembuf() 
+void stereo_pushtomembuf(ref sdrstat_t stat) 
 {
     //WaitForSingleObject(hbuffmtx,INFINITE);
     memcpy(&sdrstat.buff[(sdrstat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE], STEREO_dataBuffer, STEREO_DATABUFF_SIZE);
     //ReleaseMutex(hbuffmtx);
 
     //WaitForSingleObject(hreadmtx,INFINITE);
-    sdrstat.buffloccnt++;
+    stat.buffloccnt++;
     //ReleaseMutex(hreadmtx);
 }
 
@@ -310,21 +310,21 @@ void stereo_pushtomembuf()
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
-void filestereo_pushtomembuf() 
+void filestereo_pushtomembuf(ref sdrstat_t stat, ref sdrini_t ini)
 {
     size_t nread;
 
     //WaitForSingleObject(hbuffmtx,INFINITE);
-    nread = fread(&sdrstat.buff[(sdrstat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE],1,STEREO_DATABUFF_SIZE,sdrini.fp1.getFP);
+    nread = fread(&stat.buff[(stat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE], 1, STEREO_DATABUFF_SIZE, ini.fp1.getFP);
     //ReleaseMutex(hbuffmtx);
 
     if (nread < STEREO_DATABUFF_SIZE){
-        sdrstat.stopflag=true;
+        stat.stopflag=true;
         writeln("end of file!");
     }
 
     //WaitForSingleObject(hreadmtx,INFINITE);
-    sdrstat.buffloccnt++;
+    stat.buffloccnt++;
     //ReleaseMutex(hreadmtx);
 }
 

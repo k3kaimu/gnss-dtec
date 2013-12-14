@@ -44,11 +44,9 @@ body{
 *          ulong cnt      I   counter of sdr channel thread
 * return : ulong              current buffer location
 *------------------------------------------------------------------------------*/
-size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, size_t buffloc, size_t cnt)
+size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, ref sdrini_t ini, ref sdrstat_t stat, size_t buffloc, size_t cnt)
 {
     traceln("called");
-    
-    /* memory allocation */
 
     // [sample/code]
     // tracking-loopによって更新されるnsamp
@@ -68,7 +66,7 @@ size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
     traceln();
 
     scope byte[] data = new byte[trkN * sdr.dtype];
-    rcvgetbuff(&sdrini, buffloc, trkN, sdr.ftype, sdr.dtype, data);
+    ini.rcvgetbuff(stat, buffloc, trkN, sdr.ftype, sdr.dtype, data);
 
     traceln();
 
@@ -93,7 +91,7 @@ size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
     traceln();
 
     /* navigation data */
-    sdrnavigation(sdr, buffloc, cnt);
+    sdr.sdrnavigation(buffloc, cnt);
     sdr.flagtrk = true;
 
     if(sdr.trk.S[].find(0).empty)
@@ -234,18 +232,18 @@ body{
 *          int    flag2     I   reset flag 2
 * return : none
 *------------------------------------------------------------------------------*/
-void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(double[] I, double[] Q, sdrtrk_t *trk, int flag1, int flag2)
+void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(ref sdrtrk_t trk, int flag1, int flag2)
 {
     traceln("called");
 
     if (!flag1||(flag1&&flag2)) {
         trk.oldsumI[] = trk.sumI[];
         trk.oldsumQ[] = trk.sumQ[];
-        trk.sumI[] = I[];
-        trk.sumQ[] = Q[];
+        trk.sumI[] = trk.I[];
+        trk.sumQ[] = trk.Q[];
     }else{
-        trk.sumI[] += I[];
-        trk.sumQ[] += Q[];
+        trk.sumI[] += trk.I[];
+        trk.sumQ[] += trk.Q[];
     }
 }
 
@@ -257,7 +255,7 @@ void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(double[] I, doub
 *          sdrtrkprm_t *prm I   sdr tracking prameter struct
 * return : none
 *------------------------------------------------------------------------------*/
-void pll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm_t *prm)
+void pll(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, in ref sdrtrkprm_t prm)
 in{
     assert(sdr.trk.sumI[0].isValidNum);
     assert(sdr.trk.sumQ[0].isValidNum);
@@ -272,15 +270,12 @@ out{
 body{
     traceln("called");
 
-    double carrErr,freqErr;
     immutable IP = sdr.trk.sumI[0],
               QP = sdr.trk.sumQ[0],
               oldIP = sdr.trk.oldsumI[0],
-              oldQP = sdr.trk.oldsumQ[0];
-    
-    //carrErr=atan(QP / IP) / DPI;
-    carrErr = atan(QP, IP) / DPI;
-    freqErr=atan2(cast(real)oldIP*QP-IP*oldQP, fabs(oldIP*IP)+fabs(oldQP*QP))/PI;
+              oldQP = sdr.trk.oldsumQ[0],
+              carrErr = atan(QP, IP) / DPI,
+              freqErr = atan2(cast(real)oldIP*QP-IP*oldQP, fabs(oldIP*IP)+fabs(oldQP*QP))/PI;
 
     /* 2nd order PLL with 1st order FLL */
     sdr.trk.carrNco += prm.pllaw * (carrErr - sdr.trk.carrErr)
@@ -299,7 +294,7 @@ body{
 *          sdrtrkprm_t *prm I   sdr tracking prameter struct
 * return : none
 *------------------------------------------------------------------------------*/
-void dll(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr, sdrtrkprm_t *prm)
+void dll(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, in ref sdrtrkprm_t prm)
 in{
     assert(sdr.trk.sumI[sdr.trk.prm1.ne].isValidNum);
     assert(sdr.trk.sumI[sdr.trk.prm1.nl].isValidNum);
@@ -357,7 +352,7 @@ body{
 *          int    snrflag   I   SNR calculation flag
 * return : none
 *------------------------------------------------------------------------------*/
-void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrflag)
+void setobsdata(ref sdrch_t sdr, ulong buffloc, ulong cnt, int snrflag)
 {
     void shiftRight(E)(E[] r) { r[0 .. $-1].retro.copy(r[1 .. $].retro); }
 
