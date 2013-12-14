@@ -422,18 +422,11 @@ void initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
     nav.addflen = Constant.get!"Navigation.ADDFLEN"(ctype);
     nav.addplen = Constant.get!"Navigation.ADDPLEN"(ctype);
     nav.prelen = Constant.get!"Navigation.PRELEN"(ctype);
-    memcpy(preamble.ptr,pre_l1ca.ptr,int.sizeof*nav.prelen);
 
-    nav.prebits =  cast(int*)malloc(int.sizeof*nav.prelen).enforce();
-    scope(failure) free(nav.prebits);
-    nav.bitsync= cast(int*)calloc(nav.rate,int.sizeof).enforce();
-    scope(failure) free(nav.bitsync);
-    nav.fbits=   cast(int*)calloc(nav.flen+nav.addflen,int.sizeof).enforce();
-    scope(failure) free(nav.fbits);
-    nav.fbitsdec=cast(int*)calloc(nav.flen+nav.addflen,int.sizeof).enforce();
-    scope(failure) free(nav.fbitsdec);
-
-    memcpy(nav.prebits,preamble.ptr,int.sizeof*nav.prelen);
+    nav.prebits = pre_l1ca[0 .. nav.prelen].dup;
+    nav.bitsync = new int[nav.rate];
+    nav.fbits = new int[nav.flen + nav.addflen];
+    nav.fbitsdec = new int[nav.flen + nav.addflen];
 }
 
 
@@ -556,27 +549,6 @@ int initsdrch(string file = __FILE__, size_t line = __LINE__)(uint chno, NavSyst
 *------------------------------------------------------------------------------*/
 void freesdrch(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr)
 {
-    traceln("called");
-    //free(sdr.code);
-    sdr.code = null;
-    free(sdr.lcode);
-    cpxfree(sdr.xcode);
-    free(sdr.nav.prebits);
-    free(sdr.nav.fbits);
-    free(sdr.nav.fbitsdec);
-    free(sdr.nav.bitsync);
-    free(sdr.trk.I);
-    free(sdr.trk.Q);
-    free(sdr.trk.oldI);
-    free(sdr.trk.oldQ);
-    free(sdr.trk.sumI);
-    free(sdr.trk.sumQ);
-    free(sdr.trk.oldsumI);
-    free(sdr.trk.oldsumQ);
-    free(sdr.trk.prm1.corrp);
-    free(sdr.trk.prm2.corrp);
-    free(sdr.acq.freq);
-
     if (sdr.nav.fec !is null)
         delete_viterbi27_port(sdr.nav.fec);
 }

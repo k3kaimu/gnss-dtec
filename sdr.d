@@ -887,13 +887,13 @@ struct sdrnav_t
     int flen;
     int addflen;
     int addplen;
-    deprecated int* prebits;
+    int[] prebits;
     int prelen;
     int bit;
     double bitIP = 0;
-    deprecated int* fbits;
-    deprecated int* fbitsdec;
-    deprecated int* bitsync;
+    int[] fbits;
+    int[] fbitsdec;
+    int[] bitsync;
     size_t bitind;
     int bitth;
     ulong firstsf;
