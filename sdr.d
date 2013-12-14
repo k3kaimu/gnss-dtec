@@ -1132,30 +1132,6 @@ unittest
 }
 
 
-deprecated auto malloc(size_t size) nothrow
-{
-    return GC.malloc(size);
-}
-
-
-deprecated void free(void* p) nothrow
-{
-    GC.free(p);
-}
-
-
-deprecated void* calloc(size_t n, size_t size) nothrow
-{
-    return GC.calloc(n * size);
-}
-
-
-deprecated ushort MAKEWORD(ubyte bLow, ubyte bHigh) pure nothrow @safe
-{
-    return bLow | (bHigh << 8);
-}
-
-
 bool isValidPRN(int prn, NavSystem sys) pure nothrow @safe
 {
     final switch(sys){

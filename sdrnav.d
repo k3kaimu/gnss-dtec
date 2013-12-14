@@ -33,7 +33,7 @@ void sdrnavigation(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t s
     traceln();
 
     /* navigation bit synclonaization */
-    if (/*sdr.ctype != CType.L2RCCM && */!sdr.flagnavsync && cnt > 500){
+    if (!sdr.flagnavsync && cnt > 500){
         traceln();
         sdr.flagnavsync = nav_checksync(biti, sdr.trk.I[0], sdr.trk.oldI[0], &sdr.nav);
         traceln();

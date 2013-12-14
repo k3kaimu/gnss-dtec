@@ -303,132 +303,6 @@ void cpxpspec(cpx_t[] cpx, bool flagsum, double[] pspec)
 }
 
 
-
-/* dot products: d1=dot(a1,b),d2=dot(a2,b) --------------------------------------
-* args   : short  *a1       I   input short array
-*          short  *a2       I   input short array
-*          short  *b        I   input short array
-*          size_t    n         I   number of input data
-*          short  *d1       O   output short array
-*          short  *d2       O   output short array
-* return : none
-*------------------------------------------------------------------------------*/
-deprecated void dot_21(const short *a1, const short *a2, const short *b, size_t n,
-                   double *d1, double *d2) nothrow
-{
-    version(none){
-        immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b[0 .. n]);
-        d1[0] = result[0][0];
-        d2[0] = result[1][0];
-    }else{
-
-        const(short)* p1=a1, p2=a2, q=b;
-        
-        d1[0]=d2[0]=0.0;
-        
-        for (;p1<a1+n;p1++,p2++,q++) {
-            d1[0]+=(*p1) * (*q);
-            d2[0]+=(*p2) * (*q);
-        }
-    }
-}
-
-
-deprecated void dot_21(in short[] a1, in short[] a2, in short[] b, double[] d1, double[] d2) nothrow
-{
-    dot_21(a1.ptr, a2.ptr, b.ptr, a1.length, d1.ptr, d2.ptr);
-}
-
-
-/* dot products: d1={dot(a1,b1),dot(a1,b2)},d2={dot(a2,b1),dot(a2,b2)} ----------
-* args   : short  *a1       I   input short array
-*          short  *a2       I   input short array
-*          short  *b1       I   input short array
-*          short  *b2       I   input short array
-*          size_t    n         I   number of input data
-*          short  *d1       O   output short array
-*          short  *d2       O   output short array
-* return : none
-*------------------------------------------------------------------------------*/
-deprecated void dot_22(in short *a1, in short *a2, in short *b1, in short *b2, size_t n,
-            double *d1, double *d2) nothrow
-{
-    version(none){
-        immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b1[0 .. n], b2[0 .. n]);
-        d1[0] = result[0][0];
-        d1[1] = result[0][1];
-        d2[0] = result[1][0];
-        d2[1] = result[1][1];
-    }else{
-        const(short)* p1 = a1,
-                      p2 = a2,
-                      q1 = b1,
-                      q2 = b2;
-        
-        d1[0] = d1[1] = d2[0] = d2[1] = 0.0;
-        
-        for (;p1<a1+n;p1++,p2++,q1++,q2++) {
-            d1[0] += (*p1) * (*q1);
-            d1[1] += (*p1) * (*q2);
-            d2[0] += (*p2) * (*q1);
-            d2[1] += (*p2) * (*q2);
-        }
-    }
-}
-
-deprecated void dot_22(in short[] a1, in short[] a2, in short[] b1, in short[] b2, double[] d1, double[] d2) nothrow
-{
-    dot_22(a1.ptr, a2.ptr, b1.ptr, b2.ptr, a1.length, d1.ptr, d2.ptr);
-}
-
-
-/* dot products: d1={dot(a1,b1),dot(a1,b2),dot(a1,b3)},d2={...} -----------------
-* args   : short  *a1       I   input short array
-*          short  *a2       I   input short array
-*          short  *b1       I   input short array
-*          short  *b2       I   input short array
-*          short  *b3       I   input short array
-*          size_t    n         I   number of input data
-*          short  *d1       O   output short array
-*          short  *d2       O   output short array
-* return : none
-*------------------------------------------------------------------------------*/
-deprecated void dot_23(const short *a1, const short *a2, const short *b1,
-                   const short *b2, const short *b3, size_t n, double *d1,
-                   double *d2) nothrow
-{
-    version(none){
-        immutable result = dot!long(a1[0 .. n], a2[0 .. n])(b1[0 .. n], b2[0 .. n], b3[0 .. n]);
-
-        d1[0] = result[0][0];
-        d1[1] = result[0][1];
-        d1[2] = result[0][2];
-        d2[0] = result[1][0];
-        d2[1] = result[1][1];
-        d2[2] = result[1][2];
-    }else{
-        const(short)* p1=a1, p2=a2, q1=b1, q2=b2, q3=b3;
-        
-        d1[0] = d1[1] = d1[2] = d2[0] = d2[1] = d2[2] = 0.0;
-        
-        for (;p1<a1+n;p1++,p2++,q1++,q2++,q3++) {
-            d1[0] += (*p1) * (*q1);
-            d1[1] += (*p1) * (*q2);
-            d1[2] += (*p1) * (*q3);
-            d2[0] += (*p2) * (*q1);
-            d2[1] += (*p2) * (*q2);
-            d2[2] += (*p2) * (*q3);
-        }
-    }
-}
-
-
-deprecated void dot_23(in short[] a1, in short[] a2, in short[] b1, in short[] b2, in short[] b3, double[] d1, double[] d2) nothrow
-{
-    dot_23(a1.ptr, a2.ptr, b1.ptr, b2.ptr, b3.ptr, a1.length, d1.ptr, d2.ptr);
-}
-
-
 template dot(size_t N, size_t M)
 {
     private string genDotFunction()
@@ -464,181 +338,6 @@ template dot(size_t N, size_t M)
 }
 
 
-/* multiply char/short vectors --------------------------------------------------
-* multiply char/short vectors: out=data1.*data2
-* args   : char   *data1    I   input char array
-*          short  *data2    I   input short array
-*          int    n         I   number of input data
-*          short  *out      O   output short array
-* return : none
-*------------------------------------------------------------------------------*/
-
-deprecated void mulvcs(const(byte)* data1, const short *data2, size_t n, short *out_) pure nothrow
-{   
-    int i;
-    for (i=0;i<n;i++) out_[i]=cast(short)(data1[i]*data2[i]);
-}
-
-
-deprecated void mulvcs(in byte[] data1, in short[] data2, short[] out_) pure nothrow
-{
-    foreach(i; 0 .. data1.length)
-        out_[i] = cast(short)(data1[i] * data2[i]);
-}
-
-
-/* sum float vectors ------------------------------------------------------------
-* sum float vectors: out=data1.+data2
-* args   : float  *data1    I   input float array
-*          float  *data2    I   input float array
-*          int    n         I   number of input data
-*          float  *out      O   output float array
-* return : none
-* note   : AVX command is used if "AVX" is defined
-*------------------------------------------------------------------------------*/
-deprecated void sumvf(const float *data1, const float *data2, int n, float *out_) pure nothrow
-{
-    int i;
-    for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
-}
-
-
-void sumvf(in float[] data1, in float[] data2, float[] out_) @safe
-{
-    out_[] = data1[] + data2[];
-}
-
-
-/* sum double vectors -----------------------------------------------------------
-* sum double vectors: out=data1.+data2
-* args   : double *data1    I   input double array
-*          double *data2    I   input double array
-*          int    n         I   number of input data
-*          double *out      O   output double array
-* return : none
-* note   : AVX command is used if "AVX" is defined
-*------------------------------------------------------------------------------*/
-deprecated void sumvd(const double *data1, const double *data2, size_t n, double *out_) pure nothrow
-{
-    int i;
-    for (i=0;i<n;i++) out_[i]=data1[i]+data2[i];
-}
-
-
-void sumvd(in double[] data1, in double[] data2, double[] out_) @safe
-{
-    out_[] = data1[] + data2[];
-}
-
-/* maximum value and index (int array) ------------------------------------------
-* calculate maximum value and index
-* args   : double *data     I   input int array
-*          int    n         I   number of input data
-*          int    exinds    I   exception index (start)
-*          int    exinde    I   exception index (end)
-*          int    *ind      O   index at maximum value
-* return : int                  maximum value
-* note   : maximum value and index are calculated without exinds-exinde index
-*          exinds=exinde=-1: use all data
-*------------------------------------------------------------------------------*/
-deprecated int maxvi(const int *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind) pure nothrow
-{
-    int i;
-    int max=data[0];
-    *ind=0;
-    for(i=1;i<n;i++) {
-        if ((exinds<=exinde)&&(i<exinds||i>exinde)||((exinds>exinde)&&(i<exinds&&i>exinde))) {
-            if (max<data[i]) {
-                max=data[i];
-                *ind=i;
-            }
-        }
-    }
-    return max;
-}
-
-
-deprecated int maxvi(in int[] data, ptrdiff_t exinds, ptrdiff_t exinde, out int ind) pure nothrow
-{
-    return maxvi(data.ptr, data.length, exinds, exinde, &ind);
-}
-
-
-/* maximum value and index (float array) ----------------------------------------
-* calculate maximum value and index
-* args   : float  *data     I   input float array
-*          int    n         I   number of input data
-*          int    exinds    I   exception index (start)
-*          int    exinde    I   exception index (end)
-*          int    *ind      O   index at maximum value
-* return : float                maximum value
-* note   : maximum value and index are calculated without exinds-exinde index
-*          exinds=exinde=-1: use all data
-*------------------------------------------------------------------------------*/
-deprecated float maxvf(const float *data, size_t n, ptrdiff_t exinds, ptrdiff_t exinde, int *ind) pure nothrow
-{
-    int i;
-    float max=data[0];
-    *ind=0;
-    for(i=1;i<n;i++) {
-        if ((exinds<=exinde)&&(i<exinds||i>exinde)||((exinds>exinde)&&(i<exinds&&i>exinde))) {
-            if (max<data[i]) {
-                max=data[i];
-                *ind=i;
-            }
-        }
-    }
-    return max;
-}
-
-
-deprecated float maxvf(in float[] data, int exinds, int exinde, out int ind) pure nothrow
-{
-    return maxvf(data.ptr, data.length, exinds, exinde, &ind);
-}
-
-
-/* maximum value and index (double array) ---------------------------------------
-* calculate maximum value and index
-* args   : double *data     I   input double array
-*          int    n         I   number of input data
-*          int    exinds    I   exception index (start)
-*          int    exinde    I   exception index (end)
-*          int    *ind      O   index at maximum value
-* return : double               maximum value
-* note   : maximum value and index are calculated without exinds-exinde index
-*          exinds=exinde=-1: use all data
-*------------------------------------------------------------------------------*/
-deprecated double maxvd(const double *data, size_t n, int exinds, int exinde, int *ind) pure nothrow
-in{
-    assert(n <= int.max);
-    foreach(e; data[0 .. n])
-        assert(!isNaN(e));
-}
-out(result){
-    assert(!isNaN(result));
-}
-body{
-    double max=data[0];
-    *ind=0;
-    foreach(i; 1 .. n) {
-        if ((exinds<=exinde)&&(i<exinds||i>exinde)||((exinds>exinde)&&(i<exinds&&i>exinde))) {
-            if (max<data[i]) {
-                max=data[i];
-                *ind = cast(int)i;
-            }
-        }
-    }
-    return max;
-}
-
-
-deprecated double maxvd(in double[] data, int exinds, int exinde, out int ind) pure nothrow
-{
-    return maxvd(data.ptr, data.length, exinds, exinde, &ind);
-}
-
-
 Tuple!(ElementType!R, size_t) findMaxWithIndex(alias pred = "a > b", R)(R r)
 if(isForwardRange!R && hasLength!R && is(typeof(binaryFun!pred(r.front, r.front))))
 {
@@ -647,52 +346,6 @@ if(isForwardRange!R && hasLength!R && is(typeof(binaryFun!pred(r.front, r.front)
               nlen = maxPos.length;
 
     return typeof(return)(maxPos.front, olen - nlen);
-}
-
-
-//Tuple!(ElementType!R, size_t) findMaxWithIndex(alias pred = "a > b", R)(R r, ptrdiff_t excludeIndexStart, ptrdiff_t excludeIndexEnd)
-//if(isForwardRange!R && hasLength!R && is(typeof(binaryFun!pred(r.front, r.front))))
-//{
-//    if(excludeIndexStart <= excludeIndexEnd)
-//        return r.save.zip(iota(size_t.max))
-//                     .filter!(a => a[1].isIntervalIn!")("(excludeIndexStart, excludeIndexEnd))()
-//                     .minPos!((a, b) => binaryFun!pred(a[0], b[0]))().front;
-//    else
-//        return r.save.zip(iota(size_t.max))
-//                     .filter!(a => a[1].isIntervalIn!"()"(excludeIndexEnd, excludeIndexStart))()
-//                     .minPos!((a, b) => binaryFun!pred(a[0], b[0]))().front;
-//}
-
-
-/* mean value (double array) ----------------------------------------------------
-* calculate mean value
-* args   : double *data     I   input double array
-*          int    n         I   number of input data
-*          int    exinds    I   exception index (start)
-*          int    exinde    I   exception index (end)
-* return : double               mean value
-* note   : mean value is calculated without exinds-exinde index
-*          exinds=exinde=-1: use all data
-*------------------------------------------------------------------------------*/
-deprecated double meanvd(const double *data, int n, int exinds, int exinde) /*pure nothrow*/
-in{
-    foreach(e; data[0 .. n])
-        assert(!isNaN(e));
-}
-out(result){
-    assert(!isNaN(result));
-}
-body{
-    debug(AcqDebug) writefln("exind: arr.length = %s, arr[%s .. %s];", n, exinds, exinde);
-    int i,ne=0;
-    double mean=0.0;
-    for(i=0;i<n;i++) {
-        if ((exinds<=exinde)&&(i<exinds||i>exinde)) mean+=data[i];
-        else if ((exinds>exinde)&&(i<exinds&&i>exinde)) mean+=data[i];
-        else ne++;
-    }
-
-    return mean/(n-ne);
 }
 
 
@@ -707,19 +360,6 @@ if(isInputRange!R)
     }
 
     return sum / s;
-}
-
-
-/* 1D interpolation -------------------------------------------------------------
-* interpolation of 1D data
-* args   : double *x,*y     I   x and y data array
-*          int    n         I   number of input data
-*          double t         I   interpolation point on x data
-* return : double               interpolated y data at t
-*------------------------------------------------------------------------------*/
-deprecated double interp1()(double* x, double* y, int n, double t) pure nothrow
-{
-    return interp1(x[0 .. n], y[0 .. n], t);
 }
 
 
@@ -798,6 +438,7 @@ body{
             return interp1(x[s .. s+3], y[s .. s+3], t);
     }
 }
+
 ///
 pure nothrow @safe unittest{
     assert(approxEqual(interp1([0.0], [1.3], 5), 1.3));                             // 1点の場合は、y[0]を返すしかない
@@ -825,13 +466,6 @@ pure nothrow @safe unittest{
 *          double *out      O   output double array
 * return : none
 *------------------------------------------------------------------------------*/
-deprecated void uint64todouble(ulong *data, ulong base, int n, double *out_) pure nothrow
-{
-    int i;
-    for (i=0;i<n;i++) out_[i]=cast(double)(data[i]-base);
-}
-
-
 void uint64todouble(in ulong[] data, ulong base, double[] out_) pure nothrow @safe
 in{
     assert(data.length <= out_.length);
@@ -839,83 +473,6 @@ in{
 body{
     foreach(i, e; data)
         out_[i] = e - base;
-}
-
-
-
-/* index to subscribe -----------------------------------------------------------
-* 1D index to subscribe (index of 2D array)
-* args   : int    *ind      I   input data
-*          int    nx, ny    I   number of row and column
-*          int    *subx     O   subscript index of x
-*          int    *suby     O   subscript index of y
-* return : none
-*------------------------------------------------------------------------------*/
-deprecated void ind2sub(int ind, int nx, int ny, int *subx, int *suby) pure nothrow @safe
-in{
-    assert(ind >= 0);
-    assert(nx >= 0);
-    assert(ny >= 0);
-}
-out{
-    assert(*subx >= 0);
-    assert(*subx < nx);
-    assert(*suby >= 0);
-    assert(*suby < ny);
-}
-body{
-    *subx = ind % nx;
-    *suby = cast(int)(((cast(long)ny) * ind)/(nx*ny));      // 実際には、ny*ind/(nx*ny)
-                                                            // castはoverflow対策
-}
-
-
-/* vector circle shift function  ------------------------------------------------
-* circle shift of vector data
-* args   : void   *dst      O   input data
-*          void   *src      I   shifted data
-*          size_t size      I   type of input data (byte)
-*          int    n         I   number of input data
-* return : none
-*------------------------------------------------------------------------------*/
-deprecated void shiftright(void *dst, void *src, size_t size, int n) pure nothrow
-{
-    scope tmp = new void[size * n];
-    tmp[0 .. size*n] = src[0 .. size*n];
-    dst[0 .. size*(n-1)] = tmp[0 .. size*(n-1)];
-}
-
-
-/* resample data to (2^bits) samples --------------------------------------------
-* resample data to (2^bits) samples
-* args   : char   *data     I   data
-*          int    dtype     I   data type (1:real,2:complex)
-*          int    n         I   number of data
-*          int    m         I   number of resampled points
-*          char   *rdata    O   resampled data
-* return : none
-*------------------------------------------------------------------------------*/
-deprecated void resdata(const char *data, int dtype, int n, int m, char *rdata) pure nothrow
-{
-    char *p;
-
-//#if !defined(SSE2)
-    double index=0.0;
-    int ind;
-    
-    if (dtype == DType.IQ) { /* complex */
-        for (p=rdata;p<rdata+m;p+=2,index+=n*2) {
-            ind=cast(int)(index/m)*2;
-            p[0]=data[ind  ];
-            p[1]=data[ind+1];
-        }
-    }
-    if (dtype == DType.I) { /* real */
-        for (p=rdata;p<rdata+m;p++,index+=n) {
-            ind=cast(int)(index/m);
-            p[0]=data[ind];
-        }
-    }
 }
 
 
@@ -930,31 +487,6 @@ deprecated void resdata(const char *data, int dtype, int n, int m, char *rdata) 
 *          short  *rcode    O   resampling code
 * return : double               code remainder
 *------------------------------------------------------------------------------*/
-deprecated double rescode(string file = __FILE__, size_t line = __LINE__)(const short *code, size_t len, double coff, size_t smax, double ci, size_t n, short[] rcode)
-{
-    traceln("called");
-    traceln("len: ", len);
-    traceln("ci: ", ci);
-
-    coff -= smax*ci;
-    coff -= floor(coff / len) * len; /* 0<=coff<len */
-    traceln("coff: ", coff);
-
-    //for (p=rcode;p<rcode+n+2*smax;p++,coff+=ci) {
-    foreach(i; 0 .. n + 2 * smax){
-        coff %= len;
-        rcode[i] = code[coff.to!size_t()];
-
-        coff += ci;
-    }
-
-    traceln("return");
-
-    return coff - smax * ci;
-}
-
-
-
 double resampling(R, W)(R src, double coff, size_t smax, double ci, size_t n, auto ref W sink)
 if(isRandomAccessRange!R && hasLength!R && isOutputRange!(W, ElementType!R))
 {

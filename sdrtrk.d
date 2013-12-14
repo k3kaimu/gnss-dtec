@@ -54,8 +54,6 @@ size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t s
     enforce(sdr.trk.remcode.isValidNum);
     enforce(sdr.trk.codefreq.isValidNum);
     enforce(sdr.f_sf.isValidNum);
-    
-    //sdr.currnsamp = ((sdr.clen - sdr.trk.remcode)/(sdr.trk.codefreq/sdr.f_sf)).to!int();
 
     immutable lenOf1ms = sdr.crate * 0.001,
               remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))(sdr.trk.remcode % lenOf1ms),

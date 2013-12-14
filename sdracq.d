@@ -213,8 +213,7 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
       case DType.I:       // real
         //rdataI[0 .. n] = data[0 .. n];
         data[0 .. n].moveTo(rdataI[0 .. n]);
-        
-        //rdataI.zip(rcode).map!"cast(short)(a[0] * a[1])"().moveTo(rcodeI.save);
+
         rcodeI[] = rdataI[] * rcode[];
         cpxcpx(rcodeI, null, 1.0, datax);       // to frequency domain
         cpxpspec(datax, 0, fftxc);              // compute power spectrum
@@ -229,8 +228,6 @@ double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[]
             rdataQ[i] = data[i*2 + 1];
         }
 
-        //rdataI.zip(rcode).map!"cast(short)(a[0] * a[1])"().moveTo(rcodeI.save);
-        //rdataQ.zip(rcode).map!"cast(short)(a[0] * a[1])"().moveTo(rcodeQ.save);
         rcodeI[] = rdataI[] * rcode[];
         rcodeQ[] = rdataQ[] * rcode[];
         cpxcpx(rcodeI, rcodeQ, 1.0, datax);     // to frequency domain
