@@ -179,7 +179,11 @@ void sdrthread(size_t index)
 
             /* plot aquisition result */
             if (sdr.flagacq && sdrini.pltacq) {
-                pltacq.z=acqpower;
+                {
+                    auto p = pltacq.z;
+                    foreach(e; acqPower)
+                        p.put(e);
+                }
                 plot(&pltacq, "acq_" ~ sdr.satstr ~ "_" ~ sdr.ctype.to!string()); 
             }
         }
@@ -214,7 +218,7 @@ void sdrthread(size_t index)
 
                     /* plot correator output */
                     if (loopcnt%(cast(int)(plttrk.pltms/sdr.trk.loopms))==0&&sdrini.plttrk&&loopcnt>200) {
-                        plttrk.x = sdr.trk.prm2.corrx.dup.ptr;
+                        plttrk.x[] = sdr.trk.prm2.corrx[];
                         plttrk.y[0 .. sdr.trk.sumI.length] = sdr.trk.sumI[];
                         plotthread(&plttrk, "trk_" ~ sdr.satstr ~ "_");
                     }

@@ -100,26 +100,21 @@ void initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 
     /* memory allocation */
     switch (plt.type) {
-        case PlotType.Y:
-            plt.y = cast(double*)malloc(double.sizeof *plt.ny).enforce();
-            scope(failure) free(plt.y);
+      case PlotType.Y:
+        plt.y = new double[plt.ny];
+        break;
 
-            break;
-        case PlotType.XY:
-            plt.x = cast(double*)malloc(double.sizeof * plt.nx).enforce();
-            scope(failure) free(plt.x);
+      case PlotType.XY:
+        plt.x = new double[plt.nx];
+        plt.y = new double[plt.nx];
+        break;
 
-            plt.y = cast(double*)malloc(double.sizeof * plt.nx).enforce();
-            scope(failure) free(plt.y);
+      case PlotType.SurfZ:
+        plt.z = new double[](plt.ny * plt.nx);
+        break;
 
-            break;
-        case PlotType.SurfZ:
-            plt.z = cast(double*)malloc(double.sizeof * plt.nx * plt.ny).enforce();
-            scope(failure) free(plt.z);
-
-            break;
-        default:
-            break;
+      default:
+        break;
     }
     /* figure position */
     xi = (plt.pltno-1) % Constant.Plot.WN;
@@ -135,12 +130,7 @@ void initsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
 * return : none
 *------------------------------------------------------------------------------*/
 void quitsdrplot(string file = __FILE__, size_t line = __LINE__)(sdrplt_t *plt)
-{
-    traceln("called");
-    if (plt.x != null) free(plt.x); plt.x = null;
-    if (plt.y != null) free(plt.y); plt.y = null;
-    if (plt.z != null) free(plt.z); plt.z = null;
-}
+{}
 
 
 /* gnuplot set x axis range -----------------------------------------------------

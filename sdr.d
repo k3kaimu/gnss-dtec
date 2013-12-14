@@ -954,9 +954,9 @@ struct sdrplt_t
 {
     int nx;
     int ny;
-    deprecated double* x;
-    deprecated double* y;
-    deprecated double* z;
+    double[] x;
+    double[] y;
+    double[] z;
     PlotType type;
     int skip;
     bool flagabs;
