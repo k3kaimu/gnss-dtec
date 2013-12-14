@@ -692,10 +692,10 @@ struct sdrini_t
     uint nchL2;
     uint nchL5;
     uint nchL6;
-    int[] sat;
-    NavSystem[] sys;
-    CType[] ctype;
-    FType[] ftype;
+    immutable(int)[] sat;
+    immutable(NavSystem)[] sys;
+    immutable(CType)[] ctype;
+    immutable(FType)[] ftype;
     bool pltacq;
     bool plttrk;
     int outms;

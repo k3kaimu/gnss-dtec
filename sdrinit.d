@@ -125,10 +125,10 @@ void readIniFile(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t in
             return tmp[0 .. ini.nch];
         }
 
-        ini.sat   = getChannelSpec!int("SAT");
-        ini.sys   = getChannelSpec!NavSystem("SYS");
-        ini.ctype = getChannelSpec!CType("CTYPE");
-        ini.ftype = getChannelSpec!FType("FTYPE");
+        ini.sat   = getChannelSpec!int("SAT").dup;
+        ini.sys   = getChannelSpec!NavSystem("SYS").dup;
+        ini.ctype = getChannelSpec!CType("CTYPE").dup;
+        ini.ftype = getChannelSpec!FType("FTYPE").dup;
     }
     
     {
