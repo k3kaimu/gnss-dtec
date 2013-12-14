@@ -216,6 +216,10 @@ struct Constant
                 enum FLLB = 50.0;
                 enum DT = 0.001;
             }
+
+
+            enum snrThreshold = 6;              // 平均SNRがこの値を下回った場合に、Trackingを終了する
+                                                // 6dB -> 電力で4倍
         }
 
 
@@ -290,6 +294,10 @@ struct Constant
                 enum FLLB = 50.0;
                 enum DT = 0.001;
             }
+
+
+            enum snrThreshold = 6;              // 平均SNRがこの値を下回った場合に、Trackingを終了する
+                                                // 6dB -> 電力で4倍
         }
 
 
@@ -363,6 +371,10 @@ struct Constant
                 enum FLLB = 50.0;
                 enum DT = 0.001;
             }
+
+
+            enum snrThreshold = 6;              // 平均SNRがこの値を下回った場合に、Trackingを終了する
+                                                // 6dB -> 電力で4倍
         }
 
 
@@ -752,6 +764,16 @@ struct sdracq_t
     {
         initacqstruct(sys, ctype, &this);
     }
+
+
+    void reInitialize()
+    {
+        acqcodei = 0;
+        acqfreq = 0;
+        acqfreqf = 0;
+        cn0 = 0;
+        peakr = 0;
+    }
 }
 
 
@@ -795,14 +817,14 @@ struct sdrtrk_t
     double carrNco = 0;
     double carrErr = 0;
     size_t buffloc;
-    deprecated double[8] tow = 0;
-    deprecated ulong[8] codei = 0;
-    deprecated ulong[8] codeisum = 0;
-    deprecated ulong[8] cntout = 0;
-    deprecated double[8] remcodeout = 0;
-    deprecated double[8] L = 0;
-    deprecated double[8] D = 0;
-    deprecated double[8] S = 0;
+    double[8] tow = 0;
+    ulong[8] codei = 0;
+    ulong[8] codeisum = 0;
+    ulong[8] cntout = 0;
+    double[8] remcodeout = 0;
+    double[8] L = 0;
+    double[8] D = 0;
+    double[8] S = 0;
     double[] I;
     double[] Q;
     double[] oldI;
@@ -812,12 +834,48 @@ struct sdrtrk_t
     double[] oldsumI;
     double[] oldsumQ;
     double Isum = 0;
+    double Qsum = 0;
     int ncorrp;
     int loopms;
     int flagpolarityadd;
     int flagremcarradd;
     sdrtrkprm_t prm1;
     sdrtrkprm_t prm2;
+
+
+    void reInitialize()
+    {
+        codefreq = 0;
+        carrfreq = 0;
+        remcode = 0;
+        remcarr = 0;
+        oldremcode = 0;
+        oldremcarr = 0;
+        codeNco = 0;
+        codeErr = 0;
+        carrNco = 0;
+        carrErr = 0;
+        tow[] = 0;
+        codei[] = 0;
+        codeisum[] = 0;
+        cntout[] = 0;
+        remcodeout[] = 0;
+        L[] = 0;
+        D[] = 0;
+        S[] = 0;
+        I[] = 0;
+        Q[] = 0;
+        oldI[] = 0;
+        oldQ[] = 0;
+        sumI[] = 0;
+        sumQ[] = 0;
+        oldsumI[] = 0;
+        oldsumQ[] = 0;
+        Isum = 0;
+        Qsum = 0;
+        flagpolarityadd = 0;
+        flagremcarradd = 0;
+    }
 }
 
 
@@ -882,6 +940,13 @@ struct sdrch_t
     int flagnavpre;
     int flagfirstsf;
     int flagnavdec;
+    void reInitialize()
+    {
+        acq.reInitialize();
+        trk.reInitialize();
+        nav.reInitialize();
+        flagacq = flagtrk = flagnavsync = flagnavpre = flagfirstsf = flagnavdec = false;
+    }
 }
 
 

@@ -14,6 +14,7 @@ import sdrnav;
 
 import util.trace;
 import util.numeric;
+import util.range;
 
 import std.math;
 import std.stdio;
@@ -22,6 +23,9 @@ import std.parallelism;
 import std.exception;
 import std.array;
 import std.string;
+import std.algorithm;
+import std.range;
+import std.typetuple;
 
 private F atan(F)(F y, F x)
 if(isFloatingPoint!F)
@@ -91,6 +95,16 @@ size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(sdrch_t *sdr,
     /* navigation data */
     sdrnavigation(sdr, buffloc, cnt);
     sdr.flagtrk = true;
+
+    if(sdr.trk.S[].find(0).empty)
+    {
+        immutable meanSNR = sdr.trk.S[].mean();
+        // 追尾できなくなった(信号が途絶えた場合)
+        if(meanSNR < Constant.get!"Tracking.snrThreshold"(sdr.ctype)){
+            writeln("signal is interruptted. SNR: %s[dB]", meanSNR);
+            sdr.reInitialize();
+        }
+    }
     
     traceln();
 
@@ -345,49 +359,48 @@ body{
 *------------------------------------------------------------------------------*/
 void setobsdata(sdrch_t *sdr, ulong buffloc, ulong cnt, sdrtrk_t *trk, int snrflag)
 {
-    shiftright(&trk.tow[1],        &trk.tow[0],        double.sizeof, Constant.Observation.OBSINTERPN);
-    shiftright(&trk.L[1],          &trk.L[0],          double.sizeof, Constant.Observation.OBSINTERPN);
-    shiftright(&trk.D[1],          &trk.D[0],          double.sizeof, Constant.Observation.OBSINTERPN);
-    shiftright(&trk.codei[1],      &trk.codei[0],      ulong.sizeof,  Constant.Observation.OBSINTERPN);
-    shiftright(&trk.cntout[1],     &trk.cntout[0],     ulong.sizeof,  Constant.Observation.OBSINTERPN);
-    shiftright(&trk.remcodeout[1], &trk.remcodeout[0], double.sizeof, Constant.Observation.OBSINTERPN);
+    void shiftRight(E)(E[] r) { r[0 .. $-1].retro.copy(r[1 .. $].retro); }
 
-    trk.tow[0] = sdr.nav.firstsftow + (cast(double)(cnt-sdr.nav.firstsfcnt)) / 1000;
-    trk.codei[0] = buffloc;
-    trk.cntout[0] = cnt;
-    trk.remcodeout[0] = trk.oldremcode * sdr.f_sf / trk.codefreq;
+    // シフトレジスタ達を一つ右にシフトする
+    foreach(s; TypeTuple!("tow", "L", "D", "codei", "cntout", "remcodeout"))
+        with(sdr.trk) shiftRight(mixin(s)[]);
+
+    sdr.trk.tow[0] = sdr.nav.firstsftow + (cast(double)(cnt-sdr.nav.firstsfcnt)) / 1000;
+    sdr.trk.codei[0] = buffloc;
+    sdr.trk.cntout[0] = cnt;
+    sdr.trk.remcodeout[0] = sdr.trk.oldremcode * sdr.f_sf / sdr.trk.codefreq;
 
     /* doppler */
-    trk.D[0] = trk.carrfreq - sdr.f_if; /*+ (sdr.trk.codefreq / sdr.crate -1) * Constant.get!"freq"(sdr.ctype)*/;
+    sdr.trk.D[0] = sdr.trk.carrfreq - sdr.f_if;
 
     /* carrier phase */
-    //if (!trk.flagremcarradd) {
-    //    immutable tmpL = trk.L[0];
+    //if (!sdr.trk.flagremcarradd) {
+    //    immutable tmpL = sdr.trk.L[0];
 
-    //    trk.L[0]+=trk.remcarr/DPI;
-    //    trk.flagpolarityadd = true;
+    //    sdr.trk.L[0]+=sdr.trk.remcarr/DPI;
+    //    sdr.trk.flagpolarityadd = true;
 
-    //    (sdr.ctype == CType.L1CA) && writefln("%s [cyc] + (%s / DPI)[cyc] -> %s [cyc]", tmpL, trk.remcarr, trk.L[0]);
+    //    (sdr.ctype == CType.L1CA) && writefln("%s [cyc] + (%s / DPI)[cyc] -> %s [cyc]", tmpL, sdr.trk.remcarr, sdr.trk.L[0]);
     //}
 
-    //if (sdr.flagnavpre&&!trk.flagpolarityadd) {
-    //    if (sdr.nav.polarity==-1) { trk.L[0]+=0.5; }
-    //    trk.flagpolarityadd = true;
+    //if (sdr.flagnavpre&&!sdr.trk.flagpolarityadd) {
+    //    if (sdr.nav.polarity==-1) { sdr.trk.L[0]+=0.5; }
+    //    sdr.trk.flagpolarityadd = true;
     //}
 
-    //immutable tmpL = trk.L[0];
-    trk.L[0] = trk.L[1] + trk.D[0] * trk.prm2.dt;
+    sdr.trk.L[0] = sdr.trk.L[1] + sdr.trk.D[0] * sdr.trk.prm2.dt;
 
-    //(sdr.ctype == CType.L1CA) && writefln("(%s - %s)[Hz] * %s[s] == %s[cyc], sum : %s [cyc] -> %s [cyc]", trk.carrfreq, sdr.f_if, trk.prm2.dt, trk.D[0]* trk.prm2.dt, tmpL, trk.L[0]);
-    
-    trk.Isum+=fabs(trk.sumI[0]);
+    sdr.trk.Isum += abs(sdr.trk.sumI[0]);
+    sdr.trk.Qsum += abs(sdr.trk.sumQ[0]);
     if (snrflag){
-        shiftright(&trk.S[1],&trk.S[0],double.sizeof,Constant.Observation.OBSINTERPN);
-        shiftright(&trk.codeisum[1],&trk.codeisum[0],ulong.sizeof,Constant.Observation.OBSINTERPN);
-        
+        shiftRight(sdr.trk.S[]);
+        shiftRight(sdr.trk.codeisum[]);
+
         /* signal to noise ratio */
-        trk.S[0]=10*log(trk.Isum/100.0/100.0)+log(500.0);
-        trk.codeisum[0]=buffloc;
-        trk.Isum=0;
+        //sdr.trk.S[0]=10*log(sdr.trk.Isum/100.0/100.0)+log(500.0);
+        sdr.trk.S[0] = 10*log10(sdr.trk.Isum/sdr.trk.Qsum);
+        sdr.trk.codeisum[0] = buffloc;
+        sdr.trk.Isum = 0;
+        sdr.trk.Qsum = 0;
     }
 }
