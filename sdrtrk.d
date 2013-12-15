@@ -44,60 +44,60 @@ body{
 *          ulong cnt      I   counter of sdr channel thread
 * return : ulong              current buffer location
 *------------------------------------------------------------------------------*/
-size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, ref sdrini_t ini, ref sdrstat_t stat, size_t buffloc, size_t cnt)
+size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t state, size_t buffloc, size_t cnt)
 in{
-    assert(sdr.clen.isValidNum);
-    assert(sdr.trk.remcode.isValidNum);
-    assert(sdr.trk.codefreq.isValidNum);
-    assert(sdr.f_sf.isValidNum);
+    assert(state.sdr.clen.isValidNum);
+    assert(state.sdr.trk.remcode.isValidNum);
+    assert(state.sdr.trk.codefreq.isValidNum);
+    assert(state.sdr.f_sf.isValidNum);
 }
 body{
     traceln("called");
 
-    immutable lenOf1ms = sdr.crate * 0.001,
-              remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))(sdr.trk.remcode % lenOf1ms),
-              trkN = ((lenOf1ms - remcode1ms)/(sdr.trk.codefreq/sdr.f_sf)).to!int();
+    immutable lenOf1ms = state.sdr.crate * 0.001,
+              remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))(state.sdr.trk.remcode % lenOf1ms),
+              trkN = ((lenOf1ms - remcode1ms)/(state.sdr.trk.codefreq/state.sdr.f_sf)).to!int();
 
-    sdr.currnsamp = ((lenOf1ms - remcode1ms)/(sdr.trk.codefreq/sdr.f_sf) * (sdr.ctime / 0.001L)).to!int();
+    state.sdr.currnsamp = ((lenOf1ms - remcode1ms)/(state.sdr.trk.codefreq/state.sdr.f_sf) * (state.sdr.ctime / 0.001L)).to!int();
 
     traceln();
 
-    scope byte[] data = new byte[trkN * sdr.dtype];
-    ini.rcvgetbuff(stat, buffloc, trkN, sdr.ftype, sdr.dtype, data);
+    scope byte[] data = new byte[trkN * state.sdr.dtype];
+    state.rcvgetbuff(buffloc, trkN, state.sdr.ftype, state.sdr.dtype, data);
 
     traceln();
 
     {
         traceln();
-        immutable copySize = 1 + 2 * sdr.trk.ncorrp;
-        sdr.trk.oldI[0 .. copySize] = sdr.trk.I[0 .. copySize];
-        sdr.trk.oldQ[0 .. copySize] = sdr.trk.Q[0 .. copySize];
+        immutable copySize = 1 + 2 * state.sdr.trk.ncorrp;
+        state.sdr.trk.oldI[0 .. copySize] = state.sdr.trk.I[0 .. copySize];
+        state.sdr.trk.oldQ[0 .. copySize] = state.sdr.trk.Q[0 .. copySize];
     }
 
     traceln();
 
-    sdr.trk.oldremcode = sdr.trk.remcode;
-    sdr.trk.oldremcarr = sdr.trk.remcarr;
+    state.sdr.trk.oldremcode = state.sdr.trk.remcode;
+    state.sdr.trk.oldremcarr = state.sdr.trk.remcarr;
 
     traceln();
 
     /* correlation */
-    correlator(data, sdr.dtype, sdr.ti, trkN, sdr.trk.carrfreq, sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
-               sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code);
+    correlator(data, state.sdr.dtype, state.sdr.ti, trkN, state.sdr.trk.carrfreq, state.sdr.trk.oldremcarr, state.sdr.trk.codefreq, state.sdr.trk.oldremcode,
+               state.sdr.trk.prm1.corrp, state.sdr.trk.ncorrp, state.sdr.trk.Q, state.sdr.trk.I, &state.sdr.trk.remcode, &state.sdr.trk.remcarr, state.sdr.code);
     
     traceln();
 
     /* navigation data */
-    sdr.sdrnavigation(buffloc, cnt);
-    sdr.flagtrk = true;
+    state.sdr.sdrnavigation(buffloc, cnt);
+    state.sdr.flagtrk = true;
 
-    if(sdr.trk.S[].find(0).empty)
+    if(state.sdr.trk.S[].find(0).empty)
     {
-        immutable meanSNR = sdr.trk.S[].mean();
+        immutable meanSNR = state.sdr.trk.S[].mean();
         // 追尾できなくなった(信号が途絶えた場合)
-        if(meanSNR < Constant.get!"Tracking.snrThreshold"(sdr.ctype)){
+        if(meanSNR < Constant.get!"Tracking.snrThreshold"(state.sdr.ctype)){
             writefln("signal is interruptted. SNR: %s[dB]", meanSNR);
-            sdr.reInitialize();
+            state.sdr.reInitialize();
         }
     }
     

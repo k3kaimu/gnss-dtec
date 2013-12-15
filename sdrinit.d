@@ -9,6 +9,7 @@ import sdrmain;
 import sdrcode;
 import sdrcmn;
 import sdrplot;
+import sdrconfig;
 
 import core.sync.mutex;
 
@@ -26,172 +27,54 @@ import std.typecons;
 import std.typetuple;
 
 
-string[] readLines(File file)
-{
-    string[] lns;
-
-    foreach(line; file.byLine)
-        lns ~= line.strip().dup;
-
-    return lns;
-}
-
-
-string readIniValue(T : string)(string[] fileLines, string section, string key)
-{
-    immutable secStr = "[" ~ section ~ "]";
-
-    fileLines = fileLines.find!(a => a.startsWith(secStr))(); // sectionを探す
-    fileLines = fileLines.find!(a => a.startsWith(key))();    // keyを探す
-
-    auto str = fileLines.front.find!(a => a == '=')().drop(1);
-    return str.until!(a => a == ';')().array().to!string().strip();
-}
-
-
-string readIniValue(T : string)(string file, string section, string key)
-{
-    return readIniValue(file.readLines, section, key);
-}
-
-
-T readIniValue(T, Input)(Input fileOrLines, string section, string key)
-if(!is(T == string))
-{
-    string value = fileOrLines.readIniValue!string(section, key);
-
-    static if(isArray!T)
-    {
-        return ("[" ~ value ~ "]").to!(T)();
-    }
-    else if(isSomeString!T)
-    {
-        return value.to!T();
-    }
-    else
-    {
-        return value.to!T();
-    }
-}
-
-
-/* read ini file ----------------------------------------------------------------
-* read ini file and set value to sdrini struct
-* args   : sdrini_t *ini    I/0 sdrini struct
-* return : int                  0:okay -1:error
-* note : this function is only used in CLI application
-*------------------------------------------------------------------------------*/
-sdrini_t readIniFile(string file = __FILE__, size_t line = __LINE__)(string iniFile)
-{
-    sdrini_t ini;
-
-    traceln("called");
-
-    enforce(std.file.exists(iniFile), "error: gnss-sdrcli.ini doesn't exist");
-    auto iniLines = File(iniFile).readLines;
-
-    {
-        ini.fend = iniLines.readIniValue!Fend("RCV", "FEND");
-
-        if (ini.fend == Fend.FILE || ini.fend == Fend.FILESTEREO){
-            ini.file1 = iniLines.readIniValue!string("RCV", "FILE1");
-            if(ini.file1.length)
-                ini.useif1 = true;
-        }
-
-        if (ini.fend == Fend.FILE) {
-            ini.file2 = iniLines.readIniValue!string("RCV", "FILE2");
-            if(ini.file2.length)
-                ini.useif2 = true;
-        }
-    }
-    
-    {
-        ini.f_sf[0] = iniLines.readIniValue!double("RCV", "SF1");
-        ini.f_if[0] = iniLines.readIniValue!double("RCV", "IF1");
-        ini.dtype[0] = iniLines.readIniValue!DType("RCV", "DTYPE1");
-        ini.f_sf[1] = iniLines.readIniValue!double("RCV", "SF2");
-        ini.f_if[1] = iniLines.readIniValue!double("RCV", "IF2");
-        ini.dtype[1] = iniLines.readIniValue!DType("RCV", "DTYPE2");
-        ini.confini = iniLines.readIniValue!int("RCV", "CONFINI");
-    }
-    
-    ini.nch = iniLines.readIniValue!int("CHANNEL", "NCH").enforce("error: wrong inifile value NCH=%d".format(ini.nch));
-    
-    {
-        T[] getChannelSpec(T)(string key)
-        {
-            T[] tmp;
-            tmp = iniLines.readIniValue!(T[])("CHANNEL", key);
-            enforce(tmp.length >= ini.nch);
-            return tmp[0 .. ini.nch];
-        }
-
-        ini.sat   = getChannelSpec!int("SAT").dup;
-        ini.sys   = getChannelSpec!NavSystem("SYS").dup;
-        ini.ctype = getChannelSpec!CType("CTYPE").dup;
-        ini.ftype = getChannelSpec!FType("FTYPE").dup;
-    }
-    
-    {
-        ini.pltacq = iniLines.readIniValue!bool("PLOT", "ACQ");
-        ini.plttrk = iniLines.readIniValue!bool("PLOT", "TRK");
-
-        ini.outms = iniLines.readIniValue!int("OUTPUT", "OUTMS");
-        ini.rinex = iniLines.readIniValue!bool("OUTPUT", "RINEX");
-        ini.rtcm = iniLines.readIniValue!bool("OUTPUT", "RTCM");
-        ini.rinexpath = iniLines.readIniValue!string("OUTPUT", "RINEXPATH");
-        ini.rtcmport = iniLines.readIniValue!ushort("OUTPUT", "RTCMPORT");
-        ini.lexport = iniLines.readIniValue!ushort("OUTPUT", "LEXPORT");
-
-        /* spectrum setting */
-        ini.pltspec = iniLines.readIniValue!bool("SPECTRUM", "SPEC");
-    }
-    
-    foreach(i; 0 .. ini.nch){
-        if (ini.ctype[i] == CType.L1CA) {
-            ini.nchL1++;
-        }else if (ini.ctype[i] == CType.LEXS) {
-            ini.nchL6++;
-        }else if(ini.ctype[i] == CType.L2RCCM)
-            ini.nchL2++;
-        else
-            enforce(0, "ctype: %s is not supported.".format(ini.ctype[i]));
-    }
-
-
-    return ini;
-}
-
 
 /* check initial value ----------------------------------------------------------
 * checking value in sdrini struct
 * args   : sdrini_t *ini    I   sdrini struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-void checkInitValue(string file = __FILE__, size_t line = __LINE__)(in ref sdrini_t ini)
+void checkInitValue()()
 {
     traceln("called");
 
-    enforce(ini.f_sf[0] > 0 && ini.f_sf[0] < 100e6, "error: wrong freq. input sf1: %s".format(ini.f_sf[0]));
-    enforce(ini.f_if[0] >= 0 && ini.f_if[0] < 100e6, "error: wrong freq. input if1: %s".format(ini.f_if[0]));
+    static if(Setting.Receiver.fends.length > 0)
+        with(Setting.Receiver.fends[0]){
+            static assert(f_sf.isInInterval!"()"(0, 100e6), "error: wrong freq. input sf1: %s".format(f_sf));
+            static assert(f_if.isInInterval!"[)"(0, 100e6), "error: wrong freq. input if1: %s".format(f_if));
+        }
 
-    enforce(ini.f_sf[1] > 0 && ini.f_sf[1] < 100e6, "error: wrong freq. input sf1: %s".format(ini.f_sf[1]));
-    enforce(ini.f_if[1] >= 0 && ini.f_if[1] < 100e6, "error: wrong freq. input if1: %s".format(ini.f_if[1]));
+    static if(Setting.Receiver.fends.length > 1)
+        with(Setting.Receiver.fends[1]){
+            static assert(f_sf.isInInterval!"()"(0, 100e6), "error: wrong freq. input sf2: %s".format(f_sf));
+            static assert(f_if.isInInterval!"[)"(0, 100e6), "error: wrong freq. input if2: %s".format(f_if));
+        }
 
-    enforce(ini.rtcmport >= 0 && ini.rtcmport <= short.max, "error: wrong rtcm port rtcm:%s".format(ini.rtcmport));
-    enforce(ini.lexport >= 0 && ini.lexport <= short.max, "error: wrong rtcm port lex:%d".format(ini.lexport));
+    with(Setting.Output){
+        static if(rtcm)
+            static assert(rtcmPort.isInInterval!"[]"(0, short.max), "error: wrong rtcm port rtcm:%s".format(rtcmPort));
 
-    /* checking filepath */
-    if(ini.fend == Fend.FILE || ini.fend == Fend.FILESTEREO){
-        enforce(!ini.useif1 || exists(ini.file1), "error: file1 doesn't exist: %s".format(ini.file1));
-        enforce(!ini.useif2 || exists(ini.file2), "error: file1 or file2 are not selected".format(ini.file2));
-        enforce(ini.useif1 || ini.useif2, "error: file1 or file2 are not selected");
+        static if(lex)
+            static assert(lexPort.isInInterval!"[]"(0, short.max), "error: wrong rtcm port lex:%d".format(lexPort));
     }
 
-    /* checking rinex directory */
-    if (ini.rinex) 
-        enforce(exists(ini.rinexpath), "error: rinex output directory doesn't exist: %s".format(ini.rinexpath));
+    // checking filepath
+    with(Setting.Receiver){
+        static if(fendType == Fend.FILE || fendType == Fend.FILESTEREO)
+        {
+            static assert(fends.length.isInInterval!"(]"(0, 2), "error: file1 or file2 are not selected");
+            static assert(!fendType == Fend.FILESTEREO || fends.length == 1);
+
+            static if(fends.length > 0)
+                assert(exists(fends[0].path), "error: file1 doesn't exist: %s".format(ini.file1));
+
+            static if(fends.length > 1)
+                assert(exists(fends[1].path), "error: file2 doesn't exist: %s".format(ini.file2));
+        }
+    }
+
+    // checking rinex directory
+    static if(Setting.Output.rinex)
+        assert(exists(Setting.Output.rinexDirPath), "error: rinex output directory doesn't exist: %s".format(Setting.Output.rinexDirPath));
 }
 
 
@@ -202,12 +85,12 @@ void checkInitValue(string file = __FILE__, size_t line = __LINE__)(in ref sdrin
 *          sdrch_t  *sdr    I   sdr channel struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-void initpltstruct(string file = __FILE__, size_t line = __LINE__)(in ref sdrch_t sdr, in ref sdrini_t ini, ref sdrplt_t acq, ref sdrplt_t trk)
+void initpltstruct(string file = __FILE__, size_t line = __LINE__)(in ref sdrch_t sdr, ref sdrplt_t acq, ref sdrplt_t trk)
 {
     traceln("called");
 
     /* acquisition */
-    if (ini.pltacq) {
+    if (Config.Plot.acq) {
         setsdrplotprm(acq, PlotType.SurfZ, sdr.acq.nfreq.to!int, sdr.acq.nfft, sdr.nsampchip/3, Flag!"doAbs".no, 1, Constant.Plot.H, Constant.Plot.W, Constant.Plot.MH, Constant.Plot.MW, sdr.no);
         initsdrplot(acq);
         settitle(acq,sdr.satstr);
@@ -220,7 +103,7 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(in ref sdrch_
     }
 
     /* tracking */
-    if (ini.plttrk) {
+    if (Config.Plot.trk) {
         setsdrplotprm(trk, PlotType.XY, 1 + 2 * sdr.trk.ncorrp, 0, 0, Flag!"doAbs".yes, 0.001, Constant.Plot.H, Constant.Plot.W, Constant.Plot.MH, Constant.Plot.MW, sdr.no);
         initsdrplot(trk);
         settitle(trk, sdr.satstr);
@@ -230,7 +113,7 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(in ref sdrch_
         trk.otherSetting = "set size 0.8,0.8\n";
     }
 
-    if (ini.fend == Fend.FILE||ini.fend == Fend.FILESTEREO)
+    if (Config.Receiver.fendType == Fend.FILE || Config.Receiver.fendType == Fend.FILESTEREO)
         trk.pltms = Constant.Plot.MS_FILE;
     else
         trk.pltms = Constant.Plot.MS;
@@ -243,13 +126,13 @@ void initpltstruct(string file = __FILE__, size_t line = __LINE__)(in ref sdrch_
 *          sdrplt_t *trk    I/0 plot struct for tracking
 * return : none
 *------------------------------------------------------------------------------*/
-void quitpltstruct(in ref sdrini_t ini, ref sdrplt_t acq, ref sdrplt_t trk)
+void quitpltstruct(ref sdrplt_t acq, ref sdrplt_t trk)
 {
     traceln("called");
-    if (ini.pltacq)
+    if (Config.Plot.acq)
         quitsdrplot(acq);
     
-    if (ini.plttrk)
+    if (Config.Plot.trk)
         quitsdrplot(trk);
 }
 
@@ -448,21 +331,22 @@ void initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
 *          sdrch_t *sdr     I/0 sdr channel struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-void initsdrch(ref sdrch_t sdr, in ref sdrini_t ini, size_t chno,/*, size_t chno, NavSystem sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if*/)
+void initsdrch(ref sdrch_t sdr, size_t chno, CType ctype,/*, size_t chno, NavSystem sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if*/)
 {
     traceln("called");
     
-    sdr.no      = (chno+1).to!int();
-    sdr.sys     = ini.sys[chno];
-    sdr.prn     = ini.sat[chno];
-    sdr.sat     = satno(sdr.sys, sdr.prn);
-    sdr.ctype   = ini.ctype[chno];
-    sdr.dtype   = ini.dtype[chno];
-    sdr.ftype   = ini.ftype[chno];
-    sdr.f_sf    = ini.f_sf[sdr.ftype-1];
-    sdr.f_if    = ini.f_if[sdr.ftype-1];
-    sdr.ti      = sdr.f_sf ^^ -1;
+    alias chs = Config.channels;
 
+    sdr.no      = (chno+1).to!int();
+    sdr.sys     = chs[chno].sys;
+    sdr.prn     = chs[chno].prn;
+    sdr.sat     = satno(sdr.sys, sdr.prn);
+    sdr.ctype   = ctype;
+    sdr.dtype   = chs[chno].fends[ctype].dtype;
+    sdr.ftype   = chs[chno].fends[ctype];
+    sdr.f_sf    = chs[chno].fends[ctype].f_sf;
+    sdr.f_if    = chs[chno].fends[ctype].f_if;
+    sdr.ti      = sdr.f_sf ^^ -1;
 
     /* code generation */
     sdr.code = (){
@@ -493,7 +377,6 @@ void initsdrch(ref sdrch_t sdr, in ref sdrini_t ini, size_t chno,/*, size_t chno
     }();
 
 
-
     /* doppler search frequency */
     sdr.acq.freq = {
         auto dst = new double[sdr.acq.nfreq];
@@ -503,7 +386,7 @@ void initsdrch(ref sdrch_t sdr, in ref sdrini_t ini, size_t chno,/*, size_t chno
                 dst[i] = sdr.f_if + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
         else{
             immutable carrierRatio = 60.0 / 77.0;   // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
-            immutable inferenced = (.sdr.l1ca_doppler - ini.f_if[0]) * carrierRatio + sdr.f_if;
+            immutable inferenced = (.sdr.l1ca_doppler - Config.channels[chno].fends[CType.L1CA].f_if) * carrierRatio + sdr.f_if;
             writefln("l1ca_doppler=%s, inferenced=%s,", .sdr.l1ca_doppler, inferenced);
 
             foreach(i; 0 .. sdr.acq.nfreq)

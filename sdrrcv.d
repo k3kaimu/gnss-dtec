@@ -7,6 +7,7 @@ import sdr;
 import util.trace;
 import sdrmain;
 import stereo;
+import sdrconfig;
 
 import std.stdio,
        std.c.string;
@@ -19,77 +20,49 @@ import std.functional;
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvinit(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini, ref sdrstat_t stat)
+void rcvinit(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
 {
-    traceln("called");
-    stat.buff = stat.buff1 = stat.buff2 = null;
+    alias fendType = Config.Receiver.fendType;
 
-    final switch (ini.fend) {
-      /* NSL stereo */
-    version(EnableNSLStereo)
+    traceln("called");
+
+    static if(fendType == Fend.STEREO)
     {
-      case Fend.STEREO:
-        stereo_init();                                          // stereo initialization
-        if(ini.confini) enforce(stereo_initconf() <! 0);        // stereo initialize configurations
-        enforce(STEREO_GrabInit() <! 0);                        // signal glab initialization
+        stereo_init();                                                      // stereo initialization
+        if(Config.Receiver.confini) enforce(stereo_initconf() <! 0);       // stereo initialize configurations
+        enforce(STEREO_GrabInit() <! 0);                                    // signal glab initialization
+        stat.fendbuffsize = STEREO_DATABUFF_SIZE;                           // frontend buffer size
+        stat.buff = new byte[stat.fendbuffsize * MEMBUFLEN];
+    }
+    else static if(fendType == Fend.FILESTEREO)
+    {
+        /* IF file open */
+        stat.file[0] = File(Config.Receiver.fends[0].path, "rb");
 
         ini.fendbuffsize = STEREO_DATABUFF_SIZE;                // frontend buffer size
-        ini.buffsize = to!int(STEREO_DATABUFF_SIZE*MEMBUFLEN);  // total buffer size
-
-        stat.buff = new byte[ini.buffsize];
-        break;
+        stat.buff[0] = new byte[stat.fendbuffsize * MEMBUFLEN];
     }
-
-      /* STEREO Binary File */
-      case Fend.FILESTEREO:
-        /* IF file open */
-        ini.fp1 = File(ini.file1, "rb");
-
-        ini.fendbuffsize = STEREO_DATABUFF_SIZE;                    // frontend buffer size
-        ini.buffsize = to!int(ini.fendbuffsize * MEMBUFLEN);    // total buffer size 
-
-        stat.buff = new byte[ini.buffsize];
-        break;
-
-    version(none)
+    else static if(fendType == Fend.GN3SV2 || fendType == Fend.GN3SV3)
     {
-      /* SiGe GN3S v2/v3 */
-      case Fend.GN3SV2, Fend.GN3SV3:
-        if (gn3s_init() < 0) return -1; /* GN3S initialization */
-
-        ini.fendbuffsize = GN3S_BUFFSIZE;                           // frontend buffer size
-        ini.buffsize = GN3S_BUFFSIZE * MEMBUFLEN;                   // total buffer size
-
-        stat.buff = new  byte[ini.buffsize];
-        break;
+        enforce(gn3s_init() < 0);                                    /* GN3S initialization */
+        stat.fendbuffsize = GN3S_BUFFSIZE;                           // frontend buffer size
+        stat.buff = new  byte[stat.fendbuffsize * MEMBUFLEN];
     }
+    else static if(fendType == Fend.FILE)
+    {
+        stat.fendbuffsize = FILE_BUFFSIZE;
 
-      /* File */
-      case Fend.FILE:
         /* IF file open (FILE1) */
-        ini.fp1 = File(ini.file1,"rb");
-
-        if(ini.file2.length)
-            ini.fp2 = File(ini.file2, "rb");
-
-        /* frontend buffer size */
-        ini.fendbuffsize = FILE_BUFFSIZE;
-        /* total buffer size */
-        ini.buffsize = FILE_BUFFSIZE*MEMBUFLEN;
-
-        /* memory allocation */
-        if (ini.fp1.isOpen)
-            stat.buff1 = new byte[ini.dtype[0] * ini.buffsize];
-
-        if (ini.fp2.isOpen)
-            stat.buff2 = new byte[ini.dtype[1] * ini.buffsize];
-        break;
+        foreach(i, fend; Config.Receiver.fends){
+            stat.file[i] = File(fend.path, "rb");
+            stat.buff[i] = new byte[stat.fendbuffsize * MEMBUFLEN * fend.dtype];
+        }
     }
+    else
+        static assert(0);
 
     /* FFT initialization */
     version(UseFFTW) fftwf_init_threads();
-
-    return 0;
 }
 
 
@@ -98,42 +71,31 @@ int rcvinit(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini, re
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvquit(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini)
+void rcvquit(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
 {
+    alias fendType = Config.Receiver.fendType;
+
     traceln("called");
-    final switch (ini.fend) {
-      /* NSL stereo */
-    version(EnableNSLStereo)
+
+    static if(fendType == Fend.STEREO)
     {
-      case Fend.STEREO:
          stereo_quit();
-        break;
     }
-
-      /* STEREO Binary File */
-      case Fend.FILESTEREO: 
-        if (ini.fp1.isOpen) ini.fp1.close();
-        break;
-
-    version(none)
+    else static if(fendType == Fend.FILESTEREO)
     {
-      /* SiGe GN3S v2/v3 */
-      case Fend.GN3SV2, Fend.GN3SV3:
+        stat.file[0].close();
+    }
+    else static if(fendType == Fend.GN3SV2 || fendType == Fend.GN3SV3)
+    {
         gn3s_quit();
-        break;
     }
-
-      /* File */
-      case Fend.FILE:
-        traceln();
-        if(ini.fp1.isOpen) ini.fp1.close();
-        if(ini.fp2.isOpen) ini.fp2.close();
-        traceln();
-        break;
+    else static if(fendType == Fend.FILE)
+    {
+        foreach(i, fend; Config.Receiver.fends)
+            stat.file[i].close();
     }
-    traceln();
-
-    return 0;
+    else
+        static assert(0);
 }
 
 
@@ -142,39 +104,27 @@ int rcvquit(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini)
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(in ref sdrini_t ini)
+void rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
 {
+    alias fendType = Config.Receiver.fendType;
+
     traceln("called");
-    final switch (ini.fend){
-      /* NSL stereo */
-    version(EnableNSLStereo)
+
+    static if(fendType == Fend.STEREO)
     {
-      case Fend.STEREO: 
-        if(STEREO_GrabStart() < 0){
-            writeln("error: STEREO_GrabStart\n");
-            return -1;
-        }
-        break;
+        enforce(STEREO_GrabStart() <! 0, "error: STEREO_GrabStart\n");
     }
-
-      /* STEREO Binary File */
-      case Fend.FILESTEREO: 
-        break;
-
-    version(none)
+    else static if(fendType == Fend.FILESTEREO)
     {
-      /* SiGe GN3S v2/v3 */
-      case Fend.GN3SV2:
-      case Fend.GN3SV3:
-        break;
     }
-
-      /* File */
-      case Fend.FILE: 
-        break;
+    else static if(fendType == Fend.GN3SV2 || fendType == Fend.GN3SV3)
+    {
     }
-
-    return 0;
+    else static if(fendType == Fend.FILE)
+    {
+    }
+    else
+        static assert(0);
 }
 
 
@@ -183,46 +133,31 @@ int rcvgrabstart(string file = __FILE__, size_t line = __LINE__)(in ref sdrini_t
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini, ref sdrstat_t stat)
+void rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
 {
+    alias fendType = Config.Receiver.fendType;
+
     traceln("called");
-    final switch (ini.fend){
-      /* NSL stereo */
-    version(EnableNSLStereo)
-    {
-      case Fend.STEREO:
-        if(STEREO_RefillDataBuffer() < 0){
-            writeln("error: STEREO Buffer overrun...");
-            return -1;
-        }
 
+    static if(fendType == Fend.STEREO)
+    {
+        enforce(STEREO_RefillDataBuffer() <! 0, "error: STEREO Buffer overrun...");
         stereo_pushtomembuf(); /* copy to membuffer */
-        break;
     }
-
-      /* STEREO Binary File */
-      case Fend.FILESTEREO:
-        stat.filestereo_pushtomembuf(ini);  //copy to membuffer 
-        break;
-
-    version(none)
+    else static if(fendType == Fend.FILESTEREO)
     {
-      /* SiGe GN3S v2/v3 */
-      case Fend.GN3SV2:
-      case Fend.GN3SV3:
-        if (gn3s_pushtomembuf()<0) {
-            writeln("error: GN3S Buffer overrun...");
-            return -1;
-        }
-        break;
+        stat.filestereo_pushtomembuf();  //copy to membuffer 
     }
-
-      /* File */
-      case Fend.FILE:
-        stat.file_pushtomembuf(ini); /* copy to membuffer */
-        break;
+    else static if(fendType == Fend.GN3SV2 || fendType == Fend.GN3SV3)
+    {
+        enforce(gn3s_pushtomembuf() <! 0, "error: GN3S Buffer overrun...");
     }
-    return 0;
+    else static if(fendType == Fend.FILE)
+    {
+        stat.file_pushtomembuf(); /* copy to membuffer */
+    }
+    else
+        static assert(0);
 }
 
 
@@ -231,36 +166,22 @@ int rcvgrabdata(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini
 * args   : sdrini_t *ini    I   sdr initialization struct
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(ref sdrini_t ini)
+int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
 {
+    alias fendType = Config.Receiver.fendType;
+
     traceln("called");
-    final switch (ini.fend) {
-    version(EnableNSLStereo)
-    {
-      case Fend.STEREO:
-        enforce(0);
-        return -1;
-    }
 
-      /* STEREO Binary File */
-      case Fend.FILESTEREO: 
+    static if(fendType == Fend.FILESTEREO)
+    {
         filestereo_pushtomembuf(); /* copy to membuffer */
-        break;
-
-    version(none)
+    }
+    static if(fendType == Fend.FILE)
     {
-      case Fend.GN3SV2:
-      case Fend.GN3SV3:
-        enforce(0);
-        return -1;
+        stat.file_pushtomembuf(); /* copy to membuffer */
     }
-      
-      /* File */
-      case Fend.FILE:
-        file_pushtomembuf(); /* copy to membuffer */
-        break;
-    }
-    return 0;
+    else
+        static assert(0);
 }
 
 
@@ -274,60 +195,47 @@ int rcvgrabdata_file(string file = __FILE__, size_t line = __LINE__)(ref sdrini_
 *          char   *expbuff  O   extracted data buffer
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-int rcvgetbuff(ref sdrini_t ini, ref sdrstat_t stat, size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
+void rcvgetbuff(ref sdrstat_t stat, size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
 {
     traceln("called");
 
     bool needNewBuffer()
     {
-        return ini.fendbuffsize * stat.buffloccnt < n + buffloc;
+        return stat.fendbuffsize * stat.buffloccnt < n + buffloc;
     }
 
 
     if(expbuf !is null){
         while(needNewBuffer())
-            enforce(ini.rcvgrabdata(stat) >= 0);
+            stat.rcvgrabdata();
 
-        final switch (ini.fend) {
-          /* NSL stereo */
-        version(EnableNSLStereo)
+        alias fendType = Config.Receiver.fendType;
+
+        traceln("called");
+
+        static if(fendType == Fend.STEREO)
         {
-          case Fend.STEREO: 
-            stereo_getbuff(buffloc,n,dtype,expbuf);
-            break;
+            stereo_getbuff(buffloc, n, dtype, expbuf);
         }
-
-          /* STEREO Binary File */
-          case Fend.FILESTEREO: 
+        else static if(fendType == Fend.FILESTEREO)
+        {
             stat.stereo_getbuff(buffloc, n.to!int(), dtype, expbuf);
-            break;
-
-        version(none)
+        }
+        else static if(fendType == Fend.GN3SV2)
         {
-          /* SiGe GN3S v2 */
-          case Fend.GN3SV2:
             gn3s_getbuff_v2(buffloc, n, dtype, expbuf);
-            break;
-          /* SiGe GN3S v3 */
-          case Fend.GN3SV3:
+        }
+        else static if(fendType == Fend.GN3SV3)
+        {
             gn3s_getbuff_v3(buffloc, n, dtype, expbuf);
-            break;
         }
-
-          /* File */
-          case Fend.FILE:
+        else static if(fendType == Fend.FILE)
+        {
             stat.file_getbuff(buffloc, n, ftype, dtype, expbuf);
-            break;
         }
+        else
+            static assert(0);
     }
-
-    debug(PrintBuffloc){
-        static size_t lastBuffloc = 0;
-        writefln("buffloc: %s, diff: %s", buffloc, cast(ptrdiff_t)buffloc - cast(ptrdiff_t)lastBuffloc);
-        lastBuffloc = buffloc;
-    }
-
-    return 0;
 }
 
 
@@ -336,17 +244,15 @@ int rcvgetbuff(ref sdrini_t ini, ref sdrstat_t stat, size_t buffloc, size_t n, F
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
-void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat, ref sdrini_t ini) 
+static if(Config.Receiver.fendType == Fend.FILE)
+void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
 {
     traceln("called");
-    size_t nread1,nread2;
 
-    if(ini.fp1.isOpen) nread1=fread(&stat.buff1[(stat.buffloccnt%MEMBUFLEN)*ini.dtype[0]*FILE_BUFFSIZE],1,ini.dtype[0]*FILE_BUFFSIZE,ini.fp1.getFP);
-    if(ini.fp2.isOpen) nread2=fread(&stat.buff2[(stat.buffloccnt%MEMBUFLEN)*ini.dtype[1]*FILE_BUFFSIZE],1,ini.dtype[1]*FILE_BUFFSIZE,ini.fp2.getFP);
-
-    if ((ini.fp1.isOpen && nread1 < ini.dtype[0] * FILE_BUFFSIZE)||(ini.fp2.isOpen && nread2 < ini.dtype[1] * FILE_BUFFSIZE)) {
-        stat.stopflag = true;
-        writeln("end of file!");
+    foreach(i, fend; Config.Receiver.fends){
+        auto nread = fread(&stat.buff[i][(stat.buffloccnt % MEMBUFLEN) * fend.dtype * FILE_BUFFSIZE], 1, fend.dtype * FILE_BUFFSIZE, stat.file[i].getFP);
+        if(nread < fend.dtype * MEMBUFLEN)
+            stat.stopflag = true;
     }
 
     stat.buffloccnt++;
@@ -362,27 +268,33 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)(ref sdrst
 *          char   *expbuff  O   extracted data buffer
 * return : none
 *------------------------------------------------------------------------------*/
+static if(Config.Receiver.fendType == Fend.FILE)
 void file_getbuff(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat, size_t buffloc, size_t n, FType ftype, DType dtype, byte[] expbuf)
-{
+in{
+    static if(Config.Receiver.fends.length == 1)
+        assert(ftype == FType.Type1);
+}
+body{
     traceln("called");
     size_t membuffloc = (buffloc * dtype) % (MEMBUFLEN * dtype * FILE_BUFFSIZE);
     
     n *= dtype;
     immutable ptrdiff_t nout = membuffloc + n - MEMBUFLEN * dtype * FILE_BUFFSIZE;
-    
+
     if(ftype == FType.Type1){
         if(nout > 0){
-            expbuf[0 .. n-nout] = stat.buff1[membuffloc .. membuffloc + n-nout];
-            expbuf[n-nout .. n] = stat.buff1[0 .. nout];
+            expbuf[0 .. n-nout] = stat.buff[0][membuffloc .. membuffloc + n-nout];
+            expbuf[n-nout .. n] = stat.buff[0][0 .. nout];
         }else
-            expbuf[0 .. n] = stat.buff1[membuffloc  .. membuffloc + n];
+            expbuf[0 .. n] = stat.buff[0][membuffloc  .. membuffloc + n];
     }
-    
-    if(ftype==FType.Type2){
-        if (nout>0){
-            expbuf[0 .. n-nout] = stat.buff2[membuffloc .. membuffloc + n-nout];
-            expbuf[n-nout .. n] = stat.buff2[0 .. nout];
+
+    static if(Config.Receiver.fends.length > 1)
+    if(ftype == FType.Type2){
+        if (nout > 0){
+            expbuf[0 .. n-nout] = stat.buff[1][membuffloc .. membuffloc + n-nout];
+            expbuf[n-nout .. n] = stat.buff[1][0 .. nout];
         }else
-            expbuf[0 .. n] = stat.buff2[membuffloc  .. membuffloc + n];
+            expbuf[0 .. n] = stat.buff[1][membuffloc  .. membuffloc + n];
     }
 }

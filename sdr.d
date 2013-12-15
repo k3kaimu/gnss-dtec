@@ -32,7 +32,7 @@ import sdracq,
        stereo,
        sdrspectrum,
        sdrtrk,
-       sdrsetting,
+       sdrconfig,
        util.range,
        util.trace,
        util.serialize,
@@ -100,28 +100,18 @@ immutable CSCALE = 1.0 /16.0;
 
 
 /* front end setting */
-version(EnableNSLStereo)
+enum Fend
 {
-    enum Fend
-    {
-        STEREO = 0,
-        //GN3SV2 = -1,
-        //GN3SV3 = 1,
-        FILESTEREO,
-        FILE
-    }
+    STEREO = 0,
+    GN3SV2 = -1,
+    GN3SV3 = 1,
+    FILESTEREO,
+    FILE
 }
-else
-{
-    enum Fend
-    {
-        //STEREO = 0,
-        //GN3SV2 = -1,
-        //GN3SV3 = 1,
-        FILESTEREO,
-        FILE
-    }
-}
+
+static assert(Config.Receiver.fendType != Fend.STEREO);
+static assert(Config.Receiver.fendType != Fend.GN3SV2);
+static assert(Config.Receiver.fendType != Fend.GN3SV3);
 
 
 immutable size_t MEMBUFLEN = 5000;
@@ -130,6 +120,24 @@ enum FType
 {
     Type1 = 1,
     Type2
+}
+
+
+DType dtype(FType ftype) @property
+{
+    return Config.Receiver.fends[ftype-1].dtype;
+}
+
+
+real f_sf(FType ftype) @property
+{
+    return Config.Receiver.fends[ftype-1].f_sf;
+}
+
+
+real f_if(FType ftype) @property
+{
+    return Config.Receiver.fends[ftype-1].f_if;
 }
 
 
@@ -656,62 +664,6 @@ alias size_t SOCKET;
 immutable SOMAXCONN = 5;
 
 
-struct sdrini_t
-{
-    Fend fend;
-    double[2] f_sf = 0;
-    double[2] f_if = 0;
-    DType[2] dtype;
-    File fp1;
-    File fp2;
-    string file1;
-    string file2;
-    bool useif1;
-    bool useif2;
-    int confini;
-    uint nch;
-    uint nchL1;
-    uint nchL2;
-    uint nchL5;
-    uint nchL6;
-    immutable(int)[] sat;
-    immutable(NavSystem)[] sys;
-    immutable(CType)[] ctype;
-    immutable(FType)[] ftype;
-    bool pltacq;
-    bool plttrk;
-    int outms;
-    bool rinex;
-    bool rtcm;
-    string rinexpath;
-    ushort rtcmport;
-    ushort lexport;
-    bool pltspec;
-    int buffsize;
-    int fendbuffsize;
-    double speed = 1;               // バッファを読み取る速度を抑制する
-
-
-    /// コンストラクタ
-    this(string filename)
-    {
-        this = readIniFile(filename);
-        checkInitValue(this);
-    }
-}
-
-
-struct sdrstat_t
-{
-    bool stopflag;
-    bool specflag;
-    byte[] buff;
-    byte[] buff1;
-    byte[] buff2;
-    size_t buffloccnt;
-}
-
-
 struct sdrobs_t
 {
     int sat;
@@ -932,10 +884,9 @@ struct sdrch_t
     bool flagnavdec;
 
 
-    this(in ref sdrini_t ini, size_t i)
+    this(size_t i, CType ctype)
     {
-        this.initsdrch(ini, i);
-        //this.initsdrch(i+1, ini.sys[i], ini.sat[i], ini.ctype[i], ini.dtype[ini.ftype[i]-1], ini.ftype[i], ini.f_sf[ini.ftype[i]-1], ini.f_if[ini.ftype[i]-1]);
+        this.initsdrch(i, ctype);
     }
 
 
@@ -1008,6 +959,45 @@ struct sdrspec_t
     sdrplt_t histI;
     sdrplt_t histQ;
     sdrplt_t pspec;
+}
+
+
+struct sdrstat_t
+{
+    bool stopflag;
+    bool specflag;
+
+  static if(Config.Receiver.fendType == Fend.FILE || Config.Receiver.fendType == Fend.FILESTEREO)
+  {
+    File[Config.Receiver.fends.length] file;
+    byte[][Config.Receiver.fends.length] buff;
+  }
+  else
+  {
+    byte[] buff;
+  }
+
+    size_t buffloccnt;
+    size_t fendbuffsize;
+
+
+    sdrch_t sdr;
+
+    this(sdrch_t sdr){
+        this.sdr = sdr;
+        this.rcvinit();
+    }
+
+
+    ~this(){
+        this.rcvquit();
+    }
+
+
+    bool update()
+    {
+        return !stopflag;
+    }
 }
 
 

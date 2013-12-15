@@ -314,12 +314,12 @@ void stereo_pushtomembuf(ref sdrstat_t stat)
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
-void filestereo_pushtomembuf(ref sdrstat_t stat, ref sdrini_t ini)
+void filestereo_pushtomembuf(ref sdrstat_t stat)
 {
     size_t nread;
 
     //WaitForSingleObject(hbuffmtx,INFINITE);
-    nread = fread(&stat.buff[(stat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE], 1, STEREO_DATABUFF_SIZE, ini.fp1.getFP);
+    nread = fread(&stat.buff[0][(stat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE], 1, STEREO_DATABUFF_SIZE, stat.file[0].getFP);
     //ReleaseMutex(hbuffmtx);
 
     if (nread < STEREO_DATABUFF_SIZE){
