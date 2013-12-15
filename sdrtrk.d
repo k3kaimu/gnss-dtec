@@ -96,7 +96,7 @@ body{
         immutable meanSNR = sdr.trk.S[].mean();
         // 追尾できなくなった(信号が途絶えた場合)
         if(meanSNR < Constant.get!"Tracking.snrThreshold"(sdr.ctype)){
-            writeln("signal is interruptted. SNR: %s[dB]", meanSNR);
+            writefln("signal is interruptted. SNR: %s[dB]", meanSNR);
             sdr.reInitialize();
         }
     }
@@ -390,7 +390,7 @@ void setobsdata(ref sdrch_t sdr, ulong buffloc, ulong cnt, int snrflag)
 
         /* signal to noise ratio */
         //sdr.trk.S[0]=10*log(sdr.trk.Isum/100.0/100.0)+log(500.0);
-        sdr.trk.S[0] = 10*log10(sdr.trk.Isum/sdr.trk.Qsum);
+        sdr.trk.S[0] = 10 * log10(sdr.trk.Isum / sdr.trk.Qsum);
         sdr.trk.codeisum[0] = buffloc;
         sdr.trk.Isum = 0;
         sdr.trk.Qsum = 0;
