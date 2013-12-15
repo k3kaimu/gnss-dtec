@@ -1,24 +1,3 @@
-//##& set waitTime 400000            // 10s
-//##$ dmd -O -release -inline -m64 -version=UseFFTW -unittest -version=MAIN_IS_SDRMAIN_MAIN sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric util/server
-
-//　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
-/*
-Change Log:
-2013/07/18          単一スレッド化
-2013/07/16 v2.0beta バッファ読み込みを、sdrスレッドが操るように修正
-
-version指定一覧
-+ TRACE                 trace, traceln, traceflnが有効になります。
-+ TRACE_CSV             csvOutputが有効になります。
-+ MAIN_IS_SDRMAIN_MAIN  プログラムのmain関数は、sdrmain.dのmain関数になります。
-+ NavigationDecode      航法メッセージを解読しようとします(L1CAのみ)
-+ L2Develop             L2CM用のSDR開発のためのバージョン
-+ UseFFTW               FFTの計算にFFTWを使用します(デフォルトだと、std.numeric.Fftを使用します)
-
-debug指定一覧
-+ PrintBuffloc          すでにどれだけデータを読み込んだかを表示します。
-*/
-
 module sdr;
 /*------------------------------------------------------------------------------
 * sdr.h : constants, types and function prototypes
@@ -53,11 +32,16 @@ import sdracq,
        stereo,
        sdrspectrum,
        sdrtrk,
+       sdrsetting,
        util.range,
        util.trace,
        util.serialize,
        util.numeric,
        util.server;
+
+
+/* global variables -----------------------------------------------------------*/
+deprecated double l1ca_doppler;
 
 
 // msgpack-d
@@ -705,6 +689,7 @@ struct sdrini_t
     bool pltspec;
     int buffsize;
     int fendbuffsize;
+    double speed = 1;               // バッファを読み取る速度を抑制する
 
 
     /// コンストラクタ

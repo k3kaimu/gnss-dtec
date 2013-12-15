@@ -503,8 +503,8 @@ void initsdrch(ref sdrch_t sdr, in ref sdrini_t ini, size_t chno,/*, size_t chno
                 dst[i] = sdr.f_if + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
         else{
             immutable carrierRatio = 60.0 / 77.0;   // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
-            immutable inferenced = (sdrmain.l1ca_doppler - ini.f_if[0]) * carrierRatio + sdr.f_if;
-            writefln("l1ca_doppler=%s, inferenced=%s,", sdrmain.l1ca_doppler, inferenced);
+            immutable inferenced = (.sdr.l1ca_doppler - ini.f_if[0]) * carrierRatio + sdr.f_if;
+            writefln("l1ca_doppler=%s, inferenced=%s,", .sdr.l1ca_doppler, inferenced);
 
             foreach(i; 0 .. sdr.acq.nfreq)
                 dst[i] = inferenced + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;

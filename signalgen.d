@@ -1,4 +1,5 @@
-//##$ dmd -unittest -O -inline -release -m64 -version=SignalGenerate signalgen sdr sdrmain fec rtklib sdracq sdrcmn sdrcode sdrinit sdrnav sdrout sdrplot sdrrcv sdrspectrum sdrtrk stereo fftw util/range util/trace util/serialize util/numeric util/server
+//##& set waitTime 10000
+//##$ dmd -run runSDR -O -inline -release -m64 -version=UseFFT -unittest test_setting signalgen
 
 /**
 GPS/GNSS信号を生成します。
@@ -18,8 +19,6 @@ import std.parallelism : taskPool;
 
 
 immutable Nbits = 3;
-
-version(SignalGenerate):
 
 import sdr : sdrini_t, CType, DType, Constant;
 import sdrcode : gencode;

@@ -1,3 +1,19 @@
+//##& set waitTime 10000
+//##$ dmd -run runSDR -O -inline -release -m64 -version=UseFFT -unittest test_setting sdrmain -ofsdrmain.exe
+
+//　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
+/*
+version指定一覧
++ TRACE                 trace, traceln, traceflnが有効になります。
++ TRACE_CSV             csvOutputが有効になります。
++ NavigationDecode      航法メッセージを解読しようとします(L1CAのみ)
++ L2Develop             L2CM用のSDR開発のためのバージョン
++ UseFFTW               FFTの計算にFFTWを使用します(デフォルトだと、std.numeric.Fftを使用します)
+
+debug指定一覧
++ PrintBuffloc          すでにどれだけデータを読み込んだかを表示します。
+*/
+
 /*------------------------------------------------------------------------------
 * sdrmain.c : SDR main functions
 *
@@ -23,10 +39,6 @@ import std.math;
 import std.exception;
 import std.conv;
 import std.range;
-
-/* global variables -----------------------------------------------------------*/
-/* sdr structs */
-deprecated double l1ca_doppler;
 
 
 /**
@@ -55,7 +67,6 @@ deprecated double l1ca_doppler;
     ・Result\(L1 + 解析開始時刻の文字列表現).csv
         解析が完了した生データのサンプル数と, その時点での搬送波位相[cycle]
 */
-version(MAIN_IS_SDRMAIN_MAIN)
 void main(string[] args)
 {
     import std.datetime : StopWatch;
