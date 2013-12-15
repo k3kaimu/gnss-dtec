@@ -45,15 +45,14 @@ body{
 * return : ulong              current buffer location
 *------------------------------------------------------------------------------*/
 size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, ref sdrini_t ini, ref sdrstat_t stat, size_t buffloc, size_t cnt)
-{
+in{
+    assert(sdr.clen.isValidNum);
+    assert(sdr.trk.remcode.isValidNum);
+    assert(sdr.trk.codefreq.isValidNum);
+    assert(sdr.f_sf.isValidNum);
+}
+body{
     traceln("called");
-
-    // [sample/code]
-    // tracking-loopによって更新されるnsamp
-    enforce(sdr.clen.isValidNum);
-    enforce(sdr.trk.remcode.isValidNum);
-    enforce(sdr.trk.codefreq.isValidNum);
-    enforce(sdr.f_sf.isValidNum);
 
     immutable lenOf1ms = sdr.crate * 0.001,
               remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))(sdr.trk.remcode % lenOf1ms),
