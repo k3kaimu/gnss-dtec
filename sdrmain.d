@@ -127,73 +127,66 @@ void sdrthread(State)(size_t chno, CType ctype)
     size_t buffloc, cnt, loopcnt;
     int cntsw, swsync, swreset;
 
-    immutable resultLFileName = `Result\` ~ state.sdr.ctype.to!string() ~ "_" ~ state.sdr.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
+    immutable resultLFileName = `Result\` ~ state.ctype.to!string() ~ "_" ~ state.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
     auto resultLFile = File(resultLFileName, "w");
     resultLFile.writeln("buffloc, remcode[chip], carrierPhase[cycle], pll_carrErr, pll_carNco, pll_carrfreq, dll_codeErr, dll_codeNco, dll_codefreq, SNR, IP, QP, IE, QE, IL, QL,");
 
     /* plot setting */
-    state.sdr.initpltstruct(pltacq, plttrk);
+    state.initpltstruct(pltacq, plttrk);
 
-    writefln("**** %s sdr thread start! ****", state.sdr.satstr);
+    writefln("**** %s sdr thread start! ****", state.satstr);
 
     /* check the exit flag */
     while (state.update()) {
         /* acquisition */
-        if (!state.sdr.flagacq) {
-
-            cnt = 0;
-            loopcnt = 0;
-            cntsw = 0;
-            swsync = 0;
-            swreset = 0;
-            
+        if (!state.flagacq) {
             /* fft correlation */
             auto acqPower = state.sdracquisition(buffloc);
 
             /* plot aquisition result */
-            if (state.sdr.flagacq && Config.Plot.acq) {
+            if (state.flagacq && Config.Plot.acq){
                 {
                     auto p = pltacq.z;
                     foreach(e; acqPower)
                         p.put(e);
                 }
-                plot(&pltacq, "acq_" ~ state.sdr.satstr ~ "_" ~ state.sdr.ctype.to!string()); 
+                plot(&pltacq, "acq_" ~ state.satstr ~ "_" ~ state.ctype.to!string()); 
             }
         }
         /* tracking */
-        if (state.sdr.flagacq) {
+        if (state.flagacq) {
             immutable bufflocnow = state.sdrtracking(buffloc, cnt);
 
-            if (state.sdr.flagtrk) {
-                if (state.sdr.nav.swnavsync) cntsw = 0;
-                if ((cntsw%state.sdr.trk.loopms)==0) swsync = true;
+            if (state.flagtrk) {
+                if (state.nav.swnavsync) cntsw = 0;
+                if ((cntsw%state.trk.loopms)==0) swsync = true;
                 else swsync = false;
 
-                if (((cntsw-1)%state.sdr.trk.loopms) == 0) swreset = true;
+                if (((cntsw-1)%state.trk.loopms) == 0) swreset = true;
                 else swreset = false;
                 
                 /* correlation output accumulation */
-                state.sdr.trk.cumsumcorr(state.sdr.flagnavsync, swreset);
+                state.trk.cumsumcorr(state.flagnavsync, swreset);
                 
-                if (!state.sdr.flagnavsync) {
-                    state.sdr.pll(state.sdr.trk.prm1); /* PLL */
-                    state.sdr.dll(state.sdr.trk.prm1); /* DLL */
+                if (!state.flagnavsync) {
+                    state.pll!"1"(); /* PLL */
+                    state.dll!"1"(); /* DLL */
                 }
                 else /*if (swsync) */{
-                    state.sdr.pll(state.sdr.trk.prm2); /* PLL */
-                    state.sdr.dll(state.sdr.trk.prm2); /* DLL */
+                    state.pll!"2"(); /* PLL */
+                    state.dll!"2"(); /* DLL */
 
                     /* calculate observation data */
-                    if (loopcnt%(Constant.Observation.SNSMOOTHMS/state.sdr.trk.loopms)==0)
-                        state.sdr.setobsdata(buffloc, cnt, 1); /* SN smoothing */
+                    if (loopcnt%(Constant.Observation.SNSMOOTHMS/state.trk.loopms)==0)
+                        state.setobsdata(buffloc, cnt, 1); /* SN smoothing */
                     else
-                        state.sdr.setobsdata(buffloc, cnt, 0);
+                        state.setobsdata(buffloc, cnt, 0);
 
                     /* plot correator output */
-                    if (loopcnt%(cast(int)(plttrk.pltms/state.sdr.trk.loopms)) == 0 && Config.Plot.trk && loopcnt>200) {
-                        plttrk.x[] = state.sdr.trk.prm2.corrx[];
-                        plttrk.y[0 .. state.sdr.trk.sumI.length] = state.sdr.trk.sumI[];
-                        plotthread(&plttrk, "trk_" ~ state.sdr.satstr ~ "_");
+                    if (loopcnt%(cast(int)(plttrk.pltms/state.trk.loopms)) == 0 && Config.Plot.trk && loopcnt>200) {
+                        plttrk.x[] = state.trk.prm2.corrx[];
+                        plttrk.y[0 .. state.trk.sumI.length] = state.trk.sumI[];
+                        plotthread(&plttrk, "trk_" ~ state.satstr ~ "_");
                     }
                 }
 
@@ -201,40 +194,40 @@ void sdrthread(State)(size_t chno, CType ctype)
 
                 if(loopcnt > 1000 && isNaN(l1ca_doppler))
                 {
-                    assert(state.sdr.ctype == CType.L1CA);
-                    l1ca_doppler = state.sdr.trk.carrfreq;
+                    assert(state.ctype == CType.L1CA);
+                    l1ca_doppler = state.trk.carrfreq;
                     writeln("doppler find");
                     
                     version(L2Develop) return;
                 }
 
-                (state.sdr.nav.swnavsync) && tracefln("state.sdr.nav.swnavsync is ON on %s", buffloc);
+                (state.nav.swnavsync) && tracefln("state.nav.swnavsync is ON on %s", buffloc);
                 (cntsw) && tracefln("cntsw is ON on %s", buffloc);
                 (swreset) && tracefln("swreset is ON on %s", buffloc);
-                (state.sdr.flagnavsync) && tracefln("state.sdr.flagnavsync is ON on %s", buffloc);
+                (state.flagnavsync) && tracefln("state.flagnavsync is ON on %s", buffloc);
                 (swsync) && tracefln("swsync is ON on %s", buffloc);
 
                 if(swsync)
                     resultLFile.writefln("%s, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f, %.9f,",
-                                          buffloc, state.sdr.trk.remcode, state.sdr.trk.L[0], state.sdr.trk.carrErr, state.sdr.trk.carrNco, state.sdr.trk.carrfreq,
-                                          state.sdr.trk.codeErr, state.sdr.trk.codeNco, state.sdr.trk.codefreq,
-                                          state.sdr.trk.S[0],
-                                          state.sdr.trk.sumI[0], state.sdr.trk.sumQ[0],
-                                          state.sdr.trk.sumI[state.sdr.trk.prm1.ne], state.sdr.trk.sumQ[state.sdr.trk.prm1.ne],
-                                          state.sdr.trk.sumI[state.sdr.trk.prm1.nl], state.sdr.trk.sumQ[state.sdr.trk.prm1.nl]);
+                                          buffloc, state.trk.remcode, state.trk.L[0], state.trk.carrErr, state.trk.carrNco, state.trk.carrfreq,
+                                          state.trk.codeErr, state.trk.codeNco, state.trk.codefreq,
+                                          state.trk.S[0],
+                                          state.trk.sumI[0], state.trk.sumQ[0],
+                                          state.trk.sumI[state.trk.prm1.ne], state.trk.sumQ[state.trk.prm1.ne],
+                                          state.trk.sumI[state.trk.prm1.nl], state.trk.sumQ[state.trk.prm1.nl]);
 
-                if (/*state.sdr.no==1&&*/cnt%(1000*10)==0) writefln("process %s sec...", cast(int)cnt/(1000));
+                if (/*state.no==1&&*/cnt%(1000*10)==0) writefln("process %s sec...", cast(int)cnt/(1000));
                 cnt++;
                 cntsw++;
             }
             buffloc = bufflocnow;
         }
-        state.sdr.trk.buffloc = buffloc;
+        state.trk.buffloc = buffloc;
     }
     /* plot termination */
     quitpltstruct(pltacq, plttrk);
 
-    writefln("SDR channel %s thread finished!", state.sdr.satstr);
+    writefln("SDR channel %s thread finished!", state.satstr);
 }
 
 

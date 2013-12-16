@@ -983,6 +983,8 @@ struct sdrstat_t
 
     sdrch_t sdr;
 
+    alias sdr this;
+
     this(sdrch_t sdr){
         this.sdr = sdr;
         this.rcvinit();

@@ -46,58 +46,58 @@ body{
 *------------------------------------------------------------------------------*/
 size_t sdrtracking(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t state, size_t buffloc, size_t cnt)
 in{
-    assert(state.sdr.clen.isValidNum);
-    assert(state.sdr.trk.remcode.isValidNum);
-    assert(state.sdr.trk.codefreq.isValidNum);
-    assert(state.sdr.f_sf.isValidNum);
+    assert(state.clen.isValidNum);
+    assert(state.trk.remcode.isValidNum);
+    assert(state.trk.codefreq.isValidNum);
+    assert(state.f_sf.isValidNum);
 }
 body{
     traceln("called");
 
-    immutable lenOf1ms = state.sdr.crate * 0.001,
-              remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))(state.sdr.trk.remcode % lenOf1ms),
-              trkN = ((lenOf1ms - remcode1ms)/(state.sdr.trk.codefreq/state.sdr.f_sf)).to!int();
+    immutable lenOf1ms = state.crate * 0.001,
+              remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))(state.trk.remcode % lenOf1ms),
+              trkN = ((lenOf1ms - remcode1ms)/(state.trk.codefreq/state.f_sf)).to!int();
 
-    state.sdr.currnsamp = ((lenOf1ms - remcode1ms)/(state.sdr.trk.codefreq/state.sdr.f_sf) * (state.sdr.ctime / 0.001L)).to!int();
+    state.currnsamp = ((lenOf1ms - remcode1ms)/(state.trk.codefreq/state.f_sf) * (state.ctime / 0.001L)).to!int();
 
     traceln();
 
-    scope byte[] data = new byte[trkN * state.sdr.dtype];
-    state.rcvgetbuff(buffloc, trkN, state.sdr.ftype, state.sdr.dtype, data);
+    scope byte[] data = new byte[trkN * state.dtype];
+    state.rcvgetbuff(buffloc, trkN, state.ftype, state.dtype, data);
 
     traceln();
 
     {
         traceln();
-        immutable copySize = 1 + 2 * state.sdr.trk.ncorrp;
-        state.sdr.trk.oldI[0 .. copySize] = state.sdr.trk.I[0 .. copySize];
-        state.sdr.trk.oldQ[0 .. copySize] = state.sdr.trk.Q[0 .. copySize];
+        immutable copySize = 1 + 2 * state.trk.ncorrp;
+        state.trk.oldI[0 .. copySize] = state.trk.I[0 .. copySize];
+        state.trk.oldQ[0 .. copySize] = state.trk.Q[0 .. copySize];
     }
 
     traceln();
 
-    state.sdr.trk.oldremcode = state.sdr.trk.remcode;
-    state.sdr.trk.oldremcarr = state.sdr.trk.remcarr;
+    state.trk.oldremcode = state.trk.remcode;
+    state.trk.oldremcarr = state.trk.remcarr;
 
     traceln();
 
     /* correlation */
-    correlator(data, state.sdr.dtype, state.sdr.ti, trkN, state.sdr.trk.carrfreq, state.sdr.trk.oldremcarr, state.sdr.trk.codefreq, state.sdr.trk.oldremcode,
-               state.sdr.trk.prm1.corrp, state.sdr.trk.ncorrp, state.sdr.trk.Q, state.sdr.trk.I, &state.sdr.trk.remcode, &state.sdr.trk.remcarr, state.sdr.code);
+    correlator(data, state.dtype, state.ti, trkN, state.trk.carrfreq, state.trk.oldremcarr, state.trk.codefreq, state.trk.oldremcode,
+               state.trk.prm1.corrp, state.trk.ncorrp, state.trk.Q, state.trk.I, &state.trk.remcode, &state.trk.remcarr, state.code);
     
     traceln();
 
     /* navigation data */
-    state.sdr.sdrnavigation(buffloc, cnt);
-    state.sdr.flagtrk = true;
+    state.sdrnavigation(buffloc, cnt);
+    state.flagtrk = true;
 
-    if(state.sdr.trk.S[].find(0).empty)
+    if(state.trk.S[].find(0).empty)
     {
-        immutable meanSNR = state.sdr.trk.S[].mean();
+        immutable meanSNR = state.trk.S[].mean();
         // 追尾できなくなった(信号が途絶えた場合)
-        if(meanSNR < Constant.get!"Tracking.snrThreshold"(state.sdr.ctype)){
+        if(meanSNR < Constant.get!"Tracking.snrThreshold"(state.ctype)){
             writefln("signal is interruptted. SNR: %s[dB]", meanSNR);
-            state.sdr.reInitialize();
+            state.reInitialize();
         }
     }
     
@@ -252,7 +252,8 @@ void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(ref sdrtrk_t trk
 *          sdrtrkprm_t *prm I   sdr tracking prameter struct
 * return : none
 *------------------------------------------------------------------------------*/
-void pll(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, in ref sdrtrkprm_t prm)
+void pll(string s)(ref sdrch_t sdr)
+if(s == "1" || s == "2")
 in{
     assert(sdr.trk.sumI[0].isValidNum);
     assert(sdr.trk.sumQ[0].isValidNum);
@@ -266,6 +267,8 @@ out{
 }
 body{
     traceln("called");
+
+    immutable prm = mixin("sdr.trk.prm" ~ s);
 
     immutable IP = sdr.trk.sumI[0],
               QP = sdr.trk.sumQ[0],
@@ -291,12 +294,15 @@ body{
 *          sdrtrkprm_t *prm I   sdr tracking prameter struct
 * return : none
 *------------------------------------------------------------------------------*/
-void dll(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, in ref sdrtrkprm_t prm)
+void dll(string s)(ref sdrch_t sdr)
+if(s == "1" || s == "2")
 in{
     assert(sdr.trk.sumI[sdr.trk.prm1.ne].isValidNum);
     assert(sdr.trk.sumI[sdr.trk.prm1.nl].isValidNum);
     assert(sdr.trk.sumQ[sdr.trk.prm1.ne].isValidNum);
     assert(sdr.trk.sumQ[sdr.trk.prm1.nl].isValidNum);
+
+    immutable prm = mixin("sdr.trk.prm" ~ s);
 
     assert(prm.dllaw.isValidNum);
     assert(sdr.trk.codeErr.isValidNum);
@@ -318,6 +324,8 @@ body{
     static real cpxAbsSq(real i, real q) pure nothrow @safe { return i^^2 + q^^2; }
 
     traceln("called");
+
+    immutable prm = mixin("sdr.trk.prm" ~ s);
 
     immutable ne = sdr.trk.prm1.ne,
               nl = sdr.trk.prm1.nl,
