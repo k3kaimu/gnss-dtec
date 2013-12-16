@@ -31,7 +31,7 @@ double[][] sdracquisition(string file = __FILE__, size_t line = __LINE__)(ref sd
 {
     traceln("called");
 
-    auto power = new double[][](state.acq.nfreq, state.acq.nfft);
+    auto power = uninitializedArray!(double[][])(state.acq.nfreq, state.acq.nfft);
 
     foreach(e; power)
         e[] = 0;
