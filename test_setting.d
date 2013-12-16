@@ -63,5 +63,5 @@ struct Config
 
 
     enum spectrum = false;
-    enum realSpeed = 0.95;
+    enum readSpeed = 0.95;
 }
