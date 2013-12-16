@@ -74,6 +74,8 @@ void main(string[] args)
     StopWatch sw;
     sw.start();
 
+    checkInitValue();
+
     startsdr();
 
     sw.stop();

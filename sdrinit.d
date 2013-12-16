@@ -37,19 +37,19 @@ void checkInitValue()()
 {
     traceln("called");
 
-    static if(Setting.Receiver.fends.length > 0)
-        with(Setting.Receiver.fends[0]){
-            static assert(f_sf.isInInterval!"()"(0, 100e6), "error: wrong freq. input sf1: %s".format(f_sf));
-            static assert(f_if.isInInterval!"[)"(0, 100e6), "error: wrong freq. input if1: %s".format(f_if));
+    static if(Config.Receiver.fends.length > 0)
+        with(Config.Receiver.fends[0]){
+            static assert(Config.Receiver.fends[0].f_sf.isInInterval!"()"(0, 100e6), "error: wrong freq. input sf1: %s".format(f_sf));
+            static assert(Config.Receiver.fends[0].f_if.isInInterval!"[)"(0, 100e6), "error: wrong freq. input if1: %s".format(f_if));
         }
 
-    static if(Setting.Receiver.fends.length > 1)
-        with(Setting.Receiver.fends[1]){
-            static assert(f_sf.isInInterval!"()"(0, 100e6), "error: wrong freq. input sf2: %s".format(f_sf));
-            static assert(f_if.isInInterval!"[)"(0, 100e6), "error: wrong freq. input if2: %s".format(f_if));
+    static if(Config.Receiver.fends.length > 1)
+        with(Config.Receiver.fends[1]){
+            static assert(Config.Receiver.fends[1].f_sf.isInInterval!"()"(0, 100e6), "error: wrong freq. input sf2: %s".format(f_sf));
+            static assert(Config.Receiver.fends[0].f_if.isInInterval!"[)"(0, 100e6), "error: wrong freq. input if2: %s".format(f_if));
         }
 
-    with(Setting.Output){
+    with(Config.Output){
         static if(rtcm)
             static assert(rtcmPort.isInInterval!"[]"(0, short.max), "error: wrong rtcm port rtcm:%s".format(rtcmPort));
 
@@ -58,23 +58,23 @@ void checkInitValue()()
     }
 
     // checking filepath
-    with(Setting.Receiver){
+    with(Config.Receiver){
         static if(fendType == Fend.FILE || fendType == Fend.FILESTEREO)
         {
             static assert(fends.length.isInInterval!"(]"(0, 2), "error: file1 or file2 are not selected");
-            static assert(!fendType == Fend.FILESTEREO || fends.length == 1);
+            static assert(fendType != Fend.FILESTEREO || fends.length == 1);
 
             static if(fends.length > 0)
-                assert(exists(fends[0].path), "error: file1 doesn't exist: %s".format(ini.file1));
+                assert(exists(fends[0].path), "error: file1 doesn't exist: %s".format(fends[0].path));
 
             static if(fends.length > 1)
-                assert(exists(fends[1].path), "error: file2 doesn't exist: %s".format(ini.file2));
+                assert(exists(fends[1].path), "error: file2 doesn't exist: %s".format(fends[1].path));
         }
     }
 
     // checking rinex directory
-    static if(Setting.Output.rinex)
-        assert(exists(Setting.Output.rinexDirPath), "error: rinex output directory doesn't exist: %s".format(Setting.Output.rinexDirPath));
+    static if(Config.Output.rinex)
+        assert(exists(Config.Output.rinexDirPath), "error: rinex output directory doesn't exist: %s".format(Setting.Output.rinexDirPath));
 }
 
 

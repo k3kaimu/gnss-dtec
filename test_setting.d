@@ -12,11 +12,22 @@ struct Config
     {
         enum fendType = Fend.FILE;
 
-        alias FendSetting = Tuple!(string, "path", real, "f_sf", real, "f_if", DType, "dtype");
+        real f_sf;
+        real f_if;
+        DType dtype;
 
-        enum fends = [
-            FendSetting(`D:\gpsData\l1rx.dat`, 26e6, 6.5e6, DType.I),
-            FendSetting(`D:\gpsData\lbrx.dat`, 26e6, 0, DType.IQ),
+      static if(fendType == Fend.STEREO)
+      {
+        bool doConfig;
+      }
+      else static if(fendType == Fend.FILE || fendType == Fend.FILESTEREO)
+      {
+        string path;
+      }
+
+        enum Receiver[] fends  = [
+            {path: `D:\gpsData\l1rx.dat`, f_sf: 26e6, f_if: 6.5e6, dtype: DType.I},
+            {path: `D:\gpsData\lbrx.dat`, f_sf: 26e6, f_if:0,      dtype: DType.IQ},
         ];
     }
 
