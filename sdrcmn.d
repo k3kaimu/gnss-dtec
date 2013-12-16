@@ -53,6 +53,10 @@ static if(!isVersion!"UseFFTW")
 }
 
 
+version(UseFFTW)
+alias fftwLock = mutexLock!"fftw";
+
+
 
 /**
 nextが1である場合に、next2Pow(num)はnumより大きく、かつ、最小の2の累乗数を返します。
@@ -184,10 +188,10 @@ void cpxfft(cpx_t[] cpx)
   }else{
     immutable n = cast(int)cpx.length;
 
-    fftwf_plan_with_nthreads(NFFTTHREAD);  //fft execute in multi threads 
-    fftwf_plan p = fftwf_plan_dft_1d(n, cpx.ptr, cpx.ptr, FFTW_FORWARD, FFTW_ESTIMATE);
-    fftwf_execute(p); /* fft */
-    fftwf_destroy_plan(p);
+    fftwLock!fftwf_plan_with_nthreads(NFFTTHREAD);  //fft execute in multi threads 
+    fftwf_plan p = fftwLock!fftwf_plan_dft_1d(n, cpx.ptr, cpx.ptr, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftwLock!fftwf_execute(p); /* fft */
+    fftwLock!fftwf_destroy_plan(p);
   }
 }
 
@@ -216,10 +220,10 @@ void cpxifft(cpx_t[] cpx)
   }else{
     immutable n = cast(int)cpx.length;
 
-    fftwf_plan_with_nthreads(NFFTTHREAD); /* ifft execute in multi threads */
-    fftwf_plan p = fftwf_plan_dft_1d(n, cpx.ptr, cpx.ptr, FFTW_BACKWARD, FFTW_ESTIMATE);
-    fftwf_execute(p); /* ifft */
-    fftwf_destroy_plan(p);
+    fftwLock!fftwf_plan_with_nthreads(NFFTTHREAD); /* ifft execute in multi threads */
+    fftwf_plan p = fftwLock!fftwf_plan_dft_1d(n, cpx.ptr, cpx.ptr, FFTW_BACKWARD, FFTW_ESTIMATE);
+    fftwLock!fftwf_execute(p); /* ifft */
+    fftwLock!fftwf_destroy_plan(p);
   }
 }
 
