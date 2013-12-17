@@ -36,9 +36,9 @@ void rcvinit(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
     else static if(fendType == Fend.FILESTEREO)
     {
         /* IF file open */
-        stat.file[0] = File(Config.Receiver.fends[0].path, "rb");
+        stat.file[0] = File(Config.Receiver.path, "rb");
 
-        ini.fendbuffsize = STEREO_DATABUFF_SIZE;                // frontend buffer size
+        stat.fendbuffsize = STEREO_DATABUFF_SIZE;                // frontend buffer size
         stat.buff[0] = new byte[stat.fendbuffsize * MEMBUFLEN];
     }
     else static if(fendType == Fend.GN3SV2 || fendType == Fend.GN3SV3)

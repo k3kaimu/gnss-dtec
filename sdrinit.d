@@ -61,13 +61,19 @@ void checkInitValue()()
         static if(fendType == Fend.FILE || fendType == Fend.FILESTEREO)
         {
             static assert(fends.length.isInInterval!"(]"(0, 2), "error: file1 or file2 are not selected");
-            static assert(fendType != Fend.FILESTEREO || fends.length == 1);
 
+          static if(fendType == Fend.FILE)
+          {
             static if(fends.length > 0)
                 assert(exists(fends[0].path), "error: file1 doesn't exist: %s".format(fends[0].path));
 
             static if(fends.length > 1)
                 assert(exists(fends[1].path), "error: file2 doesn't exist: %s".format(fends[1].path));
+          }
+          else static if(fendType == Fend.FILESTEREO)
+          {
+            assert(exists(path), "error: file doesn't exist: %s".format(path));
+          }
         }
     }
 

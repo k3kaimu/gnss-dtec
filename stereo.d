@@ -281,10 +281,10 @@ void stereo_getbuff(in ref sdrstat_t stat, size_t buffloc, size_t n, DType dtype
 
     //WaitForSingleObject(hbuffmtx,INFINITE);
     if (nout>0) {
-        stereo_exp(cast(const(ubyte)*)stat.buff.ptr + membuffloc, n-nout, dtype, expbuf);
-        stereo_exp(cast(const(ubyte)*)stat.buff.ptr + 0, nout, dtype, expbuf[dtype*(n-nout) .. $]);
+        stereo_exp(cast(const(ubyte)*)stat.buff[0].ptr + membuffloc, n-nout, dtype, expbuf);
+        stereo_exp(cast(const(ubyte)*)stat.buff[0].ptr + 0, nout, dtype, expbuf[dtype*(n-nout) .. $]);
     } else {
-        stereo_exp(cast(const(ubyte)*)stat.buff.ptr + membuffloc, n, dtype, expbuf);
+        stereo_exp(cast(const(ubyte)*)stat.buff[0].ptr + membuffloc, n, dtype, expbuf);
     }
     //ReleaseMutex(hbuffmtx);
 }
