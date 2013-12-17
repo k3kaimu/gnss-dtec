@@ -8,7 +8,6 @@ import core.bitop;
 
 import sdr;
 import sdrrcv;
-import sdrmain;
 import sdrcmn;
 import sdrnav;
 

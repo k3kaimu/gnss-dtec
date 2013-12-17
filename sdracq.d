@@ -8,7 +8,6 @@ import sdrcmn;
 import util.trace;
 import util.range;
 import sdrrcv;
-import sdrmain;
 
 import std.math;
 import std.stdio;
