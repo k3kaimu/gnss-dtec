@@ -5,7 +5,6 @@
 *------------------------------------------------------------------------------*/
 import sdr;
 import util.trace;
-import sdrmain;
 import sdrcode;
 import sdrcmn;
 import sdrplot;
