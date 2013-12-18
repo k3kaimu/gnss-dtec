@@ -67,7 +67,7 @@ static if(Config.useFFTW)
     pragma(lib, "libfftw3f-3.lib");
 }
 
-version(EnableNSLStereo)
+static if(Config.Receiver.fendType == Fend.STEREO)
 {
     pragma(lib, "rcv/stereo/lib/libnslstereo.a");
     pragma(lib, "lib/usb/libusb.lib");

@@ -6,6 +6,7 @@
 *-----------------------------------------------------------------------------*/
 
 import sdr;
+import sdrconfig;
 
 import std.stdio;
 
@@ -17,7 +18,7 @@ import core.thread;
 
 /* constants -----------------------------------------------------------------*/
 /* sterei confugration file path */
-version(EnableNSLStereo) deprecated
+static if(Config.Receiver.fendType == Fend.STEREO) deprecated
 immutable DEF_FW_FILENAME       = "../../src/rcv/stereo/conf/stereo_fx2fw.ihx",
           DEF_FPGA_FILENAME     = "../../src/rcv/stereo/conf/stereo_fpga0125_intClk.bin",
           DEF_SYNTH_FILENAME    = "../../src/rcv/stereo/conf/stereo_clksynth.cfg",
@@ -27,7 +28,7 @@ immutable DEF_FW_FILENAME       = "../../src/rcv/stereo/conf/stereo_fx2fw.ihx",
 //immutable MAX_FILENAME_LEN = 256;
 
 /* global variables -----------------------------------------------------------*/
-version(EnableNSLStereo) deprecated
+static if(Config.Receiver.fendType == Fend.STEREO) deprecated
 string fx2lpFileName,
        fpgaFileName,
        max2769FileName,
@@ -76,7 +77,7 @@ struct adcConf_t {
 * args   : none
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-version(EnableNSLStereo)
+static if(Config.Receiver.fendType == Fend.STEREO)
 void stereo_init()
 {
     /* initiarize option strings */
@@ -93,7 +94,7 @@ void stereo_init()
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
-version(EnableNSLStereo)
+static if(Config.Receiver.fendType == Fend.STEREO)
 void stereo_quit() 
 {
     STEREO_GrabStop(); /* stop and clean the grabber */
@@ -105,7 +106,7 @@ void stereo_quit()
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
-version(EnableNSLStereo)
+static if(Config.Receiver.fendType == Fend.STEREO)
 void stereo_initoptions() 
 {
     fx2lpFileName = DEF_FW_FILENAME;
@@ -120,7 +121,7 @@ void stereo_initoptions()
 * args   : none
 * return : int                  status 0:okay -1:failure
 *------------------------------------------------------------------------------*/
-version(EnableNSLStereo)
+static if(Config.Receiver.fendType == Fend.STEREO)
 int stereo_initconf() 
 {
     writeln("STEREO configuration start...");
@@ -295,7 +296,7 @@ void stereo_getbuff(in ref sdrstat_t stat, size_t buffloc, size_t n, DType dtype
 * args   : none
 * return : none
 *------------------------------------------------------------------------------*/
-version(EnableNSLStereo)
+static if(Config.Receiver.fendType == Fend.STEREO)
 void stereo_pushtomembuf(ref sdrstat_t stat) 
 {
     //WaitForSingleObject(hbuffmtx,INFINITE);
@@ -331,13 +332,12 @@ void filestereo_pushtomembuf(ref sdrstat_t stat)
     //ReleaseMutex(hreadmtx);
 }
 
-version(EnableNSLStereo){}
-else
+static if(Config.Receiver.fendType != Fend.STEREO)
 {
     enum STEREO_DATABUFF_SIZE = FILE_BUFFSIZE;
 }
 
-version(EnableNSLStereo):
+static if(Config.Receiver.fendType == Fend.STEREO):
 
 /* STEREO library functions --------------------------------------------------*/
 extern(C):
