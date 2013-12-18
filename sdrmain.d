@@ -1,5 +1,5 @@
 //##& set waitTime 10000
-//##$ dmd -run runSDR -O -inline -release -m64 -version=UseFFT -unittest test_setting sdrmain -ofsdrmain.exe
+//##$ dmd -run runSDR -O -inline -release -unittest sdrconfig sdrmain -ofsdrmain.exe
 
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
 /*

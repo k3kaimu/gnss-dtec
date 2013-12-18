@@ -59,9 +59,6 @@ void rcvinit(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
     }
     else
         static assert(0);
-
-    /* FFT initialization */
-    version(UseFFTW) fftwf_init_threads();
 }
 
 

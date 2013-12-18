@@ -60,7 +60,7 @@ version(NavigationDecode)
 }
 
 /* FFT */
-version(UseFFTW)
+static if(Config.useFFTW)
 {
     static assert(isVersion!"Win64");   // 64bitビルドの場合だけFFTWが使える
     public import fftw;                 // これの仕様はlinkerの問題.   optlinkはクソ

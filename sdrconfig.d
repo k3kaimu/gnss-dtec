@@ -9,6 +9,7 @@ import sdr;
 
 struct Config
 {
+    enum useFFTW = false;
     struct Receiver
     {
         enum fendType = Fend.FILESTEREO;

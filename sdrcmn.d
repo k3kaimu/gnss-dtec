@@ -6,6 +6,8 @@
 *------------------------------------------------------------------------------*/
 import sdr;
 import util.trace;
+import util.locker;
+import sdrconfig;
 
 import core.memory;
 import core.simd;
@@ -42,19 +44,22 @@ shared static this()
 
     cost = c.dup;
     sint = s.dup;
+
+        /* FFT initialization */
+    static if(Config.useFFTW)
+        fftwf_init_threads();
 }
 
 
-static if(!isVersion!"UseFFTW")
+static if(!Config.useFFTW)
 {
     private Fft fftObj;
-    private size_t fftObjSize;
     private cpx_t[] buffer;
 }
-
-
-version(UseFFTW)
-alias fftwLock = mutexLock!"fftw";
+else
+{
+    alias fftwLock = mutexLock!"fftw";
+}
 
 
 
@@ -174,10 +179,11 @@ void cpxfft(cpx_t[] cpx)
 {
     traceln("called");
 
-  static if(!isVersion!"UseFFTW"){
+  static if(!Config.useFFTW)
+  {
     immutable size = cpx.length;
 
-    if(size != fftObjSize)
+    if(fftObj is null || fftObj.size != size)
         fftObj = new Fft(size);
 
     if(sdrcmn.buffer.length < size)
@@ -185,7 +191,9 @@ void cpxfft(cpx_t[] cpx)
 
     sdrcmn.fftObj.fft(cpx, buffer[0 .. size]);
     cpx[] =  buffer[];
-  }else{
+  }
+  else
+  {
     immutable n = cast(int)cpx.length;
 
     fftwLock!fftwf_plan_with_nthreads(NFFTTHREAD);  //fft execute in multi threads 
@@ -206,10 +214,11 @@ void cpxifft(cpx_t[] cpx)
 {
     traceln("called");
 
-  static if(!isVersion!"UseFFTW"){
+  static if(!Config.useFFTW)
+  {
     immutable size = cpx.length;
 
-    if(size != fftObjSize)
+    if(fftObj is null || fftObj.size != size)
         fftObj = new Fft(size);
 
     if(sdrcmn.buffer.length < size)
@@ -217,7 +226,9 @@ void cpxifft(cpx_t[] cpx)
 
     sdrcmn.fftObj.inverseFft(cpx, buffer[0 .. size]);
     cpx[] =  buffer[];
-  }else{
+  }
+  else
+  {
     immutable n = cast(int)cpx.length;
 
     fftwLock!fftwf_plan_with_nthreads(NFFTTHREAD); /* ifft execute in multi threads */

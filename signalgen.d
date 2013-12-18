@@ -1,5 +1,5 @@
 //##& set waitTime 10000
-//##$ dmd -run runSDR -O -inline -release -m64 -version=UseFFT -unittest test_setting signalgen
+//##$ dmd -run runSDR -O -inline -release -m64 -unittest sdrconfig signalgen
 
 /**
 GPS/GNSS信号を生成します。
