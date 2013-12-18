@@ -999,6 +999,31 @@ struct sdrstat_t
     {
         return !stopflag;
     }
+
+
+    T[] copyTo(T)(T[] buf)
+    if(is(T == byte) || is(T == ubyte))
+    {
+        byte[] _buf = cast(byte[])buf;
+        rcvgetbuff(this, this.pos, _buf.length / this.dtype, this.ftype, this.dtype, _buf);
+        return buf;
+    }
+
+
+    void consume(size_t n)
+    {
+        _totalReadBufSize += n;
+    }
+
+
+    size_t pos() @property
+    {
+        return _totalReadBufSize;
+    }
+
+
+  private:
+    size_t _totalReadBufSize;
 }
 
 

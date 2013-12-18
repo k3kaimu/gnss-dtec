@@ -1,5 +1,5 @@
 //##& set waitTime 10000
-//##$ dmd -run runSDR -O -inline -release -m64 -unittest sdrconfig sdrmain -ofsdrmain.exe
+//##$ dmd -run runSDR -m64 -O -release -inline -unittest sdrconfig sdrmain -ofsdrmain.exe
 
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
 /*
@@ -121,7 +121,7 @@ void sdrthread(State)(size_t chno, CType ctype)
     auto state = State(sdrch_t(chno, ctype));
 
     sdrplt_t pltacq, plttrk;
-    size_t buffloc, cnt, loopcnt;
+    size_t cnt, loopcnt;
     int cntsw, swsync, swreset;
 
     immutable resultLFileName = `Result\` ~ state.ctype.to!string() ~ "_" ~ state.satstr ~ "_" ~ Clock.currTime.toISOString() ~ ".csv";
@@ -150,7 +150,7 @@ void sdrthread(State)(size_t chno, CType ctype)
         if (!state.flagacq) {
             /* fft correlation */
             auto sw = StopWatch(AutoStart.yes);
-            auto acqPower = state.sdracquisition(buffloc);
+            auto acqPower = state.sdracquisition();
             sw.stop();
             writefln("Acquisition end: %s[usecs]", sw.peek.usecs);
 
@@ -164,9 +164,12 @@ void sdrthread(State)(size_t chno, CType ctype)
                 plot(&pltacq, "acq_" ~ state.satstr ~ "_" ~ state.ctype.to!string()); 
             }
         }
+
         /* tracking */
         if (state.flagacq) {
-            immutable bufflocnow = state.sdrtracking(buffloc, cnt);
+            immutable buffloc = state.pos;
+            state.sdrtracking(cnt);
+            immutable bufflocnow = state.pos;
 
             if (state.flagtrk) {
                 if (state.nav.swnavsync) cntsw = 0;
@@ -231,9 +234,8 @@ void sdrthread(State)(size_t chno, CType ctype)
                 cnt++;
                 cntsw++;
             }
-            buffloc = bufflocnow;
         }
-        state.trk.buffloc = buffloc;
+        state.trk.buffloc = state.pos;
     }
     /* plot termination */
     quitpltstruct(pltacq, plttrk);

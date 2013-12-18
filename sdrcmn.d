@@ -615,7 +615,6 @@ SIMD-Extensionによって使用可能な型のリストです
 */
 alias SIMDTypeList = TypeTuple!(SSETypeList, AVXTypeList);
 
-
 enum isSIMDType(T) = staticIndexOf!(T, SIMDTypeList) != -1;
 enum isSIMDArray(T) = isArray!T && isSIMDType!(ForeachType!T);
 

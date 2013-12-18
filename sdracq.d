@@ -26,78 +26,62 @@ import std.typecons;
 *          double *power    O   normalized correlation power vector (2D array)
 * return : uint64_t             current buffer location
 *------------------------------------------------------------------------------*/
-double[][] sdracquisition(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t state, ref size_t buffloc)
+double[][] sdracquisition(Sdr)(ref Sdr sdr)
 {
     traceln("called");
 
-    auto power = uninitializedArray!(double[][])(state.acq.nfreq, state.acq.nfft);
+    auto power = uninitializedArray!(double[][])(sdr.acq.nfreq, sdr.acq.nfft);
 
     foreach(e; power)
         e[] = 0;
 
     // FFTを使った、正確なコード位相と、曖昧な搬送波周波数(ドップラー周波数)の探索
-    {
-        /* memory allocation */
-        scope data = new byte[state.acq.nfft * state.dtype];
+    /* acquisition integration */
+    foreach(i; 0 .. sdr.acq.intg){
+        /* get new 1ms data */
+        scope data = sdr.copyTo(uninitializedArray!(byte[])(sdr.acq.nfft * sdr.dtype));
+        sdr.consume((cast(size_t)((cast(real)sdr.acq.nfft)/sdr.nsamp + 1)) * sdr.nsamp);
 
-        /* acquisition integration */
-        debug(AcqDebug){
-            writefln("%s", state.acq.freq[0 .. state.acq.nfreq]);
-            writefln("state.ftype: %s", state.ftype);
-            writefln("state.dtype: %s", state.dtype);
-            writefln("state.acq.nfft: %s", state.acq.nfft);
-        }
+        /* fft correlation */
+        pcorrelator(data, sdr.dtype, sdr.ti, sdr.acq.nfft, sdr.acq.freq, sdr.crate, sdr.acq.nfft, sdr.xcode, power);
 
-        foreach(i; 0 .. state.acq.intg){
-
-            /* get new 1ms data */
-            state.rcvgetbuff(buffloc, state.acq.nfft, state.ftype, state.dtype, data);
-            buffloc += (cast(size_t)((cast(real)state.acq.nfft)/state.nsamp + 1)) * state.nsamp;
-
-            /* fft correlation */
-            pcorrelator(data, state.dtype, state.ti, state.acq.nfft, state.acq.freq, state.crate, state.acq.nfft, state.xcode, power);
-
-            /* check acquisition result */
-            if (state.checkacquisition(power)) {
-                state.flagacq = true;
-                break;
-            }
+        /* check acquisition result */
+        if (sdr.checkacquisition(power)) {
+            sdr.flagacq = true;
+            sdr.consume(sdr.acq.acqcodei);      // バッファの先頭にコードの先頭が来るようにする
+            break;
         }
     }
 
-    /* FFTを使った、それなりに正確な搬送波周波数(ドップラー周波数)の探索, L2CMの場合は前段の周波数探索で十分に正確に探索しているため不要 */
-    if (state.flagacq && !(state.ctype == CType.L2RCCM)){
-        scope datal = new byte[state.acq.nfft * state.dtype * state.acq.lenf];
-
-        buffloc += state.acq.acqcodei; /* set buffer location at top of code */
-        state.rcvgetbuff(buffloc, state.nsamp * state.acq.lenf, state.ftype, state.dtype, datal);
+    // FFTを使った、それなりに正確な搬送波周波数(ドップラー周波数)の探索, L2CMの場合は前段の周波数探索で十分に正確に探索しているため不要
+    if (sdr.flagacq && !(sdr.ctype == CType.L2RCCM)){
+        scope datal = sdr.copyTo(uninitializedArray!(byte[])(sdr.acq.nfft * sdr.dtype * sdr.acq.lenf));
 
         /* fine doppler search */
-        state.acq.acqfreqf = carrfsearch(datal, state.dtype, state.ti, state.crate, state.nsamp * state.acq.lenf, state.acq.nfftf, state.lcode[0 .. state.clen * state.acq.lenf]);
-        writefln("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f, freqf=%.1f, diff=%.1f", state.satstr, state.acq.cn0, state.acq.peakr, cast(int)state.acq.acqcodei, state.acq.acqfreq - state.f_if, state.acq.acqfreqf - state.f_if, state.acq.acqfreq - state.acq.acqfreqf);
+        sdr.acq.acqfreqf = carrfsearch(datal, sdr.dtype, sdr.ti, sdr.crate, sdr.nsamp * sdr.acq.lenf, sdr.acq.nfftf, sdr.lcode[0 .. sdr.clen * sdr.acq.lenf]);
+        writefln("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f, freqf=%.1f, diff=%.1f", sdr.satstr, sdr.acq.cn0, sdr.acq.peakr, cast(int)sdr.acq.acqcodei, sdr.acq.acqfreq - sdr.f_if, sdr.acq.acqfreqf - sdr.f_if, sdr.acq.acqfreq - sdr.acq.acqfreqf);
         
-        state.trk.carrfreq = state.acq.acqfreqf;
-        state.trk.codefreq = state.crate;
+        sdr.trk.carrfreq = sdr.acq.acqfreqf;
+        sdr.trk.codefreq = sdr.crate;
 
         /* check fine acquisition result */
-        if (std.math.abs(state.acq.acqfreqf - state.acq.acqfreq) > state.acq.step)
-            state.flagacq = false; /* reset */
-    }else if(state.flagacq && state.ctype == CType.L2RCCM){
-        buffloc += state.acq.acqcodei;    // バッファの先頭にコードの先頭が来るようにする
-        state.acq.acqfreqf = state.acq.acqfreq;     // fineサーチしてないけど、してるように見せかけ
-        state.trk.carrfreq = state.acq.acqfreq;
-        state.trk.codefreq = state.crate;
-        writefln("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f", state.satstr,state.acq.cn0,state.acq.peakr,state.acq.acqcodei,state.acq.acqfreq-state.f_if);
+        if (std.math.abs(sdr.acq.acqfreqf - sdr.acq.acqfreq) > sdr.acq.step)
+            sdr.flagacq = false; /* reset */
+    }else if(sdr.flagacq && sdr.ctype == CType.L2RCCM){
+        sdr.acq.acqfreqf = sdr.acq.acqfreq;     // fineサーチしてないけど、してるように見せかけ
+        sdr.trk.carrfreq = sdr.acq.acqfreq;
+        sdr.trk.codefreq = sdr.crate;
+        writefln("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f", sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
     }else
-        writefln("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f", state.satstr,state.acq.cn0,state.acq.peakr,state.acq.acqcodei,state.acq.acqfreq-state.f_if);
+        writefln("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f", sdr.satstr,sdr.acq.cn0,sdr.acq.peakr,sdr.acq.acqcodei,sdr.acq.acqfreq-sdr.f_if);
 
 
-    if(!state.flagacq){
+    if(!sdr.flagacq){
         // 今までに何回連続で捕捉に失敗したかで、次のバッファの場所が決まる
-        ++state.acq.failCount;
-        buffloc += min(state.acq.failCount ^^ 2 * (state.nsamp >> 4), state.f_sf * 10 * state.dtype);
+        ++sdr.acq.failCount;
+        sdr.consume(min(sdr.acq.failCount ^^ 2 * (sdr.nsamp >> 4), sdr.f_sf * 10).to!size_t());
     }else
-        state.acq.failCount = 0;
+        sdr.acq.failCount = 0;
 
     return power;
 }
@@ -111,7 +95,7 @@ double[][] sdracquisition(string file = __FILE__, size_t line = __LINE__)(ref sd
 * return : int                  acquisition flag (0: not acquired, 1: acquired) 
 * note : first/second peak ratio and c/n0 computation
 *------------------------------------------------------------------------------*/
-bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(ref sdrch_t sdr, double[][] P)
+bool checkacquisition(ref sdrch_t sdr, double[][] P)
 {
     traceln("called");
 
@@ -154,8 +138,7 @@ bool checkacquisition(string file = __FILE__, size_t line = __LINE__)(ref sdrch_
 * return : none
 * notes  : P=abs(ifft(conj(fft(code)).*fft(data.*e^(2*pi*freq*t*i)))).^2
 *------------------------------------------------------------------------------*/
-void pcorrelator(string file = __FILE__, size_t line = __LINE__)(in byte[] data, DType dtype, double ti, int n, in double[] freq,
-                        double crate, int m, in cpx_t[] codex, double[][] P)
+void pcorrelator(in byte[] data, DType dtype, double ti, int n, in double[] freq, double crate, int m, in cpx_t[] codex, double[][] P)
 {
     traceln("called");
 
@@ -194,7 +177,7 @@ void pcorrelator(string file = __FILE__, size_t line = __LINE__)(in byte[] data,
 *          short  *code     I   long code
 * return : double               doppler frequency (Hz)
 *------------------------------------------------------------------------------*/
-double carrfsearch(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, double crate, int n, int m, in short[] code)
+double carrfsearch(const(byte)[] data, DType dtype, double ti, double crate, int n, int m, in short[] code)
 {
     traceln("called");
 
