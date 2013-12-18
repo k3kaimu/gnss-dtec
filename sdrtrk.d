@@ -142,15 +142,33 @@ body{
     traceln("called");
     immutable smax = s[ns-1];
 
+  version(Win32)
+  {
+    enum size_t VectorizedN = 8;
+    alias ElemType = short[VectorizedN];
+    enum sliceOp = "[]";
+    enum getElem = "";
+  }
+  else
+  {
     version(AVX)
-        enum VectorizedN = 16;          // AVX(256bit -> short * 16)
+    {
+        enum size_t VectorizedN = 16;          // AVX(256bit -> short * 16)
+    }
     else
+    {
         enum size_t VectorizedN = 8;           // SSE(128bit -> short * 8)
+    }
+
+    alias ElemType = Vector!(short[VectorizedN]);
+    enum sliceOp = "";
+    enum getElem =".array";
+  }
 
     immutable packedLength = (n + (VectorizedN-1)) / VectorizedN;
-    scope dataI = uninitializedArray!(Vector!(short[VectorizedN])[])(packedLength),
-          dataQ = uninitializedArray!(Vector!(short[VectorizedN])[])(packedLength),
-          code_e = uninitializedArray!(Vector!(short[VectorizedN])[])(packedLength + 2*smax/VectorizedN);
+    scope dataI = uninitializedArray!(ElemType[])(packedLength),
+          dataQ = uninitializedArray!(ElemType[])(packedLength),
+          code_e = uninitializedArray!(ElemType[])(packedLength + 2*smax/VectorizedN);
 
     // あまりの部分の初期化
     dataI[$-1] = 0;
@@ -160,10 +178,10 @@ body{
     const code = code_e.ptr + smax / VectorizedN;
 
     /* mix local carrier */
-    *remp = mixcarr(data, dtype, ti, freq, phi0, dataI.toArray[0 .. n], dataQ.toArray[0 .. n]);
+    *remp = mixcarr(data, dtype, ti, freq, phi0, (cast(short*)(dataI.ptr))[0 .. n], (cast(short*)(dataQ.ptr))[0 .. n]);
 
     /* resampling code */
-    *remc = codein.resampling(coff, smax, ti*crate, n, code_e.toArray[0 .. n + smax * 2]);
+    *remc = codein.resampling(coff, smax, ti*crate, n, (cast(short*)(code_e.ptr))[0 .. n + smax * 2]);
 
     // I[0] := IP, I[1] := IE, I[2] := IL, Q[0] := QP, Q[1] := QE, Q[2] := QL
     I[0] = I[1] = I[2] = Q[0] = Q[1] = Q[2] = 0;
@@ -173,34 +191,34 @@ body{
         enum SubN = 32;     // accumulateする最大の数
                             // これが大きければ飽和するが、高速化につながる
 
-        const(short8)* pI = dataI.ptr,              // I-phase
-                       pQ = dataQ.ptr,              // Q-phase
-                       pP = code,                   // Prompt
-                       pE = (code-s[0]/8),          // Early
-                       pL = (code+s[0]/8);          // Late
+        const(ElemType)* pI = dataI.ptr,                // I-phase
+                         pQ = dataQ.ptr,                // Q-phase
+                         pP = code,                     // Prompt
+                         pE = (code-s[0]/VectorizedN),  // Early
+                         pL = (code+s[0]/VectorizedN);  // Late
 
         enum statement = q{
             {
-                short8 sumIP, sumQP, sumIE, sumQE, sumIL, sumQL;
+                ElemType sumIP, sumQP, sumIE, sumQE, sumIL, sumQL;
 
                 foreach(j; 0 .. %s){
-                    sumIP += *pI * *pP;
-                    sumQP += *pQ * *pP;
-                    sumIE += *pI * *pE;
-                    sumQE += *pQ * *pE;
-                    sumIL += *pI * *pL;
-                    sumQL += *pQ * *pL;
+                    mixin(`sumIP` ~ sliceOp) += mixin(`(*pI)` ~ sliceOp) * mixin(`(*pP)` ~ sliceOp);
+                    mixin(`sumQP` ~ sliceOp) += mixin(`(*pQ)` ~ sliceOp) * mixin(`(*pP)` ~ sliceOp);
+                    mixin(`sumIE` ~ sliceOp) += mixin(`(*pI)` ~ sliceOp) * mixin(`(*pE)` ~ sliceOp);
+                    mixin(`sumQE` ~ sliceOp) += mixin(`(*pQ)` ~ sliceOp) * mixin(`(*pE)` ~ sliceOp);
+                    mixin(`sumIL` ~ sliceOp) += mixin(`(*pI)` ~ sliceOp) * mixin(`(*pL)` ~ sliceOp);
+                    mixin(`sumQL` ~ sliceOp) += mixin(`(*pQ)` ~ sliceOp) * mixin(`(*pL)` ~ sliceOp);
 
                     ++pI; ++pQ; ++pP; ++pE; ++pL;
                 }
 
                 foreach(j; 0 .. VectorizedN){
-                    I[0] += sumIP.array[j];
-                    I[1] += sumIE.array[j];
-                    I[2] += sumIL.array[j];
-                    Q[0] += sumQP.array[j];
-                    Q[1] += sumQE.array[j];
-                    Q[2] += sumQL.array[j];
+                    I[0] += mixin(`sumIP` ~ getElem ~ `[j]`);
+                    I[1] += mixin(`sumIE` ~ getElem ~ `[j]`);
+                    I[2] += mixin(`sumIL` ~ getElem ~ `[j]`);
+                    Q[0] += mixin(`sumQP` ~ getElem ~ `[j]`);
+                    Q[1] += mixin(`sumQE` ~ getElem ~ `[j]`);
+                    Q[2] += mixin(`sumQL` ~ getElem ~ `[j]`);
                 }
             }
         };
