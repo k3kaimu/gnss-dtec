@@ -8,6 +8,8 @@
 
 module util.trace;
 
+import sdrconfig;
+
 import std.conv : to;
 import std.stdio;
 import std.traits;
@@ -62,7 +64,8 @@ tracefln("called: a = %s, b = %s", a, b);
 void tracefln(string file = __FILE__, size_t line = __LINE__, string fn = __FUNCTION__, S, T...)(S format, T args)
 if(isSomeString!S)
 {
-    version(TRACE){
+    static if(Config.trace)
+    {
         if(tracing){
             stdout.writef("log: %s(%s): %s: ", file, line, fn);
             stdout.writefln(format, args);
@@ -86,7 +89,8 @@ traceln("called: a = ", a, ", b = " b);
 */
 void traceln(string file = __FILE__, size_t line = __LINE__, string fn = __FUNCTION__, T...)(T args)
 {
-    version(TRACE){
+    static if(Config.trace)
+    {
         if(tracing){
             stdout.writef("log: %s(%s): %s: ", file, line, fn);
             stdout.writeln(args);
@@ -115,7 +119,8 @@ void ctTrace(string file = __FILE__, size_t line = __LINE__)()
 void csvOutput(R)(R data, string filename)
 if(isInputRange!R)
 {
-    version(CSV_TRACE){
+    static if(Config.traceCSV)
+    {
         alias T = ElementType!R;
 
         auto file = File(filename, "w");

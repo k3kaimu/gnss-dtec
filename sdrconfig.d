@@ -10,9 +10,12 @@ import sdr;
 struct Config
 {
     enum useFFTW = false;
+    enum trace = false;
+    enum traceCSV = false;
+
     struct Receiver
     {
-        enum fendType = Fend.FILESTEREO;
+        enum fendType = Fend.FILE;
 
         real f_sf;
         real f_if;

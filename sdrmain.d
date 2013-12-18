@@ -4,11 +4,8 @@
 //　-version=Dnative -debug=PrintBuffloc -version=TRACE -version=L2Develop -O -release -inline -version=L2Develop -version=useFFTW
 /*
 version指定一覧
-+ TRACE                 trace, traceln, traceflnが有効になります。
-+ TRACE_CSV             csvOutputが有効になります。
 + NavigationDecode      航法メッセージを解読しようとします(L1CAのみ)
 + L2Develop             L2CM用のSDR開発のためのバージョン
-+ UseFFTW               FFTの計算にFFTWを使用します(デフォルトだと、std.numeric.Fftを使用します)
 
 debug指定一覧
 + PrintBuffloc          すでにどれだけデータを読み込んだかを表示します。
