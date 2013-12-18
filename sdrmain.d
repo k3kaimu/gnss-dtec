@@ -133,12 +133,26 @@ void sdrthread(State)(size_t chno, CType ctype)
 
     writefln("**** %s sdr thread start! ****", state.satstr);
 
+    static if(is(typeof(Config.Receiver.startBuffloc)))
+        buffloc += Config.startBuffloc;
+
+    bool checkEnd() @property
+    {
+        static if(is(typeof(Config.Receiver.endBuffloc)))
+            return state.update() && buffloc < Config.endBuffloc;
+        else
+            return state.update();
+    }
+
     /* check the exit flag */
-    while (state.update()) {
+    while (checkEnd()) {
         /* acquisition */
         if (!state.flagacq) {
             /* fft correlation */
+            auto sw = StopWatch(AutoStart.yes);
             auto acqPower = state.sdracquisition(buffloc);
+            sw.stop();
+            writefln("Acquisition end: %s[usecs]", sw.peek.usecs);
 
             /* plot aquisition result */
             if (state.flagacq && Config.Plot.acq){
