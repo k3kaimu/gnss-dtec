@@ -844,7 +844,7 @@ void tecThread()
 
                         if(baseDTEC.isNaN){
                             baseDTEC = -calcTEC!"cycle"(l1L, l2L);
-                            aveTEC = calcTEC!"m"(((l1b - l1remcode) - (l2b - l2remcode)) / f_sf * 3e8, 0);
+                            aveTEC = calcTEC!"m"(((l1b + l1remcode) - (l2b + l2remcode)) / f_sf * 3e8, 0);
                             oldDTEC = 0;
 
                             if(!file.isOpen){
@@ -855,7 +855,7 @@ void tecThread()
                             }
                         }else{
                             immutable dtec = -calcTEC!"cycle"(l1L, l2L) - baseDTEC;
-                            immutable tec = calcTEC!"m"(((l1b - l1remcode) - (l2b - l2remcode)) / f_sf * 3e8, 0);
+                            immutable tec = calcTEC!"m"(((l1b + l1remcode) - (l2b + l2remcode)) / f_sf * 3e8, 0);
 
                             aveTEC = mInv * tec + (1 - mInv) * (aveTEC + (dtec - oldDTEC));
                             oldDTEC = dtec;
