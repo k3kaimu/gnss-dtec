@@ -1207,8 +1207,8 @@ struct strsvr_t                         /// stream server type
     uint tick;                          /// start tick
     stream_t[16] stream;                /// input/output streams
     strconv_t*[16] conv;                /// stream converter
-    thread_t thread;                    /// server thread
-    lock_t lock;                        /// lock flag
+    thread_t thread;         /// server thread
+    lock_t lock;             /// lock flag
 }
 
 struct rtksvr_t                         /// RTK server type
@@ -1246,7 +1246,7 @@ struct rtksvr_t                         /// RTK server type
     thread_t thread;                    /// server thread
     int cputime;                        /// CPU time (ms) for a processing cycle
     int prcout;                         /// missing observation data count
-    lock_t lock;                        /// lock flag
+    lock_t lock;             /// lock flag
 }
 
 
