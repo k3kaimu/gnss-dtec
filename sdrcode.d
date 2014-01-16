@@ -675,8 +675,8 @@ body{
     auto code = new short[*len];
 
     foreach(i; iota(*len).stride(2)){
-        code[i] = l2cmCode[i/2];
-        code[i+1] = 0;
+        code[i] = 0;
+        code[i+1] = l2cmCode[i/2];
     }
     
     return code.ptr;

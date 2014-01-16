@@ -7,11 +7,13 @@
 
 import sdr;
 import sdrconfig;
+import sdrrcv;
 
 import std.stdio;
 
 import std.conv : to;
-import std.exception : enforce;
+import std.exception : enforce, enforceEx;
+import std.string;
 
 import std.functional;
 import core.thread;
@@ -280,14 +282,12 @@ void stereo_getbuff(in ref sdrstat_t stat, size_t buffloc, size_t n, DType dtype
     size_t membuffloc = buffloc%(MEMBUFLEN*STEREO_DATABUFF_SIZE);
     int nout = cast(int)((membuffloc+n)-(MEMBUFLEN*STEREO_DATABUFF_SIZE));
 
-    //WaitForSingleObject(hbuffmtx,INFINITE);
     if (nout>0) {
-        stereo_exp(cast(const(ubyte)*)stat.buff[0].ptr + membuffloc, n-nout, dtype, expbuf);
-        stereo_exp(cast(const(ubyte)*)stat.buff[0].ptr + 0, nout, dtype, expbuf[dtype*(n-nout) .. $]);
+        stereo_exp(cast(const(ubyte)*)stat.buff.ptr + membuffloc, n-nout, dtype, expbuf);
+        stereo_exp(cast(const(ubyte)*)stat.buff.ptr + 0, nout, dtype, expbuf[dtype*(n-nout) .. $]);
     } else {
-        stereo_exp(cast(const(ubyte)*)stat.buff[0].ptr + membuffloc, n, dtype, expbuf);
+        stereo_exp(cast(const(ubyte)*)stat.buff.ptr + membuffloc, n, dtype, expbuf);
     }
-    //ReleaseMutex(hbuffmtx);
 }
 
 
@@ -299,13 +299,11 @@ void stereo_getbuff(in ref sdrstat_t stat, size_t buffloc, size_t n, DType dtype
 static if(Config.Receiver.fendType == Fend.STEREO)
 void stereo_pushtomembuf(ref sdrstat_t stat) 
 {
-    //WaitForSingleObject(hbuffmtx,INFINITE);
-    memcpy(&sdrstat.buff[(sdrstat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE], STEREO_dataBuffer, STEREO_DATABUFF_SIZE);
-    //ReleaseMutex(hbuffmtx);
+    immutable idx = (sdrstat.buffloccnt % MEMBUFLEN) * STEREO_DATABUFF_SIZE,
+              size = STEREO_DATABUFF_SIZE;
 
-    //WaitForSingleObject(hreadmtx,INFINITE);
-    stat.buffloccnt++;
-    //ReleaseMutex(hreadmtx);
+    sdrstat.buff[idx  .. size] = STEREO_dataBuffer[0 .. size];
+    sdrstat.buffloccnt++;
 }
 
 
@@ -316,21 +314,14 @@ void stereo_pushtomembuf(ref sdrstat_t stat)
 *------------------------------------------------------------------------------*/
 void filestereo_pushtomembuf(ref sdrstat_t stat)
 {
-    size_t nread;
+    immutable size = STEREO_DATABUFF_SIZE,
+              idx = (stat.buffloccnt % MEMBUFLEN) * STEREO_DATABUFF_SIZE,
+              nread = stat.file.rawRead(stat.buff[idx .. idx+size]).length;
 
-    //WaitForSingleObject(hbuffmtx,INFINITE);
-    nread = fread(&stat.buff[0][(stat.buffloccnt%MEMBUFLEN)*STEREO_DATABUFF_SIZE], 1, STEREO_DATABUFF_SIZE, stat.file[0].getFP);
-    //ReleaseMutex(hbuffmtx);
-
-    if (nread < STEREO_DATABUFF_SIZE){
-        stat.stopflag=true;
-        writeln("end of file!");
-    }
-
-    //WaitForSingleObject(hreadmtx,INFINITE);
+    enforceEx!BufferEmpty(nread == STEREO_DATABUFF_SIZE, "get only %s byte <--> %s, pos = %s,".format(nread, STEREO_DATABUFF_SIZE, stat.file.tell));
     stat.buffloccnt++;
-    //ReleaseMutex(hreadmtx);
 }
+
 
 static if(Config.Receiver.fendType != Fend.STEREO)
 {

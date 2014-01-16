@@ -4,40 +4,26 @@ module sdr;
 
 * Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
 *-----------------------------------------------------------------------------*/
-import std.complex;
-import std.stdio;
-import std.c.stdlib;
-import std.c.math;
-import std.math;
-import std.array  : appender;
-import std.traits : isSomeString;
-import core.memory;
-import std.datetime;
+
+import sdrconfig,
+       sdrinit,
+       sdrrcv;
+
 import core.stdc.time;
-import std.string;
+
+import std.algorithm,
+       std.complex,
+       std.conv,
+       std.datetime,
+       std.exception,
+       std.math,
+       std.stdio,
+       std.string,
+       std.typetuple;
+
 
 // time_tがいるらしいが、正直うざい
 alias time_t = long;
-
-
-import sdracq,
-       sdrcmn,
-       sdrcode,
-       sdrinit,
-       sdrnav,
-       sdrout,
-       sdrplot,
-       sdrrcv,
-       stereo,
-       sdrspectrum,
-       sdrtrk,
-       sdrconfig,
-       util.range,
-       util.trace,
-       util.serialize,
-       util.numeric,
-       util.server;
-
 
 /* global variables -----------------------------------------------------------*/
 deprecated double l1ca_doppler;
@@ -320,7 +306,7 @@ struct Constant
             @disable this();
 
             enum INTG = 1;
-            enum HBAND = 4;
+            enum HBAND = 0;
             enum STEP = 2;
             enum TH = 2.0;
             //enum LENF = 10;
@@ -961,15 +947,20 @@ struct sdrspec_t
 }
 
 
+
 struct sdrstat_t
 {
-    bool stopflag;
     bool specflag;
 
-  static if(Config.Receiver.fendType == Fend.FILE || Config.Receiver.fendType == Fend.FILESTEREO)
+  static if(Config.Receiver.fendType == Fend.FILE)
   {
     File[Config.Receiver.fends.length] file;
     byte[][Config.Receiver.fends.length] buff;
+  }
+  else static if(Config.Receiver.fendType == Fend.FILESTEREO)
+  {
+    File file;
+    byte[] buff;
   }
   else
   {
@@ -980,51 +971,115 @@ struct sdrstat_t
     size_t fendbuffsize;
 
 
-    sdrch_t sdr;
-
-    alias sdr this;
-
-    this(sdrch_t sdr){
-        this.sdr = sdr;
+    this(typeof(null))
+    {
         this.rcvinit();
     }
 
 
-    ~this(){
+    ~this()
+    {
         this.rcvquit();
     }
 
 
-    bool update()
+  version(Win64)
+  {
+    static if(Config.Receiver.fendType == Fend.FILE || Config.Receiver.fendType == Fend.FILESTEREO)
     {
-        return !stopflag;
+        void seek(long offset, int origin = SEEK_SET)
+        in{
+            origin == SEEK_SET && assert(offset >= 0);
+            origin == SEEK_END && assert(offset <= 0);
+        }
+        body{
+            switch(origin){
+                case SEEK_SET:
+                    this.buffloccnt = offset / this.fendbuffsize - 1;
+
+                    enum seekStatements = q{{
+                      static if(Config.Receiver.fendType == Fend.FILE)
+                        immutable seekN = this.buffloccnt * this.fendbuffsize * Config.Receiver.fends[i].dtype;
+                      else
+                        immutable seekN = this.buffloccnt * this.fendbuffsize;
+
+                        f.seeki64(seekN, SEEK_SET);
+                    }};
+
+                  static if(Config.Receiver.fendType == Fend.FILE)
+                  {
+                    foreach(i, ref f; this.file)
+                        mixin(seekStatements);
+                  }
+                  else
+                  {
+                    alias f = this.file;
+                    mixin(seekStatements);
+                  }
+
+                    break;
+                case SEEK_CUR:
+                    this.seek(this.buffloccnt * this.fendbuffsize + offset, SEEK_SET);
+                    break;
+
+                case SEEK_END:
+                    ulong minN = ulong.max;
+
+                    enum getMinStatements = q{{
+                      static if(Config.Receiver.fendType == Fend.FILE)
+                        immutable nn = Config.Receiver.fends[i].dtype;
+                      else
+                        immutable nn = 1;
+
+                        immutable nSamp = f.size / nn;
+                        if(nSamp < minN)
+                            minN = nSamp;
+                    }};
+
+                  static if(Config.Receiver.fendType == Fend.FILE)
+                  {
+                    foreach(i, ref f; this.file)
+                        mixin(getMinStatements);
+                  }
+                  else
+                  {
+                    alias f = this.file;
+                    mixin(getMinStatements);
+                  }
+
+                    this.seek(minN + offset, SEEK_SET);
+
+                default:
+                    assert(0);
+            }
+        }
     }
-
-
-    T[] copyTo(T)(T[] buf)
-    if(is(T == byte) || is(T == ubyte))
-    {
-        byte[] _buf = cast(byte[])buf;
-        rcvgetbuff(this, this.pos, _buf.length / this.dtype, this.ftype, this.dtype, _buf);
-        return buf;
-    }
-
-
-    void consume(size_t n)
-    {
-        _totalReadBufSize += n;
-    }
-
-
-    size_t pos() @property
-    {
-        return _totalReadBufSize;
-    }
-
-
-  private:
-    size_t _totalReadBufSize;
+  }
 }
+
+
+enum isSDRChannel(T) = is(typeof((T ch){
+    sdrch_t sdr = ch.sdr;
+    static assert(isDataReader!(typeof(ch.reader)));
+}));
+
+
+class BufferEmpty : Exception
+{
+    this(string msg = "Data buffer is empty", string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
+}
+
+
+enum isDataReader(T) = is(typeof((T r){
+    byte[] buf;
+    buf = r.copy(buf);
+    r.consume(0);
+    size_t p = r.pos;
+}));
+
 
 
 /**
@@ -1136,13 +1191,11 @@ unittest
 bool isValidPRN(int prn, NavSystem sys) pure nothrow @safe
 {
     final switch(sys){
-      case NavSystem.GPS:       return prn.isInInterval!"[]"(Constant.GPS.PRN.min, Constant.GPS.PRN.max);
-      case NavSystem.GLONASS:   return prn.isInInterval!"[]"(Constant.GLONASS.PRN.min, Constant.GLONASS.PRN.max);
-      case NavSystem.Galileo:   return prn.isInInterval!"[]"(Constant.Galileo.PRN.min, Constant.Galileo.PRN.max);
-      case NavSystem.QZSS:      return prn.isInInterval!"[]"(Constant.QZSS.PRN.min, Constant.QZSS.PRN.max);
-      case NavSystem.BeiDou:    return prn.isInInterval!"[]"(Constant.BeiDou.PRN.min, Constant.BeiDou.PRN.max);
-      case NavSystem.SBAS:      return prn.isInInterval!"[]"(Constant.SBAS.PRN.min, Constant.SBAS.PRN.max);
+      foreach(e; TypeTuple!("GPS", "GLONASS", "Galileo", "QZSS", "BeiDou", "SBAS"))
+        mixin(q{case NavSystem.%1$s: return prn.isInInterval!"[]"(Constant.%1$s.PRN.min, Constant.%1$s.PRN.max);}.format(e));
     }
+
+    assert(0);
 }
 
 
@@ -1152,14 +1205,14 @@ in{
     assert(prn.isValidPRN(sys));
 }
 body{
-    with(Constant) final switch (sys) {
-      case NavSystem.GPS:       return prn - GPS.PRN.min + 1;
-      case NavSystem.GLONASS:   return GPS.totalSatellites + prn - GLONASS.PRN.min + 1;
-      case NavSystem.Galileo:   return GPS.totalSatellites + GLONASS.totalSatellites + prn - Galileo.PRN.min + 1;
-      case NavSystem.QZSS:      return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + prn - QZSS.PRN.min + 1;
-      case NavSystem.BeiDou:    return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + QZSS.totalSatellites + prn - BeiDou.PRN.min + 1;
-      case NavSystem.SBAS:      return GPS.totalSatellites + GLONASS.totalSatellites + Galileo.totalSatellites + QZSS.totalSatellites + BeiDou.totalSatellites + prn - SBAS.PRN.min + 1;
+    foreach(e; TypeTuple!("GPS", "GLONASS", "Galileo", "QZSS", "BeiDou", "SBAS"))
+    {
+        if(sys == mixin("NavSystem." ~ e))
+            return prn - mixin("Constant." ~ e ~ ".PRN.min") + 1;
+
+        prn += mixin("Constant." ~ e ~ ".totalSatellites");
     }
+
     assert(0);
 }
 
@@ -1170,50 +1223,18 @@ in{
     assert(0 < sat && sat < Constant.totalSatellites);
 }
 body{
-    with(Constant){
-        if(sat <= GPS.totalSatellites){
-            prn = sat + GPS.PRN.min - 1;
-            return NavSystem.GPS;
+    immutable arg1 = sat;
+    foreach(e; TypeTuple!("GPS", "GLONASS", "Galileo", "QZSS", "BeiDou", "SBAS"))
+    {
+        if(sat <= mixin("Constant." ~ e ~ ".totalSatellites")){
+            prn = sat + mixin("Constant." ~ e ~ ".PRN.min") - 1;
+            return mixin("NavSystem." ~ e);
         }
 
-        sat -= GPS.totalSatellites;
-        
-        if(sat <= GLONASS.totalSatellites){
-            prn = sat + GLONASS.PRN.min - 1;
-            return NavSystem.GLONASS;
-        }
-
-        sat -= GLONASS.totalSatellites;
-
-        if(sat <= Galileo.totalSatellites){
-            prn = sat + Galileo.PRN.min - 1;
-            return NavSystem.Galileo;
-        }
-
-        sat -= Galileo.totalSatellites;
-
-        if(sat <= QZSS.totalSatellites){
-            prn = sat + QZSS.PRN.min - 1;
-            return NavSystem.QZSS;
-        }
-
-        sat -= QZSS.totalSatellites;
-
-        if(sat <=  BeiDou.totalSatellites){
-            prn = sat + BeiDou.PRN.min - 1;
-            return NavSystem.BeiDou;
-        }
-
-        sat -= BeiDou.totalSatellites;
-
-        if(sat <= SBAS.totalSatellites){
-            prn = sat + SBAS.PRN.min - 1;
-            return NavSystem.SBAS;
-        }
-
-        enforce(0);
-        assert(0);
+        sat -= mixin("Constant." ~ e ~ ".totalSatellites");
     }
+
+    assert(0, arg1.to!string());
 }
 
 
@@ -1222,12 +1243,11 @@ string satno2Id(int sat)
 {
     int prn = void;
     final switch (satsys(sat, prn)) {
-        case NavSystem.GPS:     return "G%02d".format(prn - Constant.GPS.PRN.min + 1);
-        case NavSystem.GLONASS: return "R%02d".format(prn - Constant.GLONASS.PRN.min + 1);
-        case NavSystem.Galileo: return "E%02d".format(prn - Constant.Galileo.PRN.min + 1);
-        case NavSystem.QZSS:    return "J%02d".format(prn - Constant.QZSS.PRN.min + 1);
-        case NavSystem.BeiDou:  return "C%02d".format(prn - Constant.BeiDou.PRN.min + 1);
-        case NavSystem.SBAS:    return "%03d".format(prn);
+        foreach(e; TypeTuple!("GPS,G%02d", "GLONASS,R%02d", "Galileo,E%02d", "QZSS,J%02d", "BeiDou,C%02d", "SBAS,%03d"))
+        {
+            enum sp = e.findSplit(",");
+            mixin(q{case NavSystem.%1$s: return "%2$s".format(prn - ((NavSystem.%1$s == NavSystem.SBAS) ? 0 : (Constant.%1$s.PRN.min - 1)));}.format(sp[0], sp[2]));
+        }
     }
 
     assert(0);
@@ -1296,16 +1316,24 @@ uint crc24q(in ubyte* buff, int len)
 uint getbitu(in ubyte* buff, int pos, int len)
 {
     uint bits;
-    foreach(i; pos .. pos + len) bits = (bits << 1) + ((buff[i / 8] >> (7 - i % 8)) & 1u);
+    foreach(i; pos .. pos + len){
+        bits <<= 1;
+        bits |= (buff[i / 8] >> (7 - i % 8)) & 1u;
+    }
+
     return bits;
 }
+
 
 /// ditto
 int getbits(in ubyte* buff, int pos, int len)
 {
-    uint bits = getbitu(buff,pos,len);
-    if (len<=0||32<=len||!(bits&(1u<<(len-1)))) return cast(int)bits;
-    return cast(int)(bits|(~0u<<len)); /* extend sign */
+    immutable bits = getbitu(buff, pos, len);
+
+    if (len <= 0 || 32 <= len || !(bits & (1u << (len-1))))
+        return bits;
+
+    return bits | (~0u << len); /* extend sign */
 }
 
 
@@ -1449,3 +1477,21 @@ gtime_t gpst2time(int week, double sec)
 
 // semi-circle to radian
 alias SC2RAD = std.math.PI;
+
+
+version(Win64)
+{
+    extern(C)
+    int _fseeki64(
+       FILE *stream,
+       long offset,
+       int origin 
+    );
+
+    void seeki64(ref File file, long offset, int origin = SEEK_SET)
+    {
+        enforce(file.isOpen, "Attempting to seek() in an unopened file");
+        errnoEnforce(_fseeki64(file.getFP, offset, origin) == 0,
+                "Could not seek in file `"~file.name~"'");
+    }
+}

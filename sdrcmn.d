@@ -558,7 +558,7 @@ body{
 
     if (dtype==DType.IQ)        /* complex */
         foreach(i; 0 .. data.length / 2){
-            immutable idx = (cast(int)phi)&CMASK;
+            immutable idx = (cast(ptrdiff_t)phi) & CMASK;     // マイナスの周波数も対応可能
             I[i] = cast(U)(cost[idx]*data[0] - sint[idx]*data[1]);
             Q[i] = cast(U)(cost[idx]*data[1] + sint[idx]*data[0]);
 
@@ -568,7 +568,7 @@ body{
 
     else if (dtype==DType.I)    /* real */
         foreach(i, e; data){
-            immutable idx=(cast(int)phi)&CMASK;
+            immutable idx=(cast(ptrdiff_t)phi) & CMASK;       // マイナスの周波数も対応可能
             I[i] = cast(U)(cost[idx] * e);
             Q[i] = cast(U)(sint[idx] * e);
 
@@ -622,4 +622,24 @@ auto toArray(T)(T aligned) pure nothrow @trusted
 if(isSIMDArray!T)
 {
     return (cast(typeof(T.init[0].ptr))aligned.ptr)[0 .. aligned.length * ForeachType!T.array.length];
+}
+
+
+real toNearby(real value, real pole) pure nothrow @safe
+{
+    value %= pole;
+    if(value > pole/2)
+        return value - pole;
+    else if(value < -pole/2)
+        return value + pole;
+    return value;
+}
+
+pure nothrow @safe
+unittest
+{
+    assert(toNearby(0.01, 1).approxEqual(0.01));
+    assert(toNearby(1.99, 1).approxEqual(-0.01));
+    assert(toNearby(-1.99, 1).approxEqual(0.01));
+    assert(toNearby(-0.01, 1).approxEqual(-0.01));
 }

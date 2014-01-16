@@ -26,6 +26,7 @@ import std.algorithm;
 import std.range;
 import std.typetuple;
 
+
 private F atan(F)(F y, F x)
 if(isFloatingPoint!F)
 out(r){
@@ -36,6 +37,18 @@ body{
 }
 
 
+version(Actors)
+{
+    class LostSignal : Exception
+    {
+        this(string msg = "Lost signal", string file = __FILE__, size_t line = __LINE__)
+        {
+            super(msg, file, line);
+        }
+    }
+}
+
+
 /* sdr tracking function --------------------------------------------------------
 * sdr tracking function called from sdr channel thread
 * args   : sdrch_t *sdr      I/O sdr channel struct
@@ -43,27 +56,31 @@ body{
 *          ulong cnt      I   counter of sdr channel thread
 * return : ulong              current buffer location
 *------------------------------------------------------------------------------*/
-void sdrtracking(Sdr)(ref Sdr sdr, size_t cnt)
+void sdrtracking(Ch)(ref Ch ch, size_t cnt)
+if(isSDRChannel!Ch)
 in{
-    assert(sdr.clen.isValidNum);
-    assert(sdr.trk.remcode.isValidNum);
-    assert(sdr.trk.codefreq.isValidNum);
-    assert(sdr.f_sf.isValidNum);
+    assert(ch.sdr.clen.isValidNum);
+    assert(ch.sdr.trk.remcode.isValidNum);
+    assert(ch.sdr.trk.codefreq.isValidNum);
+    assert(ch.sdr.f_sf.isValidNum);
 }
 body{
+    scope sdr = &ch.sdr,
+          reader = &ch.reader;
+
     traceln("called");
 
     immutable lenOf1ms = sdr.crate * 0.001,
               remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))(sdr.trk.remcode % lenOf1ms),
-              trkN = ((lenOf1ms - remcode1ms)/(sdr.trk.codefreq/sdr.f_sf)).to!int();
+              trkN = ((lenOf1ms - remcode1ms)/(sdr.trk.codefreq/sdr.f_sf)).to!size_t();
 
     sdr.currnsamp = ((lenOf1ms - remcode1ms)/(sdr.trk.codefreq/sdr.f_sf) * (sdr.ctime / 0.001L)).to!int();
 
     traceln();
 
-    immutable beforeBuffloc = sdr.pos;
-    scope data = sdr.copyTo(uninitializedArray!(byte[])(trkN * sdr.dtype));
-    sdr.consume(trkN);
+    immutable beforeBuffloc = reader.pos;
+    scope data = reader.copy(uninitializedArray!(byte[])(trkN * sdr.dtype));
+    reader.consume(trkN);
 
     traceln();
 
@@ -88,16 +105,23 @@ body{
     traceln();
 
     /* navigation data */
-    sdr.sdrnavigation(beforeBuffloc, cnt);
+    (*sdr).sdrnavigation(beforeBuffloc, cnt);
     sdr.flagtrk = true;
 
-    if(sdr.trk.S[].find(0).empty)
+    if((sdr.flagnavsync || cnt > 500) && sdr.trk.S[].find(0).empty)
     {
         immutable meanSNR = sdr.trk.S[].mean();
         // 追尾できなくなった(信号が途絶えた場合)
         if(meanSNR < Constant.get!"Tracking.snrThreshold"(sdr.ctype)){
+          version(Actors)
+          {
+            enforceEx!LostSignal(0, "signal is interruptted. SNR: %s[dB]".format(meanSNR));
+          }
+          else
+          {
             writefln("signal is interruptted. SNR: %s[dB]", meanSNR);
             sdr.reInitialize();
+          }
         }
     }
     
@@ -122,7 +146,7 @@ body{
 * return : none
 * notes  : see above for data
 *------------------------------------------------------------------------------*/
-void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, int n, double freq, double phi0, 
+void correlator(string file = __FILE__, size_t line = __LINE__)(const(byte)[] data, DType dtype, double ti, size_t n, double freq, double phi0, 
                        double crate, double coff, in size_t[] s, int ns, double[] I, double[] Q,
                        double *remc, double *remp, in short[] codein)
 in{
@@ -176,7 +200,7 @@ body{
 
     const code = code_e.ptr + smax / VectorizedN;
 
-    /* mix local carrier */
+    /* mix local carrier */ // exp(-j2πft+φ)を乗算する
     *remp = mixcarr(data, dtype, ti, freq, phi0, (cast(short*)(dataI.ptr))[0 .. n], (cast(short*)(dataQ.ptr))[0 .. n]);
 
     /* resampling code */
@@ -375,11 +399,11 @@ body{
 *------------------------------------------------------------------------------*/
 void setobsdata(ref sdrch_t sdr, ulong buffloc, ulong cnt, int snrflag)
 {
-    void shiftRight(E)(E[] r) { r[0 .. $-1].retro.copy(r[1 .. $].retro); }
+    void shiftBack(E)(E[] r) { r[0 .. $-1].retro.copy(r[1 .. $].retro); }
 
     // シフトレジスタ達を一つ右にシフトする
     foreach(s; TypeTuple!("tow", "L", "D", "codei", "cntout", "remcodeout"))
-        with(sdr.trk) shiftRight(mixin(s)[]);
+        with(sdr.trk) shiftBack(mixin(s)[]);
 
     sdr.trk.tow[0] = sdr.nav.firstsftow + (cast(double)(cnt-sdr.nav.firstsfcnt)) / 1000;
     sdr.trk.codei[0] = buffloc;
@@ -409,12 +433,11 @@ void setobsdata(ref sdrch_t sdr, ulong buffloc, ulong cnt, int snrflag)
     sdr.trk.Isum += abs(sdr.trk.sumI[0]);
     sdr.trk.Qsum += abs(sdr.trk.sumQ[0]);
     if (snrflag){
-        shiftRight(sdr.trk.S[]);
-        shiftRight(sdr.trk.codeisum[]);
+        shiftBack(sdr.trk.S[]);
+        shiftBack(sdr.trk.codeisum[]);
 
         /* signal to noise ratio */
-        //sdr.trk.S[0]=10*log(sdr.trk.Isum/100.0/100.0)+log(500.0);
-        sdr.trk.S[0] = 10 * log10(sdr.trk.Isum / sdr.trk.Qsum);
+        sdr.trk.S[0] = 20 * log10(sdr.trk.Isum / sdr.trk.Qsum);
         sdr.trk.codeisum[0] = buffloc;
         sdr.trk.Isum = 0;
         sdr.trk.Qsum = 0;

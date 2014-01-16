@@ -14,6 +14,7 @@ import std.stdio,
 import core.thread;
 import std.functional;
 
+
 /* sdr receiver initialization --------------------------------------------------
 * receiver initialization, memory allocation, file open
 * args   : sdrini_t *ini    I   sdr initialization struct
@@ -36,10 +37,10 @@ void rcvinit(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
     else static if(fendType == Fend.FILESTEREO)
     {
         /* IF file open */
-        stat.file[0] = File(Config.Receiver.path, "rb");
+        stat.file = File(Config.Receiver.path, "rb");
 
         stat.fendbuffsize = STEREO_DATABUFF_SIZE;                // frontend buffer size
-        stat.buff[0] = new byte[stat.fendbuffsize * MEMBUFLEN];
+        stat.buff = new byte[stat.fendbuffsize * MEMBUFLEN];
     }
     else static if(fendType == Fend.GN3SV2 || fendType == Fend.GN3SV3)
     {
@@ -79,7 +80,7 @@ void rcvquit(string file = __FILE__, size_t line = __LINE__)(ref sdrstat_t stat)
     }
     else static if(fendType == Fend.FILESTEREO)
     {
-        stat.file[0].close();
+        stat.file.close();
     }
     else static if(fendType == Fend.GN3SV2 || fendType == Fend.GN3SV3)
     {
@@ -246,9 +247,8 @@ void file_pushtomembuf(string file = __FILE__, size_t line = __LINE__)(ref sdrst
     traceln("called");
 
     foreach(i, fend; Config.Receiver.fends){
-        auto nread = fread(&stat.buff[i][(stat.buffloccnt % MEMBUFLEN) * fend.dtype * FILE_BUFFSIZE], 1, fend.dtype * FILE_BUFFSIZE, stat.file[i].getFP);
-        if(nread < fend.dtype * MEMBUFLEN)
-            stat.stopflag = true;
+        immutable nread = fread(&stat.buff[i][(stat.buffloccnt % MEMBUFLEN) * fend.dtype * FILE_BUFFSIZE], 1, fend.dtype * FILE_BUFFSIZE, stat.file[i].getFP);
+        enforceEx!BufferEmpty(nread <! fend.dtype * MEMBUFLEN);
     }
 
     stat.buffloccnt++;
@@ -293,4 +293,48 @@ body{
         }else
             expbuf[0 .. n] = stat.buff[1][membuffloc  .. membuffloc + n];
     }
+}
+
+
+/**
+D言語的なインターフェイスを持つsdrstat_tのラッパー
+
+
+*/
+struct StateReader
+{
+    this(sdrstat_t* state, FType ftype)
+    {
+        this._ftype = ftype;
+        this._dtype = ftype.dtype;
+        this._state = state;
+    }
+
+
+    T[] copy(T)(T[] buf)
+    if(is(T == byte) || is(T == ubyte))
+    {
+        byte[] _buf = cast(byte[])buf;
+        rcvgetbuff(*this._state, this.pos, _buf.length / this._dtype, this._ftype, this._dtype, _buf);
+        return buf;
+    }
+
+
+    void consume(size_t n)
+    {
+        _totalReadBufSize += n;
+    }
+
+
+    size_t pos() @property
+    {
+        return _totalReadBufSize;
+    }
+
+
+  //private:
+    sdrstat_t* _state;
+    size_t _totalReadBufSize;
+    FType _ftype;
+    DType _dtype;
 }

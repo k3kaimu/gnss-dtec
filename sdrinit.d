@@ -336,7 +336,7 @@ void initnavstruct(string file = __FILE__, size_t line = __LINE__)(int sys, CTyp
 *          sdrch_t *sdr     I/0 sdr channel struct
 * return : int                  0:okay -1:error
 *------------------------------------------------------------------------------*/
-void initsdrch(ref sdrch_t sdr, size_t chno, CType ctype,/*, size_t chno, NavSystem sys, int prn, CType ctype, DType dtype, FType ftype, double f_sf, double f_if*/)
+void initsdrch(ref sdrch_t sdr, size_t chno, CType ctype)
 {
     traceln("called");
     
@@ -424,6 +424,8 @@ void initsdrch(ref sdrch_t sdr, size_t chno, CType ctype,/*, size_t chno, NavSys
         cpxfft(dst);
         return dst.idup;
     }();
+
+    traceln("return");
 }
 
 

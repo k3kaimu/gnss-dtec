@@ -11,6 +11,7 @@ import sdrrcv;
 
 import std.math;
 import std.stdio;
+import std.exception;
 
 import std.algorithm;
 import std.range;
@@ -20,14 +21,30 @@ import std.random;
 import std.typecons;
 
 
+version(Actors)
+{
+    class CannotFindSignal : Exception
+    {
+        this(string msg = "Signal is not found", string file = __FILE__, size_t line = __LINE__)
+        {
+            super(msg, file, line);
+        }
+    }
+}
+
+
 /* sdr acquisition function -----------------------------------------------------
 * sdr acquisition function called from sdr channel thread
 * args   : sdrch_t *sdr     I/O sdr channel struct
 *          double *power    O   normalized correlation power vector (2D array)
 * return : uint64_t             current buffer location
 *------------------------------------------------------------------------------*/
-double[][] sdracquisition(Sdr)(ref Sdr sdr)
+double[][] sdracquisition(Ch)(ref Ch ch)
+if(isSDRChannel!Ch)
 {
+    scope sdr = &ch.sdr,
+          reader = &ch.reader;
+
     traceln("called");
 
     auto power = uninitializedArray!(double[][])(sdr.acq.nfreq, sdr.acq.nfft);
@@ -39,27 +56,40 @@ double[][] sdracquisition(Sdr)(ref Sdr sdr)
     /* acquisition integration */
     foreach(i; 0 .. sdr.acq.intg){
         /* get new 1ms data */
-        scope data = sdr.copyTo(uninitializedArray!(byte[])(sdr.acq.nfft * sdr.dtype));
-        sdr.consume((cast(size_t)((cast(real)sdr.acq.nfft)/sdr.nsamp + 1)) * sdr.nsamp);
+        scope data = reader.copy(uninitializedArray!(byte[])(sdr.acq.nfft * sdr.dtype));
+        reader.consume((cast(size_t)((cast(real)sdr.acq.nfft)/sdr.nsamp + 1)) * sdr.nsamp);
 
         /* fft correlation */
         pcorrelator(data, sdr.dtype, sdr.ti, sdr.acq.nfft, sdr.acq.freq, sdr.crate, sdr.acq.nfft, sdr.xcode, power);
 
         /* check acquisition result */
-        if (sdr.checkacquisition(power)) {
+        if ((*sdr).checkacquisition(power)) {
             sdr.flagacq = true;
-            sdr.consume(sdr.acq.acqcodei);      // バッファの先頭にコードの先頭が来るようにする
+            reader.consume(sdr.acq.acqcodei);      // バッファの先頭にコードの先頭が来るようにする
             break;
         }
     }
 
     // FFTを使った、それなりに正確な搬送波周波数(ドップラー周波数)の探索, L2CMの場合は前段の周波数探索で十分に正確に探索しているため不要
     if (sdr.flagacq && !(sdr.ctype == CType.L2RCCM)){
-        scope datal = sdr.copyTo(uninitializedArray!(byte[])(sdr.acq.nfft * sdr.dtype * sdr.acq.lenf));
+        scope datal = reader.copy(uninitializedArray!(byte[])(sdr.acq.nfft * sdr.dtype * sdr.acq.lenf));
 
         /* fine doppler search */
         sdr.acq.acqfreqf = carrfsearch(datal, sdr.dtype, sdr.ti, sdr.crate, sdr.nsamp * sdr.acq.lenf, sdr.acq.nfftf, sdr.lcode[0 .. sdr.clen * sdr.acq.lenf]);
-        writefln("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f, freqf=%.1f, diff=%.1f", sdr.satstr, sdr.acq.cn0, sdr.acq.peakr, cast(int)sdr.acq.acqcodei, sdr.acq.acqfreq - sdr.f_if, sdr.acq.acqfreqf - sdr.f_if, sdr.acq.acqfreq - sdr.acq.acqfreqf);
+        
+        writef("%s, ", sdr.satstr);
+        writef("C/N0=%.1f[dB], ", sdr.acq.cn0);
+        writef("peakr=%.1f, ", sdr.acq.peakr);
+        writef("codei=%s[sample], ", sdr.acq.acqcodei);
+        writef("dopFrq=%.1f[Hz], ", sdr.acq.acqfreq - sdr.f_if);
+        writef("dopFrqf=%.1f[Hz], ", sdr.acq.acqfreqf - sdr.f_if);
+        writef("diff=%.1f[Hz]", sdr.acq.acqfreq - sdr.acq.acqfreqf);
+        writeln();
+
+
+        //writefln("%s, C/N0=%.1f, peak=%.1f, codei=%d, freq=%.1f, freqf=%.1f, diff=%.1f",
+        //    sdr.satstr, sdr.acq.cn0, sdr.acq.peakr, sdr.acq.acqcodei,
+        //    sdr.acq.acqfreq - sdr.f_if, sdr.acq.acqfreqf - sdr.f_if, sdr.acq.acqfreq - sdr.acq.acqfreqf);
         
         sdr.trk.carrfreq = sdr.acq.acqfreqf;
         sdr.trk.codefreq = sdr.crate;
@@ -79,9 +109,17 @@ double[][] sdracquisition(Sdr)(ref Sdr sdr)
     if(!sdr.flagacq){
         // 今までに何回連続で捕捉に失敗したかで、次のバッファの場所が決まる
         ++sdr.acq.failCount;
-        sdr.consume(min(sdr.acq.failCount ^^ 2 * (sdr.nsamp >> 4), sdr.f_sf * 10).to!size_t());
+        reader.consume(min(sdr.acq.failCount ^^ 2 * (sdr.nsamp >> 4), sdr.f_sf * 10).to!size_t());
     }else
         sdr.acq.failCount = 0;
+
+  version(Actors)
+  {
+    if(sdr.acq.failCount > 8 / sdr.dtype)
+    {
+        enforceEx!CannotFindSignal(0, "fail acquition");
+    }
+  }
 
     return power;
 }
@@ -111,13 +149,25 @@ bool checkacquisition(ref sdrch_t sdr, double[][] P)
               meanP = P[freqi].sliceEx(exinds, exinde).mean(),
               maxP2 = P[freqi].sliceEx(exinds, exinde).minPos!"a > b"().front;
 
+    //{
+    //    writefln("output freq is %s [Hz]", sdr.acq.freq[freqi]);
+    //    static size_t n = 0;
+    //    auto temp = P[freqi].zip(iota(size_t.max)).array().dup;
+    //    temp.sort!"a[0] > b[0]"();
+    //    ++n;
+    //    auto f = File(format("result_%s_%s_%s.csv", sdr.ctype, n, Clock.currTime.toISOString()), "w");
+
+    //    foreach(e; temp[0 .. 1024].sort!"a[1] < b[1]"())
+    //        f.writefln("%s, %s", e[1], e[0]);
+    //}
+
     /* C/N0 calculation */
     sdr.acq.cn0 = 10 * log10(maxP / meanP / sdr.ctime);
 
     /* peak ratio */
     sdr.acq.peakr = maxP / maxP2;
     sdr.acq.acqcodei = codei.to!int();
-    sdr.acq.acqfreq = sdr.acq.freq[freqi];
+    sdr.acq.acqfreq = sdr.acq.freq[freqi];  // 最良の-f = 信号のf
 
     return sdr.acq.peakr > Constant.get!"Acquisition.TH"(sdr.ctype);
 }
@@ -205,18 +255,19 @@ double carrfsearch(const(byte)[] data, DType dtype, double ti, double crate, int
         return (cast(double)ind) / (m * ti);
 
       case DType.IQ:      // complex
-        foreach(i; 0 .. n){
-            rdataI[i] = data[i*2];
-            rdataQ[i] = data[i*2 + 1];
-        }
+        //foreach(i; 0 .. n){
+        //    rdataI[i] = data[i*2];
+        //    rdataQ[i] = data[i*2 + 1];
+        //}
 
-        rcodeI[] = rdataI[] * rcode[];
-        rcodeQ[] = rdataQ[] * rcode[];
-        cpxcpx(rcodeI, rcodeQ, 1.0, datax);     // to frequency domain
-        cpxpspec(datax, 0, fftxc);              // compute power spectrum
+        //rcodeI[] = rdataI[] * rcode[];
+        //rcodeQ[] = rdataQ[] * rcode[];
+        //cpxcpx(rcodeI, rcodeQ, 1.0, datax);     // to frequency domain
+        //cpxpspec(datax, 0, fftxc);              // compute power spectrum
 
-        immutable ind = fftxc[m/2 .. $].findMaxWithIndex()[1];
+        //immutable ind = fftxc[m/2 .. $].findMaxWithIndex()[1];
 
-        return (m / 2.0 - ind) / (m * ti);
+        //return (m / 2.0 - ind) / (m * ti);
+        assert(0);
     }
 }

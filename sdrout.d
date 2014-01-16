@@ -155,7 +155,7 @@ version(none):
 * args   : void   *arg      I   sdr socket struct
 * return : none
 *------------------------------------------------------------------------------*/
-void tcpsvrthread(/*sdrsoc_t arg*/) 
+void tcpsvrthread(/*void* arg*/) 
 {/+
     sdrsoc_t *soc=cast(sdrsoc_t*)arg;
     sockaddr_in srcAddr,dstAddr;
