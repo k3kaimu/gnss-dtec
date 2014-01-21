@@ -1,5 +1,7 @@
-//##& set waitTime 10000
-//##$ dmd -run runSDR -m64 -O -release -inline -unittest -version=Actors sdrconfig sdrmain
+//##& set waitTime 1000000
+//##$ rdmd -m64 -O -release -inline -unittest -version=Actors --build-only actors
+
+////##$ dmd -run runSDR -m64 -O -release -inline -unittest -version=Actors sdrconfig sdrmain
 
 /**
 マルチスレッドバージョンのSDR
@@ -467,7 +469,7 @@ void sdrThread(CType ctype)(size_t chId, Tid serverTid, double freq)
     try{
       static if(ctype == CType.L2RCCM)
       {
-        l1ca_doppler = (freq - Config.channels[chId].fends[CType.L2RCCM].f_if) * 77.0 / 60.0 + Config.channels[chId].fends[CType.L1CA].f_if;
+        sdrinit.l1ca_doppler = (freq - Config.channels[chId].fends[CType.L2RCCM].f_if) * 77.0 / 60.0 + Config.channels[chId].fends[CType.L1CA].f_if;
       }
 
         immutable thisThreadName = "sdr-thread-" ~ chId.to!string() ~ "-" ~ ctype.to!string();

@@ -25,9 +25,6 @@ import std.algorithm,
 // time_tがいるらしいが、正直うざい
 alias time_t = long;
 
-/* global variables -----------------------------------------------------------*/
-deprecated double l1ca_doppler;
-
 
 // msgpack-d
 version(Win64){

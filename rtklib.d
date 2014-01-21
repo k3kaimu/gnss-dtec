@@ -410,11 +410,23 @@ enum P2_48 =        3.552713678800501E-15;  /// 2^-48
 enum P2_50 =        8.881784197001252E-16;  /// 2^-50
 enum P2_55 =        2.775557561562891E-17;  /// 2^-55
 
-deprecated alias thread_t = std.concurrency.Tid;
-deprecated alias lock_t = core.sync.mutex.Mutex;
-deprecated void initlock(ref Mutex m){ m = new Mutex; }
-deprecated void lock(Mutex m){ m.lock(); }
-deprecated void unlock(Mutex m){ m.unlock(); }
+//version(Win32)
+version(Windows)
+{
+    alias thread_t = HANDLE;
+    alias lock_t = CRITICAL_SECTION;
+    alias initlock = InitializeCriticalSection;
+    alias lock = EnterCriticalSection;
+    alias unlock = LeaveCriticalSection;
+}
+else
+{
+    alias thread_t    = pthread_t;
+    alias lock_t      = pthread_mutex_t;
+    alias initlock = pthread_mutex_init;
+    alias lock     = pthread_mutex_lock;
+    alias unlock   = pthread_mutex_unlock;
+}
 enum FILEPATHPEP = std.path.dirSeparator;
 
 extern(C):

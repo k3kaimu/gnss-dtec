@@ -26,6 +26,10 @@ import std.typecons;
 import std.typetuple;
 
 
+/// L2CM捕捉の際に必要となるL1C/Aのドップラー周波数
+double l1ca_doppler;
+
+
 
 /* check initial value ----------------------------------------------------------
 * checking value in sdrini struct
@@ -390,9 +394,11 @@ void initsdrch(ref sdrch_t sdr, size_t chno, CType ctype)
             foreach(i; 0 .. sdr.acq.nfreq)
                 dst[i] = sdr.f_if + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
         else{
-            immutable carrierRatio = 60.0 / 77.0;   // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
-            immutable inferenced = (.sdr.l1ca_doppler - Config.channels[chno].fends[CType.L1CA].f_if) * carrierRatio + sdr.f_if;
-            writefln("l1ca_doppler=%s, inferenced=%s,", .sdr.l1ca_doppler, inferenced);
+            // = f_L2C / f_L1CA = 1227.60 MHz / 1575.42 MHz
+            // = (2 * 60 * 10.23MHz) / (2 * 77 * 10.23MHz)
+            immutable carrierRatio = 60.0 / 77.0;
+            immutable double inferenced = (.sdrinit.l1ca_doppler - Config.channels[chno].fends[CType.L1CA].f_if) * carrierRatio + sdr.f_if;
+            writefln("l1ca_doppler=%s, inferenced=%s,", .sdrinit.l1ca_doppler, inferenced);
 
             foreach(i; 0 .. sdr.acq.nfreq)
                 dst[i] = inferenced + (i - (sdr.acq.nfreq-1) / 2) * sdr.acq.step;
@@ -412,13 +418,11 @@ void initsdrch(ref sdrch_t sdr, size_t chno, CType ctype)
     if(sdr.ctype != CType.L2RCCM)
         sdr.lcode = sdr.code.cycle.take(sdr.clen * sdr.acq.lenf).array.assumeUnique;
 
-    /* memory allocation */
     sdr.xcode = (){
         scope rcode = new short[sdr.acq.nfft];
-        scope dst = new cpx_t[sdr.acq.nfft];
+        scope dst = uninitializedArray!(cpx_t[])(sdr.acq.nfft);
 
         /* other code generation */
-        rcode[] = 0;       // zero padding
         sdr.code.resampling(0, 0, sdr.ci, sdr.acq.nfft, rcode.save);
         cpxcpx(rcode, null, 1.0, dst); /* FFT code */
         cpxfft(dst);
