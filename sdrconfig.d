@@ -1,3 +1,8 @@
+// Written in the D programming language.
+/**
+Authors: Kazuki Komatsu
+License: Kazuki Komatsu - NYSL
+*/
 module sdrconfig;
 
 
@@ -53,13 +58,20 @@ struct Config
       static if(fendType == Fend.FILE)
       {
         enum Receiver[] fends  = [
-            {path: `D:\gpsData\l1rx.dat`, f_sf: 26e6, f_if: f_if_STEREO_L1, dtype: DType.I},
-            {path: `D:\gpsData\lbrx.dat`, f_sf: 26e6, f_if: f_if_STEREO_L2, dtype: DType.IQ},
+            {path: `D:\gpsData\l1rx.dat`,
+             f_sf: 26e6,
+             f_if: f_if_STEREO_L1,
+             dtype: DType.I},
+
+            {path: `D:\gpsData\lbrx.dat`,
+             f_sf: 26e6,
+             f_if: f_if_STEREO_L2,
+             dtype: DType.IQ},
         ];
       }
       else static if(fendType == Fend.FILESTEREO)
       {
-        enum path = `F:\20130108_stereo_v25-win64-beta\bin\2013_1209_1516.dat`;
+        enum path = `E:\20130108_stereo_v25-win64-beta\bin\2013_1209_1516.dat`;
         enum Receiver[] fends = [
             {f_sf: 26e6, f_if: f_if_STEREO_L1, dtype: DType.I},
             {f_sf: 26e6, f_if: f_if_STEREO_L2, dtype: DType.IQ},
@@ -79,16 +91,26 @@ struct Config
 
 
     enum channels = [
-        ChannelConfig(NavSystem.GPS,    5, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
-        ChannelConfig(NavSystem.GPS,    7, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
-        ChannelConfig(NavSystem.GPS,   12, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
-        ChannelConfig(NavSystem.GPS,   15, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
-        ChannelConfig(NavSystem.GPS,   17, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
-        ChannelConfig(NavSystem.GPS,   24, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
-        ChannelConfig(NavSystem.GPS,   27, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
-        ChannelConfig(NavSystem.GPS,   29, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
-        ChannelConfig(NavSystem.GPS,   31, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
-        ChannelConfig(NavSystem.QZSS, 193, [CType.L1CA: FType.Type1, CType.L2RCCM: FType.Type2]),
+        ChannelConfig(NavSystem.GPS,    5, [CType.L1CA:   FType.Type1,
+                                            CType.L2RCCM: FType.Type2]),
+        //ChannelConfig(NavSystem.GPS,    7, [CType.L1CA:   FType.Type1,
+        //                                    CType.L2RCCM: FType.Type2]),
+        //ChannelConfig(NavSystem.GPS,   12, [CType.L1CA:   FType.Type1,
+        //                                    CType.L2RCCM: FType.Type2]),
+        //ChannelConfig(NavSystem.GPS,   15, [CType.L1CA:   FType.Type1,
+        //                                    CType.L2RCCM: FType.Type2]),
+        //ChannelConfig(NavSystem.GPS,   17, [CType.L1CA:   FType.Type1,
+        //                                    CType.L2RCCM: FType.Type2]),
+        //ChannelConfig(NavSystem.GPS,   24, [CType.L1CA:   FType.Type1,
+        //                                    CType.L2RCCM: FType.Type2]),
+        //ChannelConfig(NavSystem.GPS,   27, [CType.L1CA:   FType.Type1,
+        //                                    CType.L2RCCM: FType.Type2]),
+        //ChannelConfig(NavSystem.GPS,   29, [CType.L1CA:   FType.Type1,
+        //                                    CType.L2RCCM: FType.Type2]),
+        //ChannelConfig(NavSystem.GPS,   31, [CType.L1CA:   FType.Type1,
+        //                                    CType.L2RCCM: FType.Type2]),
+        //ChannelConfig(NavSystem.QZSS, 193, [CType.L1CA:   FType.Type1,
+        //                                    CType.L2RCCM: FType.Type2]),
     ];
 
 

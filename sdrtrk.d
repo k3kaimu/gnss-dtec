@@ -1,8 +1,9 @@
-/*-------------------------------------------------------------------------------
-* sdrtrk.c : SDR tracking functions
-*
-* Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
-*------------------------------------------------------------------------------*/
+// Written in the D programming language.
+/**
+Authors: Kazuki Komatsu, Taro Suzuki <gnsssdrlib@gmail.com>
+License: Kazuki Komatsu - NYSL, 
+         Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
+*/
 import core.simd;
 import core.bitop;
 
@@ -41,7 +42,9 @@ version(Actors)
 {
     class LostSignal : Exception
     {
-        this(string msg = "Lost signal", string file = __FILE__, size_t line = __LINE__)
+        this(string msg = "Lost signal",
+             string file = __FILE__,
+             size_t line = __LINE__)
         {
             super(msg, file, line);
         }
@@ -49,13 +52,9 @@ version(Actors)
 }
 
 
-/* sdr tracking function --------------------------------------------------------
-* sdr tracking function called from sdr channel thread
-* args   : sdrch_t *sdr      I/O sdr channel struct
-*          ulong buffloc  I   buffer location
-*          ulong cnt      I   counter of sdr channel thread
-* return : ulong              current buffer location
-*------------------------------------------------------------------------------*/
+/** 信号追尾ループ
+ *
+ */
 void sdrtracking(Ch)(ref Ch ch, size_t cnt)
 if(isSDRChannel!Ch)
 in{
@@ -71,15 +70,20 @@ body{
     traceln("called");
 
     immutable lenOf1ms = sdr.crate * 0.001,
-              remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))(sdr.trk.remcode % lenOf1ms),
-              trkN = ((lenOf1ms - remcode1ms)/(sdr.trk.codefreq/sdr.f_sf)).to!size_t();
+              remcode1ms = (a => a < 1 ? a : (a - lenOf1ms))
+                                    (sdr.trk.remcode % lenOf1ms),
+              trkN = ((lenOf1ms - remcode1ms)
+                        /(sdr.trk.codefreq/sdr.f_sf)).to!size_t();
 
-    sdr.currnsamp = ((lenOf1ms - remcode1ms)/(sdr.trk.codefreq/sdr.f_sf) * (sdr.ctime / 0.001L)).to!int();
+    sdr.currnsamp = ((lenOf1ms - remcode1ms)
+                   /(sdr.trk.codefreq/sdr.f_sf)
+                   * (sdr.ctime / 0.001L)).to!int();
 
     traceln();
 
     immutable beforeBuffloc = reader.pos;
-    scope data = reader.copy(uninitializedArray!(byte[])(trkN * sdr.dtype));
+    scope data = reader.copy(
+        uninitializedArray!(byte[])(trkN * sdr.dtype));
     reader.consume(trkN);
 
     traceln();
@@ -99,8 +103,11 @@ body{
     traceln();
 
     /* correlation */
-    correlator(data, sdr.dtype, sdr.ti, trkN, sdr.trk.carrfreq, sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
-               sdr.trk.prm1.corrp, sdr.trk.ncorrp, sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode, &sdr.trk.remcarr, sdr.code);
+    correlator(data, sdr.dtype, sdr.ti, trkN, sdr.trk.carrfreq,
+               sdr.trk.oldremcarr, sdr.trk.codefreq, sdr.trk.oldremcode,
+               sdr.trk.prm1.corrp, sdr.trk.ncorrp,
+               sdr.trk.Q, sdr.trk.I, &sdr.trk.remcode,
+               &sdr.trk.remcarr, sdr.code);
     
     traceln();
 
@@ -115,7 +122,8 @@ body{
         if(meanSNR < Constant.get!"Tracking.snrThreshold"(sdr.ctype)){
           version(Actors)
           {
-            enforceEx!LostSignal(0, "signal is interruptted. SNR: %s[dB]".format(meanSNR));
+            enforceEx!LostSignal(0,
+                "signal is interruptted. SNR: %s[dB]".format(meanSNR));
           }
           else
           {
@@ -376,13 +384,13 @@ body{
               IEQE = cpxAbsSq(IE, QE),
               ILQL = cpxAbsSq(IL, QL),
               codeErr = (IEQE + ILQL) != 0 ? ((IEQE - ILQL) / (IEQE + ILQL)) : 0;
-    
+  
     enforce(codeErr.isValidNum);
 
     /* 2nd order DLL */
     sdr.trk.codeNco += prm.dllaw * (codeErr - sdr.trk.codeErr)
                      + prm.dllw2 * prm.dt * codeErr;
-    
+
     sdr.trk.codefreq = sdr.crate - sdr.trk.codeNco + (sdr.trk.carrfreq - sdr.f_if) / (Constant.get!"freq"(sdr.ctype) / sdr.crate); /* carrier aiding */
     sdr.trk.codeErr = codeErr;
 }

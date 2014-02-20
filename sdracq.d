@@ -1,8 +1,9 @@
-/*-------------------------------------------------------------------------------
-* sdracq.c : SDR acquisition functions
-*
-* Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
-*------------------------------------------------------------------------------*/
+// Written in the D programming language.
+/**
+Authors: Kazuki Komatsu, Taro Suzuki <gnsssdrlib@gmail.com>
+License: Kazuki Komatsu - NYSL, 
+         Copyright (C) 2013 Taro Suzuki <gnsssdrlib@gmail.com>
+*/
 import sdr;
 import sdrcmn;
 import util.trace;
@@ -25,7 +26,9 @@ version(Actors)
 {
     class CannotFindSignal : Exception
     {
-        this(string msg = "Signal is not found", string file = __FILE__, size_t line = __LINE__)
+        this(string msg = "Signal is not found",
+            string file = __FILE__,
+            size_t line = __LINE__)
         {
             super(msg, file, line);
         }
@@ -33,57 +36,66 @@ version(Actors)
 }
 
 
-/* sdr acquisition function -----------------------------------------------------
-* sdr acquisition function called from sdr channel thread
-* args   : sdrch_t *sdr     I/O sdr channel struct
-*          double *power    O   normalized correlation power vector (2D array)
-* return : uint64_t             current buffer location
-*------------------------------------------------------------------------------*/
-
 /** 信号捕捉ステージ
  *  
  */
 double[][] sdracquisition(Ch)(ref Ch ch)
 if(isSDRChannel!Ch)
 {
+    alias unIniArr = uninitializedArray;
+
     scope sdr = &ch.sdr,
           reader = &ch.reader;
 
     debug(SDRAcq) traceln("called");
 
-    auto power = uninitializedArray!(double[][])(sdr.acq.nfreq, sdr.acq.nfft);
+    auto power = unIniArr!(double[][])(sdr.acq.nfreq, sdr.acq.nfft);
 
     foreach(e; power)
         e[] = 0;
 
-    // FFTを使った、正確なコード位相と、曖昧な搬送波周波数(ドップラー周波数)の探索
+    // FFTを使った、正確なコード位相と、
+    //              曖昧な搬送波周波数(ドップラー周波数)の探索
     foreach(i; 0 .. sdr.acq.intg){
         /* get new 1ms data */
-        scope data = reader.copy(uninitializedArray!(byte[])(sdr.acq.nfft * sdr.dtype));
-        reader.consume((cast(size_t)((cast(real)sdr.acq.nfft)/sdr.nsamp + 1)) * sdr.nsamp);
+        scope data = reader.copy(
+                unIniArr!(byte[])(sdr.acq.nfft * sdr.dtype));
+        reader.consume(
+            (cast(size_t)((cast(real)sdr.acq.nfft)/sdr.nsamp + 1))
+            * sdr.nsamp);
 
         // CrossCorrelation
-        pcorrelator(data, sdr.dtype, sdr.ti, sdr.acq.nfft, sdr.acq.freq, sdr.crate, sdr.acq.nfft, sdr.xcode, power);
+        pcorrelator(data, sdr.dtype, sdr.ti, sdr.acq.nfft,
+                    sdr.acq.freq, sdr.crate, sdr.acq.nfft,
+                    sdr.xcode, power);
 
         // ピークを確かめる
         if ((*sdr).checkacquisition(power)) {
             sdr.flagacq = true;
-            reader.consume(sdr.acq.acqcodei);      // バッファの先頭にコードの先頭が来るようにする
+
+            // バッファの先頭にコードの先頭が来るようにする
+            reader.consume(sdr.acq.acqcodei);
             break;
         }
     }
 
-    // FFTを使った、それなりに正確な搬送波周波数(ドップラー周波数)の探索, L2CMの場合は前段の周波数探索で十分に正確に探索しているため不要
+    // FFTを使った、それなりに正確な搬送波周波数(ドップラー周波数)の探索
+    // L2CMの場合は前段の周波数探索で十分に正確に探索しているため不要
     if (sdr.flagacq && !(sdr.ctype == CType.L2RCCM)){
-        scope datal = reader.copy(uninitializedArray!(byte[])(sdr.acq.nfft * sdr.dtype * sdr.acq.lenf));
+        scope datal = reader.copy(unIniArr!(byte[])(
+                sdr.acq.nfft * sdr.dtype * sdr.acq.lenf));
 
         // それなりに正確な搬送波周波数の探索
-        sdr.acq.acqfreqf = carrfsearch(datal, sdr.dtype, sdr.ti, sdr.crate, sdr.nsamp * sdr.acq.lenf, sdr.acq.nfftf, sdr.lcode[0 .. sdr.clen * sdr.acq.lenf]);
+        sdr.acq.acqfreqf
+        = carrfsearch(datal, sdr.dtype, sdr.ti, sdr.crate,
+                      sdr.nsamp * sdr.acq.lenf, sdr.acq.nfftf,
+                      sdr.lcode[0 .. sdr.clen * sdr.acq.lenf]);
 
         sdr.trk.carrfreq = sdr.acq.acqfreqf;
         sdr.trk.codefreq = sdr.crate;
     }else if(sdr.flagacq && sdr.ctype == CType.L2RCCM){
-        sdr.acq.acqfreqf = sdr.acq.acqfreq;     // fineサーチしてないけど、してるように見せかけ
+        // fineサーチしてないけど、してるように見せかけ
+        sdr.acq.acqfreqf = sdr.acq.acqfreq;
         sdr.trk.carrfreq = sdr.acq.acqfreq;
         sdr.trk.codefreq = sdr.crate;
     }
@@ -110,7 +122,10 @@ if(isSDRChannel!Ch)
     if(!sdr.flagacq){
         // 今までに何回連続で捕捉に失敗したかで、次のバッファの場所が決まる
         ++sdr.acq.failCount;
-        reader.consume(min(sdr.acq.failCount ^^ 2 * (sdr.nsamp >> 4), sdr.f_sf * 10).to!size_t());
+        reader.consume(
+            min(sdr.acq.failCount ^^ 2 * (sdr.nsamp >> 4),
+                sdr.f_sf * 10)
+            .to!size_t());
     }else
         sdr.acq.failCount = 0;
 

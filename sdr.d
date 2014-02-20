@@ -28,9 +28,9 @@ alias time_t = long;
 
 // msgpack-d
 version(Win64){
-    pragma(lib, "msgpack_x64.lib");
+    pragma(lib, "lib/x64/msgpack_x64.lib");
 }else version(Win32){
-    pragma(lib, "msgpack.lib");
+    pragma(lib, "lib/msgpack.lib");
 }else
     static assert(0);
 
@@ -38,7 +38,7 @@ version(Win64){
 version(NavigationDecode)
 {
     static assert(isVersion!"Win64");   // 64bitビルドの場合だけlibfecが使える
-    pragma(lib, "libfec.a");            // この仕様はlinkerの問題.   optlinkはクソ
+    pragma(lib, "lib/x64/libfec.a");            // この仕様はlinkerの問題.   optlinkはクソ
     public import fec;
 }
 
@@ -47,13 +47,13 @@ static if(Config.useFFTW)
 {
     static assert(isVersion!"Win64");   // 64bitビルドの場合だけFFTWが使える
     public import fftw;                 // これの仕様はlinkerの問題.   optlinkはクソ
-    pragma(lib, "libfftw3f-3.lib");
+    pragma(lib, "lib/x64/libfftw3f-3.lib");
 }
 
 static if(Config.Receiver.fendType == Fend.STEREO)
 {
-    pragma(lib, "rcv/stereo/lib/libnslstereo.a");
-    pragma(lib, "lib/usb/libusb.lib");
+    pragma(lib, "lib/x64/libnslstereo.a");
+    pragma(lib, "lib/x64/libusb.lib");
 }
 
 
@@ -169,7 +169,7 @@ struct Constant
 
                 enum CDN = 16;
                 enum CP = 16;
-                enum DLLB = 1.0;
+                enum DLLB = 0.1;    // 0.005*2PI*2 -> 0.0628 ???
                 enum PLLB = 20.0;
                 enum FLLB = 250.0;
                 enum DT = 0.001;
@@ -183,7 +183,7 @@ struct Constant
 
                 enum CDN = 16;
                 enum CP = 16;
-                enum DLLB = 0.5;
+                enum DLLB = 0.05;    // 0.005*2PI -> 0.0314 ???
                 enum PLLB = 20.0;
                 enum FLLB = 50.0;
                 enum DT = 0.001;
@@ -247,7 +247,7 @@ struct Constant
 
                 enum CDN = 3;
                 enum CP = 12;
-                enum DLLB = 1.0;
+                enum DLLB = 0.1;    // 0.005*2PI*2 -> 0.0628 ???
                 enum PLLB = 20.0;
                 enum FLLB = 250.0;
                 enum DT = 0.001;
@@ -261,7 +261,7 @@ struct Constant
 
                 enum CDN = 3;
                 enum CP = 12;
-                enum DLLB = 0.5;
+                enum DLLB = 0.05;    // 0.005*2PI -> 0.0314 ???
                 enum PLLB = 20.0;
                 enum FLLB = 50.0;
                 enum DT = 0.001;
@@ -324,7 +324,7 @@ struct Constant
 
                 enum CDN = 16;
                 enum CP = 16;
-                enum DLLB = 0.5;
+                enum DLLB = 0.1;    // 0.005*2PI*2 -> 0.0628 ???
                 enum PLLB = 20.0;
                 enum FLLB = 250.0;
                 enum DT = 0.001;
@@ -338,7 +338,7 @@ struct Constant
 
                 enum CDN = 16;
                 enum CP = 16;
-                enum DLLB = 0.5;
+                enum DLLB = 0.05;    // 0.005*2PI -> 0.0314 ???
                 enum PLLB = 20.0;
                 enum FLLB = 50.0;
                 enum DT = 0.001;

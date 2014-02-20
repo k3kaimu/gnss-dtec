@@ -2,7 +2,7 @@
  * GNSS-SDRLIB by D.
  * 
  * Authors:     Kazuki Komatsu
- * Data:        2013/07/10
+ * Date:        2013/07/10
  * License:     NYSL
  */
 

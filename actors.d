@@ -838,11 +838,11 @@ void tecThread()
                              l2bs = result[1].map!"cast(real)(a.buffloc)"().array();
 
                         // L1に合わて補間
-                        immutable l2L = interp1(l2bs, l2Ls, l1b),
-                                  l2b = result[1][2].buffloc;
+                        immutable double l2L = interp1(l2bs, l2Ls, l1b),
+                                         l2b = result[1][2].buffloc;
 
-                        immutable l1remcode = result[0][2].remcode,
-                                  l2remcode = result[1][2].remcode.toNearby(0.001 * f_sf / 2);
+                        immutable double l1remcode = result[0][2].remcode,
+                                         l2remcode = result[1][2].remcode.toNearby(0.001 * f_sf / 2);
 
                         if(baseDTEC.isNaN){
                             baseDTEC = -calcTEC!"cycle"(l1L, l2L);
@@ -851,17 +851,17 @@ void tecThread()
 
                             if(!file.isOpen){
                                 file = File(format("TEC_Result_chId%s_%s.csv", chId, Clock.currTime.toISOString()), "w");
-                                file.writeln("buffloc, DeltaTEC[TEC], TEC[TEC], aveTEC[TEC]");
+                                file.writeln("buffloc, DeltaTEC[TEC], TEC[TEC], aveTEC[TEC], bufflocL1, remcodeL1, bufflocL2, remcodeL2");
                             }else{
                                 //file.writefln("%s, %s,", "Base-DTEC-Change", baseDTEC);
                             }
                         }else{
-                            immutable dtec = -calcTEC!"cycle"(l1L, l2L) - baseDTEC;
-                            immutable tec = calcTEC!"m"(((l1b + l1remcode) - (l2b + l2remcode)) / f_sf * 3e8, 0);
+                            immutable double dtec = -calcTEC!"cycle"(l1L, l2L) - baseDTEC;
+                            immutable double tec = calcTEC!"m"(((l1b + l1remcode) - (l2b + l2remcode)) / f_sf * 3e8, 0);
 
                             aveTEC = mInv * tec + (1 - mInv) * (aveTEC + (dtec - oldDTEC));
                             oldDTEC = dtec;
-                            file.writefln("%s, %s, %s, %s", l1b, dtec, tec, aveTEC);
+                            file.writefln("%s, %s, %s, %s, %s, %s, %s, %s", l1b, dtec, tec, aveTEC, l1b, l1remcode, l2b, l2remcode);
                             file.flush();
                             writefln("[TECThread]{chId: %s}{%s [DeltaTEC], %s [TEC], ave: %s [TEC]}@{buffloc: %s}", chId, dtec, tec, aveTEC, l1b);
                         }
