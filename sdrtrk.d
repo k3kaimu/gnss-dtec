@@ -82,6 +82,8 @@ body{
     traceln();
 
     immutable beforeBuffloc = reader.pos;
+
+    // データ読み込み
     scope data = reader.copy(
         uninitializedArray!(byte[])(trkN * sdr.dtype));
     reader.consume(trkN);
@@ -115,6 +117,7 @@ body{
     (*sdr).sdrnavigation(beforeBuffloc, cnt);
     sdr.flagtrk = true;
 
+    // SNRが悪くなった場合にSDRが自殺を図る
     if((sdr.flagnavsync || cnt > 500) && sdr.trk.S[].find(0).empty)
     {
         immutable meanSNR = sdr.trk.S[].mean();
@@ -277,6 +280,8 @@ body{
 *          int    flag2     I   reset flag 2
 * return : none
 *------------------------------------------------------------------------------*/
+/** 相関値を積分するアレ
+*/
 void cumsumcorr(string file = __FILE__, size_t line = __LINE__)(ref sdrtrk_t trk, int flag1, int flag2)
 {
     traceln("called");
@@ -316,6 +321,7 @@ out{
 body{
     traceln("called");
 
+    // s=="1"のときはsdr.trk.prm1に、s=="2"のときはsdr.trk.prm2になる。
     immutable prm = mixin("sdr.trk.prm" ~ s);
 
     immutable IP = sdr.trk.sumI[0],
