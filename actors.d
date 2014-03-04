@@ -7,6 +7,7 @@
 マルチスレッドバージョンのSDR
 
 アクターモデルを採用したマルチスレッドなプログラミングスタイル。
+dmd 2.065.0
 
 license：NYSL
 author: Kazuki Komatsu

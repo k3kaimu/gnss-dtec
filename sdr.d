@@ -26,14 +26,6 @@ import std.algorithm,
 alias time_t = long;
 
 
-// msgpack-d
-version(Win64){
-    pragma(lib, "lib/x64/msgpack_x64.lib");
-}else version(Win32){
-    pragma(lib, "lib/msgpack.lib");
-}else
-    static assert(0);
-
 /* FEC */
 version(NavigationDecode)
 {
