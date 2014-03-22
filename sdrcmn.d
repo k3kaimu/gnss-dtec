@@ -27,6 +27,18 @@ import std.typetuple;
 
 version(unittest) import std.stdio;
 
+
+static if(!Config.useFFTW)
+{
+    private Fft fftObj;
+    private cpx_t[] buffer;
+}
+else
+{
+    alias fftwLock = mutexLock!"fftw";
+}
+
+
 /* global variables -----------------------------------------------------------*/
 private shared immutable(short[]) cost, sint;   // sin, cos lockup table
 
@@ -49,18 +61,6 @@ shared static this()
     static if(Config.useFFTW)
         fftwf_init_threads();
 }
-
-
-static if(!Config.useFFTW)
-{
-    private Fft fftObj;
-    private cpx_t[] buffer;
-}
-else
-{
-    alias fftwLock = mutexLock!"fftw";
-}
-
 
 
 /**

@@ -37,9 +37,22 @@ version(NavigationDecode)
 /* FFT */
 static if(Config.useFFTW)
 {
-    static assert(isVersion!"Win64");   // 64bitビルドの場合だけFFTWが使える
+    //static assert(isVersion!"Win64");   // 64bitビルドの場合だけFFTWが使える
     public import fftw;                 // これの仕様はlinkerの問題.   optlinkはクソ
+    
+  static if(isVersion!"Win64")
+  {
     pragma(lib, "lib/x64/libfftw3f-3.lib");
+  }
+  else static if(isVersion!"linux")
+  {
+    pragma(lib, "fftw3f");
+    pragma(lib, "fftw3f_threads");
+  }
+  else
+  {
+    static assert(0);
+  }
 }
 
 static if(Config.Receiver.fendType == Fend.STEREO)

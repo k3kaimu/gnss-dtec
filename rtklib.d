@@ -413,6 +413,8 @@ enum P2_55 =        2.775557561562891E-17;  /// 2^-55
 //version(Win32)
 version(Windows)
 {
+    import core.sys.windows.windows;
+
     alias thread_t = HANDLE;
     alias lock_t = CRITICAL_SECTION;
     alias initlock = InitializeCriticalSection;
@@ -421,6 +423,8 @@ version(Windows)
 }
 else
 {
+    import core.sys.posix.pthread;
+
     alias thread_t    = pthread_t;
     alias lock_t      = pthread_mutex_t;
     alias initlock = pthread_mutex_init;
